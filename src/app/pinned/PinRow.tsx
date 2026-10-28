@@ -2,6 +2,7 @@ import { memo, useRef, type PointerEvent, type Ref } from 'react';
 import { Volume2, VolumeX, X } from 'lucide-react';
 import {
   closePin,
+  favoriteItem,
   moveItemToSpace,
   newFolderWith,
   pressPin,
@@ -16,7 +17,7 @@ import type { MenuEntry } from '@/app/rows/RowMenu';
 import { Row } from '@/app/rows/Row';
 import styles from '@/app/rows/rows.module.css';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
-import type { PinItem } from '@/model/types';
+import { FAVORITES_ID, FAVORITES_LIMIT, type PinItem } from '@/model/types';
 import { isSamePage } from '@/model/urls';
 import { useSidebar } from '@/state/sidebar';
 import { faviconFor, toggleMuted, useTabs } from '@/state/tabs';
@@ -38,6 +39,11 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
   const previous = useTabs((state) => tabId !== undefined && state.previousId === tabId);
   const editing = useUi((state) => state.editingId === itemId);
   const spaces = useSidebar((state) => state.model.spaces);
+  const canFavorite = useSidebar(
+    (state) =>
+      Object.values(state.model.items).filter((item) => item.spaceId === FAVORITES_ID).length <
+      FAVORITES_LIMIT,
+  );
 
   // Keep drawing the last state while the row fades out after an unpin.
   const last = useRef<PinItem | undefined>(undefined);
@@ -57,6 +63,7 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
         ]
       : []),
     { label: 'New Folder with Tab', onSelect: () => newFolderWith(itemId) },
+    ...(canFavorite ? [{ label: 'Add to Favorites', onSelect: () => favoriteItem(itemId) }] : []),
     ...moveToSpaceMenu(spaces, pin.spaceId, (target) => moveItemToSpace(itemId, target)),
     'separator',
     ...(tab ? [{ label: 'Close Tab', onSelect: () => closePin(itemId) }] : []),

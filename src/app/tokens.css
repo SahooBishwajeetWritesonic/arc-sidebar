@@ -25,6 +25,8 @@
   --ink: light-dark(rgb(0 0 0 / 0.85), rgb(255 255 255 / 0.92));
   --ink-secondary: light-dark(rgb(0 0 0 / 0.45), rgb(255 255 255 / 0.5));
   --row-hover: light-dark(rgb(0 0 0 / 0.045), rgb(250 251 255 / 0.07));
+  --tile: light-dark(rgb(14 15 16 / 0.05), rgb(250 251 255 / 0.1));
+  --tile-hover: light-dark(rgb(14 15 16 / 0.09), rgb(250 251 255 / 0.15));
   --row-previous: light-dark(rgb(255 255 255 / 0.32), rgb(250 251 255 / 0.08));
   --row-previous-hover: light-dark(rgb(255 255 255 / 0.5), rgb(250 251 255 / 0.12));
   --row-selected: light-dark(rgb(255 255 255 / 0.85), rgb(250 251 255 / 0.2));

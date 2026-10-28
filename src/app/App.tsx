@@ -16,6 +16,7 @@ import { useUi } from '@/state/ui';
 import { ArchiveView } from './archive/ArchiveView';
 import { BottomBar } from './chrome/BottomBar';
 import { DragLayer } from './drag/DragLayer';
+import { Favorites } from './favorites/Favorites';
 import { fade } from './motion';
 import styles from './app.module.css';
 import { SpacePager } from './spaces/SpacePager';
@@ -148,6 +149,7 @@ export function App() {
                   exit={{ opacity: 0, x: 12 }}
                   transition={fade}
                 >
+                  <Favorites />
                   <SpacePager looks={looks} />
                 </motion.div>
               )}

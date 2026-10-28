@@ -1,10 +1,11 @@
 import { memo, useRef, type PointerEvent, type Ref } from 'react';
 import { Volume2, VolumeX, X } from 'lucide-react';
-import { closeTodayTab, moveTabToSpace, pinTab } from '@/app/actions';
+import { closeTodayTab, favoriteTab, moveTabToSpace, pinTab } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
 import { Row } from '@/app/rows/Row';
 import styles from '@/app/rows/rows.module.css';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
+import { FAVORITES_ID, FAVORITES_LIMIT } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
 import { activateTab, faviconFor, toggleMuted, useTabs } from '@/state/tabs';
 
@@ -16,6 +17,11 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
   const previous = useTabs((state) => state.previousId === id);
   const spaceId = useTabs((state) => state.tabSpaces[id] ?? state.spaceId);
   const spaces = useSidebar((state) => state.model.spaces);
+  const canFavorite = useSidebar(
+    (state) =>
+      Object.values(state.model.items).filter((item) => item.spaceId === FAVORITES_ID).length <
+      FAVORITES_LIMIT,
+  );
 
   // While the row fades out after a close, the tab is already gone from the
   // store; keep drawing its last state.
@@ -39,6 +45,7 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
       }}
       menu={[
         { label: 'Pin Tab', onSelect: () => pinTab(id) },
+        ...(canFavorite ? [{ label: 'Add to Favorites', onSelect: () => favoriteTab(id) }] : []),
         { label: tab.muted ? 'Unmute Tab' : 'Mute Tab', onSelect: () => toggleMuted(id) },
         ...moveToSpaceMenu(spaces, spaceId, (target) => moveTabToSpace(id, target)),
         'separator',
