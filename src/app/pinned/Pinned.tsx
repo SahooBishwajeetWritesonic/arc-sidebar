@@ -35,7 +35,12 @@ export function Pinned({ spaceId }: { spaceId: string }) {
           )}
         </AnimatePresence>
       </ul>
-      <motion.div layout="position" transition={{ layout: spring.row }} className={styles.divider}>
+      <motion.div
+        layout="position"
+        transition={{ layout: spring.row }}
+        className={styles.divider}
+        data-can-clear={canClear || undefined}
+      >
         <div className={styles.line} role="separator" />
         {canClear && (
           <button

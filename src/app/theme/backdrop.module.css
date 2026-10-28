@@ -1,0 +1,20 @@
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+}
+
+/* Grain: grey noise blended over the gradient (Arc: ±2–3 levels per pixel). */
+.grain {
+  position: absolute;
+  inset: 0;
+  background-size: 160px 160px;
+  mix-blend-mode: overlay;
+}

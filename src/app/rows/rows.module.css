@@ -201,10 +201,15 @@
 .line {
   height: 0.5px;
   background: var(--separator);
+  transition: margin-right 150ms ease-out;
 }
 
-/* Arc's "Clear" sits on the divider and shows while the pointer is over the sidebar;
-   its background cuts the line. */
+/* The line makes room for "Clear", which has no background, so it sits on any theme. */
+:global([data-sidebar]:hover) .divider[data-can-clear] .line {
+  margin-right: 52px;
+}
+
+/* Arc's "Clear" sits on the divider and shows while the pointer is over the sidebar. */
 .clear {
   position: absolute;
   top: 50%;
@@ -214,7 +219,7 @@
   padding: 0 8px;
   border: 0;
   border-radius: 6px;
-  background: var(--plate);
+  background: none;
   color: var(--ink-secondary);
   font-size: 12px;
   opacity: 0;

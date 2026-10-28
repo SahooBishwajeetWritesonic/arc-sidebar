@@ -1,19 +1,14 @@
-import {
-  animate,
-  LayoutGroup,
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  type MotionValue,
-} from 'motion/react';
+import { animate, LayoutGroup, motion, useReducedMotion, type MotionValue } from 'motion/react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { WheelGestures } from 'wheel-gestures';
 import { switchSpace } from '@/app/actions';
 import { spring } from '@/app/motion';
 import { Pinned } from '@/app/pinned/Pinned';
+import type { ThemeLook } from '@/app/theme/engine';
 import { Today } from '@/app/today/Today';
 import type { Space } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
+import { pagerSize, pagerX } from './pager';
 import { SpaceHeader } from './SpaceHeader';
 import { constrainTrack, releaseTarget, SWIPE_SCALE } from './swipe';
 import styles from './spaces.module.css';
@@ -25,7 +20,7 @@ const MOUSE_NOTCH = 50;
  * Spaces side by side on a track, sliding on Arc's critically damped spring. Only the shown
  * space and its neighbours render (plus any crossed by a slide); the others are inert.
  */
-export function SpacePager() {
+export function SpacePager({ looks }: { looks: Record<string, ThemeLook> }) {
   const spaces = useSidebar((state) => state.model.spaces);
   const spaceId = useSidebar((state) => state.spaceId);
   const index = Math.max(
@@ -33,7 +28,7 @@ export function SpacePager() {
     spaces.findIndex((space) => space.id === spaceId),
   );
   const viewport = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
+  const x = pagerX;
   const reduced = useReducedMotion();
 
   // Read by the wheel handler, which is set up once.
@@ -49,7 +44,7 @@ export function SpacePager() {
   useLayoutEffect(() => {
     const element = viewport.current!;
     const measure = () => {
-      live.current.width = element.clientWidth;
+      live.current.width = pagerSize.width = element.clientWidth;
       if (!x.isAnimating()) x.set(-live.current.index * live.current.width);
     };
     measure();
@@ -92,6 +87,8 @@ export function SpacePager() {
             className={styles.page}
             data-active-page={i === index || undefined}
             inert={i !== index}
+            // Each page in its space's scheme, so a neighbour sliding in is drawn right.
+            style={{ colorScheme: looks[space.id]?.scheme }}
             aria-label={space.name}
           >
             {rendered(i) && (

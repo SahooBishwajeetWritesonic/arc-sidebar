@@ -17,7 +17,11 @@ import { ArchiveView } from './archive/ArchiveView';
 import { BottomBar } from './chrome/BottomBar';
 import { DragLayer } from './drag/DragLayer';
 import { fade } from './motion';
+import styles from './app.module.css';
 import { SpacePager } from './spaces/SpacePager';
+import { Backdrop } from './theme/Backdrop';
+import { useRootScheme, useSpaceLooks } from './theme/looks';
+import { ThemePicker } from './theme/ThemePicker';
 import { ToastLayer } from './toast/ToastLayer';
 
 /** Enter on a row does what a click does. */
@@ -113,48 +117,48 @@ export function App() {
   const sidebarReady = useSidebar((state) => state.ready);
   const ready = tabsReady && sidebarReady;
   const view = useUi((state) => state.view);
+  const spaceId = useSidebar((state) => state.spaceId);
+  const looks = useSpaceLooks();
+  useRootScheme(ready ? looks[spaceId]?.scheme : undefined);
 
   return (
     // reducedMotion="user": with Reduce Motion on, movement is skipped and fades stay.
     <MotionConfig reducedMotion="user">
-      <main
-        data-sidebar
-        style={{
-          position: 'relative',
-          padding: '8px var(--pad-side) calc(var(--bottom-bar-height) + 8px)',
-          color: 'var(--ink)',
-        }}
-        onKeyDown={onKeyDown}
-      >
-        {ready && (
-          <AnimatePresence mode="wait" initial={false}>
-            {view === 'archive' ? (
-              <motion.div
-                key="archive"
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -12 }}
-                transition={fade}
-              >
-                <ArchiveView />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="sidebar"
-                initial={{ opacity: 0, x: 12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 12 }}
-                transition={fade}
-              >
-                <SpacePager />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
-        <DragLayer />
-      </main>
-      <BottomBar />
+      {/* As in Arc, the sidebar scrolls above a transparent bottom bar. */}
+      <div className={styles.shell}>
+        {ready && <Backdrop looks={looks} />}
+        <main data-sidebar className={styles.sidebar} onKeyDown={onKeyDown}>
+          {ready && (
+            <AnimatePresence mode="wait" initial={false}>
+              {view === 'archive' ? (
+                <motion.div
+                  key="archive"
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -12 }}
+                  transition={fade}
+                >
+                  <ArchiveView />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="sidebar"
+                  initial={{ opacity: 0, x: 12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 12 }}
+                  transition={fade}
+                >
+                  <SpacePager looks={looks} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
+          <DragLayer />
+        </main>
+        <BottomBar />
+      </div>
       <ToastLayer />
+      <ThemePicker />
     </MotionConfig>
   );
 }

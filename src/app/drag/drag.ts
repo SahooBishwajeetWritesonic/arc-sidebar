@@ -20,7 +20,7 @@ export const useDrag = create<{
 
 /** Movement before a press becomes a drag (Arc: about 3–4 pt). */
 const THRESHOLD = 4;
-/** How near the panel's top or bottom edge a drag starts scrolling it. */
+/** Distance from the sidebar's top or bottom edge where it starts scrolling. */
 const SCROLL_EDGE = 40;
 
 type GhostContent = Omit<Ghost, 'width'>;
@@ -107,9 +107,13 @@ function start(t: Tracking) {
   useDrag.setState({ source: t.source, ghost: { ...t.ghost(), width }, target: null });
 }
 
-/** Rows in display order, relative to the sidebar's top edge. */
+/** The top of the sidebar's content in viewport coordinates (it scrolls). */
+const contentTop = (sidebar: HTMLElement) =>
+  sidebar.getBoundingClientRect().top - sidebar.scrollTop;
+
+/** Rows in display order, relative to the top of the sidebar's content. */
 function measure(sidebar: HTMLElement): Slot[] {
-  const top = sidebar.getBoundingClientRect().top;
+  const top = contentTop(sidebar);
   const page = sidebar.querySelector('[data-active-page]') ?? sidebar;
   return [...page.querySelectorAll<HTMLElement>('[data-nav-row]')].map((element) => {
     const rect = element.getBoundingClientRect();
@@ -127,7 +131,7 @@ function measure(sidebar: HTMLElement): Slot[] {
 
 function updateTarget() {
   if (!tracking?.started) return;
-  const y = tracking.y - tracking.sidebar.getBoundingClientRect().top;
+  const y = tracking.y - contentTop(tracking.sidebar);
   const { model } = useSidebar.getState();
   const { source } = tracking;
   const target = findTarget(tracking.slots, y, source, (folderId) =>
@@ -149,18 +153,19 @@ function autoScroll() {
   if (!tracking || tracking.scrollFrame) return;
   const step = () => {
     if (!tracking) return;
-    const { y } = tracking;
+    const { y, sidebar } = tracking;
+    const { top, bottom } = sidebar.getBoundingClientRect();
     const speed =
-      y < SCROLL_EDGE
-        ? -(SCROLL_EDGE - y) / 3
-        : y > innerHeight - SCROLL_EDGE
-          ? (y - (innerHeight - SCROLL_EDGE)) / 3
+      y < top + SCROLL_EDGE
+        ? -(top + SCROLL_EDGE - y) / 3
+        : y > bottom - SCROLL_EDGE
+          ? (y - (bottom - SCROLL_EDGE)) / 3
           : 0;
     if (speed === 0) {
       tracking.scrollFrame = 0;
       return;
     }
-    window.scrollBy(0, speed);
+    sidebar.scrollBy(0, speed);
     updateTarget();
     tracking.scrollFrame = requestAnimationFrame(step);
   };
