@@ -46,6 +46,13 @@ export function Harness({ platform }: { platform: FakePlatform }) {
         <button onClick={() => platform.closeRandom()}>Close a random tab</button>
         <button onClick={() => platform.reloadRandom()}>Reload a random tab</button>
         <button onClick={() => platform.toggleAudibleRandom()}>Toggle audio</button>
+        <button onClick={() => platform.navigateActive()}>Follow a link in the active tab</button>
+
+        <h2>Browser</h2>
+        <button onClick={() => platform.restartChrome()}>
+          Restart Chrome (clears the session)
+        </button>
+        <button onClick={() => platform.resetEverything()}>Reset everything</button>
 
         <h2>Panel</h2>
         <label>
