@@ -20,6 +20,8 @@ const state = (change: Partial<TabsState> = {}): TabsState => ({
   windowId: 1,
   tabs: new Map([1, 2, 3].map((id) => [id, tab(id)])),
   order: [1, 2, 3],
+  bound: new Set(),
+  openingUrls: [],
   activeId: 1,
   previousId: null,
   ...change,
@@ -35,6 +37,18 @@ describe('selectTodayIds', () => {
     tabs.set(4, tab(4));
     tabs.set(5, tab(5));
     expect(selectTodayIds(state({ tabs }))).toEqual([5, 4, 1, 2, 3]);
+  });
+
+  it('leaves out tabs bound to pinned items', () => {
+    expect(selectTodayIds(state({ bound: new Set([2]) }))).toEqual([1, 3]);
+  });
+
+  it('hides a new tab that a pinned item is opening', () => {
+    const tabs = new Map(state().tabs);
+    tabs.set(4, tab(4, { url: 'https://mail.google.com/mail/u/0/#inbox' }));
+    tabs.set(5, tab(5));
+    const ids = selectTodayIds(state({ tabs, openingUrls: ['https://mail.google.com/mail/u/0/'] }));
+    expect(ids).toEqual([5, 1, 2, 3]);
   });
 
   it('skips ids in the order that have no tab', () => {
