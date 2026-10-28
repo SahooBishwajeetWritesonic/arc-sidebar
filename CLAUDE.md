@@ -28,3 +28,4 @@ A personal Chrome (MV3) extension that recreates Arc's macOS sidebar inside Chro
 
 - TypeScript strict. Dependencies are pinned to exact versions; upgrade deliberately (Motion and dnd-kit move fast).
 - Small, focused changes. Don't commit unless asked.
+- Commits: one line, lowercase conventional prefix, plain words about what changed (`feat: open new tabs at the top of today`). No body, no trailers. Several small commits over one big one.
