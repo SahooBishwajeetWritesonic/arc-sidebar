@@ -62,6 +62,7 @@ test('auto-archive skips the active tab and tabs playing audio', async ({ page }
 test('the archive time follows the setting', async ({ page }) => {
   await ready(page);
   await panel(page).getByRole('button', { name: 'More', exact: true }).click();
+  await panel(page).getByRole('menuitem', { name: 'Archive Today Tabs After' }).hover();
   await panel(page).getByRole('menuitemradio', { name: '24 Hours' }).click();
   await page.getByRole('button', { name: 'Make inactive tabs 13 hours old' }).click();
   await page.getByRole('button', { name: 'Run auto-archive now' }).click();
