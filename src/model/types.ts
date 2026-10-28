@@ -22,15 +22,38 @@ export const ARCHIVE_AFTER_MS: Record<ArchiveAfter, number> = {
 
 export interface Settings {
   archiveAfter: ArchiveAfter;
+  appearance: Appearance;
 }
 
-export const defaultSettings = (): Settings => ({ archiveAfter: '12h' });
+export const defaultSettings = (): Settings => ({ archiveAfter: '12h', appearance: 'auto' });
 
 export interface Space {
   id: string;
   name: string;
   icon?: SpaceIcon;
+  theme?: SpaceTheme;
 }
+
+/**
+ * How a theme's other colours follow the first (hue offsets in
+ * app/theme/engine.ts); 'free' lets each colour move on its own, as in Arc.
+ */
+export type Harmony =
+  'single' | 'analogous' | 'complementary' | 'splitComplementary' | 'triadic' | 'free';
+
+/** A space's colours: Arc's 1–3 colour gradient with intensity and grain. */
+export interface SpaceTheme {
+  /** 1–3 hex colours, the first one leading. */
+  colors: string[];
+  harmony: Harmony;
+  /** How much colour versus the neutral base, 0.25–0.8. */
+  intensity: number;
+  /** Grain strength, 0–1 in sixteenths. */
+  grain: number;
+}
+
+/** Light, dark or following the system; one setting for every space, as in Arc. */
+export type Appearance = 'auto' | 'light' | 'dark';
 
 /** An emoji, or one of the sidebar's symbol icons (see app/spaces/icons.ts). */
 export type SpaceIcon = { type: 'emoji'; char: string } | { type: 'symbol'; name: string };
@@ -167,6 +190,8 @@ export type Intent =
   | { type: 'createSpace'; spaceId: string; name: string; index: number; icon?: SpaceIcon }
   | { type: 'renameSpace'; spaceId: string; name: string }
   | { type: 'setSpaceIcon'; spaceId: string; icon: SpaceIcon | null }
+  | { type: 'setSpaceTheme'; spaceId: string; theme: SpaceTheme | null }
+  | { type: 'setAppearance'; appearance: Appearance }
   | { type: 'moveSpace'; spaceId: string; index: number }
   /**
    * Removes a space and its pins and folders (`itemIds`). Its Today tabs, and

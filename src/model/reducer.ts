@@ -147,6 +147,17 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
         return space.icon ? rest : space;
       });
 
+    case 'setSpaceTheme':
+      return updateSpace(model, intent.spaceId, (space) => {
+        const { theme: _old, ...rest } = space;
+        if (intent.theme) return { ...rest, theme: intent.theme };
+        return space.theme ? rest : space;
+      });
+
+    case 'setAppearance':
+      if (model.settings.appearance === intent.appearance) return model;
+      return { ...model, settings: { ...model.settings, appearance: intent.appearance } };
+
     case 'moveSpace': {
       const from = model.spaces.findIndex((space) => space.id === intent.spaceId);
       if (from === -1) return model;
