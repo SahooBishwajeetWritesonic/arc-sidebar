@@ -1,5 +1,5 @@
 import { childrenOf, flattenSpace, orderAtEnd, orderBefore } from '@/model/tree';
-import type { ArchiveAfter, ArchiveEntry, SpaceIcon } from '@/model/types';
+import type { Appearance, ArchiveAfter, ArchiveEntry, SpaceIcon, SpaceTheme } from '@/model/types';
 import type { TabInfo } from '@/platform/types';
 import { dispatch, newId, useSidebar } from '@/state/sidebar';
 import {
@@ -393,4 +393,12 @@ export function moveTabToSpace(tabId: number, spaceId: string) {
 export function moveItemToSpace(itemId: string, spaceId: string) {
   const { model } = useSidebar.getState();
   dispatch({ type: 'moveToSpace', itemId, spaceId, order: orderAtEnd(model, spaceId, null) });
+}
+
+export function setSpaceTheme(spaceId: string, theme: SpaceTheme | null) {
+  dispatch({ type: 'setSpaceTheme', spaceId, theme });
+}
+
+export function setAppearance(appearance: Appearance) {
+  dispatch({ type: 'setAppearance', appearance });
 }

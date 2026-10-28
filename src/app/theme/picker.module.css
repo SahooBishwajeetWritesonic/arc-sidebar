@@ -1,0 +1,371 @@
+/* Arc's theme picker, from research/refs/arc/theme-picker-*.png. */
+
+.positioner {
+  z-index: 30;
+  outline: none;
+}
+
+.card {
+  --card: light-dark(rgb(244 244 245 / 0.94), rgb(40 40 43 / 0.94));
+  --well: light-dark(#e3e3e5, #1d1d20);
+  --grid: light-dark(rgb(0 0 0 / 0.1), rgb(255 255 255 / 0.07));
+  --control: light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.6));
+  --control-quiet: light-dark(rgb(0 0 0 / 0.22), rgb(255 255 255 / 0.22));
+
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(328px, calc(100vw - 16px));
+  padding: 8px;
+  border-radius: 18px;
+  background: var(--card);
+  -webkit-backdrop-filter: blur(30px) saturate(1.6);
+  backdrop-filter: blur(30px) saturate(1.6);
+  box-shadow:
+    0 0 0 0.5px var(--menu-edge),
+    0 20px 50px rgb(0 0 0 / 0.28);
+  color: var(--ink);
+  outline: none;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.canvas {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle, var(--grid) 0.8px, transparent 1.2px) 0 0 / 7px 7px,
+    var(--well);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.appearance {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  gap: 4px;
+}
+
+.appearance button,
+.dotButtons button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--control);
+  cursor: default;
+}
+
+.appearance button[aria-pressed='true'] {
+  background: var(--control-quiet);
+  color: var(--ink);
+}
+
+.appearance button:hover,
+.dotButtons button:not(:disabled):hover {
+  color: var(--ink);
+}
+
+.dotButtons {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  gap: 8px;
+}
+
+.dotButtons button:disabled {
+  opacity: 0.35;
+}
+
+/* Colour dots: the main one large, the others small, each with a white ring. */
+.dot {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  translate: -50% -50%;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+  cursor: grab;
+  touch-action: none;
+}
+
+.dot[data-primary] {
+  width: 40px;
+  height: 40px;
+}
+
+.dot:active {
+  cursor: grabbing;
+}
+
+/* When the harmony changes, dots glide to their new places; never while
+   being dragged, and not with Reduce Motion. */
+.dot {
+  transition:
+    left 280ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    top 280ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.canvas[data-held] .dot {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    transition: none;
+  }
+}
+
+/* Linked dots: spokes from the centre and the orbit they share. */
+.guides {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.guide {
+  stroke: var(--control-quiet);
+  stroke-width: 1;
+}
+
+.orbit {
+  fill: none;
+  stroke: var(--control-quiet);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+.hub {
+  fill: var(--control-quiet);
+}
+
+/* The harmony glyph between − and +. */
+.harmony {
+  color: var(--control);
+}
+
+.harmony:disabled {
+  opacity: 0.35;
+}
+
+.glyphRing {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  opacity: 0.55;
+}
+
+.glyphDot {
+  fill: currentColor;
+}
+
+/* The harmony's name fades in above the buttons for a moment after a change. */
+.announce {
+  position: absolute;
+  bottom: 42px;
+  left: 50%;
+  translate: -50% 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--control-quiet);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 160ms ease-out,
+    translate 160ms ease-out;
+}
+
+.announce[data-show] {
+  opacity: 1;
+  translate: -50% 0;
+}
+
+.announce:empty {
+  display: none;
+}
+
+.dot:focus-visible,
+.swatch:focus-visible,
+.squiggle:focus-visible,
+.dial:focus-visible {
+  outline: 2px dashed var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.presets {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 12px;
+}
+
+.chevron {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--control);
+}
+
+.chevron:disabled {
+  opacity: 0.25;
+}
+
+.swatches {
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.swatch {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.18);
+}
+
+.swatch[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 2px var(--card),
+    0 0 0 3.5px var(--control);
+}
+
+/* Bottom row: the grain squiggle and the intensity dial. */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 10px;
+  padding: 4px 6px 4px 10px;
+}
+
+.controls[data-disabled] {
+  opacity: 0.4;
+}
+
+.squiggle {
+  position: relative;
+  flex: 1;
+  height: 44px;
+  outline: none;
+  touch-action: none;
+}
+
+.squiggle svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.waveBefore,
+.waveAfter {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.waveBefore {
+  stroke: var(--control);
+}
+
+.waveAfter {
+  stroke: var(--control-quiet);
+}
+
+.thumb {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 42px;
+  border-radius: 9px;
+  translate: -50% -50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.12),
+    0 2px 6px rgb(0 0 0 / 0.22);
+  pointer-events: none;
+}
+
+.dial {
+  position: relative;
+  flex: none;
+  width: 72px;
+  height: 72px;
+  outline: none;
+  border-radius: 50%;
+  touch-action: none;
+}
+
+.tick {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  margin: -1.5px 0 0 -1.5px;
+  border-radius: 50%;
+  background: var(--control-quiet);
+}
+
+.tick[data-on] {
+  background: var(--control);
+}
+
+.knob {
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    light-dark(#ffffff, #8a8a90),
+    light-dark(#cfcfd3, #46464b) 70%
+  );
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.12),
+    0 3px 8px rgb(0 0 0 / 0.2);
+}
+
+.knobMark {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: light-dark(rgb(0 0 0 / 0.45), rgb(255 255 255 / 0.85));
+}

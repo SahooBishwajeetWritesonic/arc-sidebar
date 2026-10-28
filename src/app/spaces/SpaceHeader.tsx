@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { createSpace, deleteSpace, renameSpace, setSpaceIcon } from '@/app/actions';
 import { spring } from '@/app/motion';
 import { InlineEdit } from '@/app/rows/InlineEdit';
+import { openThemePicker } from '@/app/theme/ThemePicker';
 import { RowMenu, type MenuEntry } from '@/app/rows/RowMenu';
 import { useSidebar } from '@/state/sidebar';
 import { startEditing, stopEditing, useUi } from '@/state/ui';
@@ -18,6 +19,7 @@ export function SpaceHeader({ spaceId }: { spaceId: string }) {
 
   const menu: MenuEntry[] = [
     { label: 'Rename…', onSelect: () => startEditing(spaceId) },
+    { label: 'Edit Theme…', onSelect: () => openThemePicker(spaceId) },
     {
       label: 'Symbol',
       submenu: Object.entries(SYMBOLS).map(([name, Symbol]) => ({
@@ -42,7 +44,7 @@ export function SpaceHeader({ spaceId }: { spaceId: string }) {
   ];
 
   return (
-    <motion.div layout="position" transition={{ layout: spring.row }}>
+    <motion.div layout="position" transition={{ layout: spring.row }} data-space-header={spaceId}>
       <RowMenu items={menu} className={styles.header}>
         <span className={styles.glyph}>
           <SpaceGlyph icon={space.icon} />
