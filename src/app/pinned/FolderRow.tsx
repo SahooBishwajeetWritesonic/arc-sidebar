@@ -30,8 +30,14 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
       kind="folder"
       id={itemId}
       depth={depth}
-      // Arc opens and closes folders on press.
-      onPress={() => setFolderCollapsed(itemId, !folder.collapsed)}
+      parentId={folder.parentId}
+      open={!folder.collapsed}
+      // Arc toggles on press; on release here, so a drag never toggles it.
+      onTap={() => setFolderCollapsed(itemId, !folder.collapsed)}
+      drag={{
+        source: { kind: 'folder', itemId },
+        ghost: () => ({ title: folder.name, folder: true }),
+      }}
       menu={[
         { label: 'Rename…', onSelect: () => startEditing(itemId) },
         'separator',

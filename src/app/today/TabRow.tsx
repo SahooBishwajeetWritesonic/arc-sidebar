@@ -4,7 +4,7 @@ import { pinTab } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
 import { Row } from '@/app/rows/Row';
 import styles from '@/app/rows/rows.module.css';
-import { activateTab, closeTab, toggleMuted, useTabs } from '@/state/tabs';
+import { activateTab, closeTab, faviconFor, toggleMuted, useTabs } from '@/state/tabs';
 
 const stop = (event: PointerEvent) => event.stopPropagation();
 
@@ -29,6 +29,10 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
       previous={previous}
       onPress={() => activateTab(id)}
       onMiddleClick={() => closeTab(id)}
+      drag={{
+        source: { kind: 'tab', tabId: id },
+        ghost: () => ({ title: tab.title, faviconUrl: faviconFor(tab.url), folder: false }),
+      }}
       menu={[
         { label: 'Pin Tab', onSelect: () => pinTab(id) },
         { label: tab.muted ? 'Unmute Tab' : 'Mute Tab', onSelect: () => toggleMuted(id) },

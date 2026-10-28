@@ -1,8 +1,9 @@
 import { LayoutGroup, MotionConfig } from 'motion/react';
 import type { KeyboardEvent } from 'react';
-import { closePin, pressPin, setFolderCollapsed } from '@/app/actions';
+import { closePin, moveByKeyboard, pressPin, setFolderCollapsed } from '@/app/actions';
 import { useSidebar } from '@/state/sidebar';
 import { activateTab, closeTab, openNewTab, useTabs } from '@/state/tabs';
+import { DragLayer } from './drag/DragLayer';
 import { Pinned } from './pinned/Pinned';
 import { Today } from './today/Today';
 
@@ -31,6 +32,19 @@ function onKeyDown(event: KeyboardEvent<HTMLElement>) {
   const kind = row.dataset.navRow!;
   const id = row.dataset.rowId ?? '';
   const focusRow = (i: number) => rows[Math.max(0, Math.min(rows.length - 1, i))]?.focus();
+
+  if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+    event.preventDefault();
+    moveByKeyboard(kind, id, event.key === 'ArrowUp' ? -1 : 1);
+    // React moves the row's element, which drops focus; put it back.
+    const sidebar = event.currentTarget;
+    requestAnimationFrame(() =>
+      sidebar
+        .querySelector<HTMLElement>(`[data-nav-row][data-row-id="${CSS.escape(id)}"]`)
+        ?.focus(),
+    );
+    return;
+  }
 
   switch (event.key) {
     case 'ArrowDown':
@@ -67,7 +81,11 @@ export function App() {
   return (
     // reducedMotion="user": with Reduce Motion on, movement is skipped and fades stay.
     <MotionConfig reducedMotion="user">
-      <main style={{ padding: '8px var(--pad-side)', color: 'var(--ink)' }} onKeyDown={onKeyDown}>
+      <main
+        data-sidebar
+        style={{ position: 'relative', padding: '8px var(--pad-side)', color: 'var(--ink)' }}
+        onKeyDown={onKeyDown}
+      >
         {ready && (
           // One group, so rows in every section slide together when any changes.
           <LayoutGroup>
@@ -75,6 +93,7 @@ export function App() {
             <Today />
           </LayoutGroup>
         )}
+        <DragLayer />
       </main>
     </MotionConfig>
   );

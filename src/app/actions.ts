@@ -1,7 +1,8 @@
-import { orderAtEnd, orderBefore } from '@/model/tree';
+import { childrenOf, orderAtEnd, orderBefore } from '@/model/tree';
 import { dispatch, newId, useSidebar } from '@/state/sidebar';
-import { activateTab, forgetTab, useTabs } from '@/state/tabs';
+import { activateTab, forgetTab, selectTodayIds, useTabs } from '@/state/tabs';
 import { startEditing } from '@/state/ui';
+import { orderForDrop, type DragSource, type DropTarget } from './drag/targets';
 
 /** What the user can do in the sidebar: mouse, keyboard and context menus all go through here. */
 
@@ -97,4 +98,85 @@ export function newFolder() {
 
 export function deleteFolder(itemId: string) {
   dispatch({ type: 'deleteFolder', itemId });
+}
+
+export function dropOn(source: DragSource, target: DropTarget) {
+  const { model, spaceId, windowId } = useSidebar.getState();
+  if (windowId === null) return;
+
+  if (target.section === 'today') {
+    if (source.kind === 'tab') {
+      dispatch({
+        type: 'reorderToday',
+        windowId,
+        tabId: source.tabId,
+        beforeTabId: target.beforeTabId,
+      });
+    } else if (source.kind === 'pin') {
+      dispatch({
+        type: 'unpin',
+        itemId: source.itemId,
+        windowId,
+        todayBeforeTabId: target.beforeTabId,
+      });
+    }
+    return;
+  }
+
+  const sourceId = source.kind === 'tab' ? null : source.itemId;
+  const order = orderForDrop(
+    model,
+    spaceId,
+    target.parentId,
+    target.beforeId,
+    target.afterId,
+    sourceId,
+  );
+  if (source.kind === 'tab') {
+    const tab = useTabs.getState().tabs.get(source.tabId);
+    if (!tab) return;
+    dispatch({
+      type: 'pinTab',
+      itemId: newId(),
+      tabId: source.tabId,
+      spaceId,
+      parentId: target.parentId,
+      order,
+      url: tab.url,
+      title: tab.title,
+    });
+  } else {
+    dispatch({ type: 'move', itemId: source.itemId, parentId: target.parentId, order });
+  }
+}
+
+/** Alt+Up/Down moves a row one place among its siblings: the keyboard's drag and drop. */
+export function moveByKeyboard(kind: string, id: string, delta: -1 | 1) {
+  const { model, windowId } = useSidebar.getState();
+  if (windowId === null) return;
+
+  if (kind === 'tab') {
+    const ids = selectTodayIds(useTabs.getState());
+    const index = ids.indexOf(Number(id));
+    if (index === -1 || index + delta < 0 || index + delta >= ids.length) return;
+    const beforeTabId = delta < 0 ? ids[index - 1]! : (ids[index + 2] ?? null);
+    dispatch({ type: 'reorderToday', windowId, tabId: Number(id), beforeTabId });
+    return;
+  }
+
+  const item = model.items[id];
+  if (!item) return;
+  const siblings = childrenOf(model, item.spaceId, item.parentId);
+  const index = siblings.findIndex((sibling) => sibling.id === id);
+  const neighbour = siblings[index + delta];
+  if (!neighbour) return;
+  const order = orderForDrop(
+    model,
+    item.spaceId,
+    item.parentId,
+    delta < 0 ? neighbour.id : null,
+    delta > 0 ? neighbour.id : null,
+    id,
+  );
+  dispatch({ type: 'move', itemId: id, parentId: item.parentId, order });
 }

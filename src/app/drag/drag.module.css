@@ -1,0 +1,47 @@
+/* The gap a drop would land in. */
+.line {
+  position: absolute;
+  left: calc(var(--pad-side) + var(--row-inset) + var(--depth, 0) * var(--indent));
+  right: var(--pad-side);
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: var(--drag-line);
+  pointer-events: none;
+}
+
+.ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--row-height);
+  padding: 0 7px 0 var(--row-inset);
+  border-radius: var(--row-radius);
+  background: var(--row-selected);
+  box-shadow: 0 2px 8px var(--ghost-shadow);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--title-size);
+  opacity: 0.9;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.icon {
+  flex: none;
+  width: var(--favicon-size);
+  height: var(--favicon-size);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin-left: var(--favicon-gap);
+  overflow: hidden;
+  white-space: nowrap;
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}

@@ -50,6 +50,15 @@
   background: var(--row-previous-hover);
 }
 
+/* While dragging, only a folder the drop would go into lights up under the pointer. */
+:global([data-sidebar][data-dragging]) .row:not([data-selected], [data-previous]):hover .plate {
+  background: none;
+}
+
+.row[data-drop-into] .plate {
+  background: var(--drag-hint);
+}
+
 .row[data-selected] .plate {
   background: var(--row-selected);
   box-shadow:
@@ -173,6 +182,10 @@
 .row:hover .close,
 .row:focus-visible .close {
   opacity: 1;
+}
+
+:global([data-sidebar][data-dragging]) .close {
+  opacity: 0;
 }
 
 /* The line between Pinned and Today: a 0.5 pt hairline, 10 pt in from each

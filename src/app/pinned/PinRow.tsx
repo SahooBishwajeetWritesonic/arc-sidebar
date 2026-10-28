@@ -17,7 +17,7 @@ import styles from '@/app/rows/rows.module.css';
 import type { PinItem } from '@/model/types';
 import { isSamePage } from '@/model/urls';
 import { useSidebar } from '@/state/sidebar';
-import { toggleMuted, useTabs } from '@/state/tabs';
+import { faviconFor, toggleMuted, useTabs } from '@/state/tabs';
 import { startEditing, stopEditing, useUi } from '@/state/ui';
 
 const stop = (event: PointerEvent) => event.stopPropagation();
@@ -65,9 +65,15 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
       kind="pin"
       id={itemId}
       depth={depth}
+      parentId={pin.parentId}
       selected={selected}
       previous={previous}
-      onPress={() => pressPin(itemId)}
+      onPress={tab ? () => pressPin(itemId) : undefined}
+      onTap={tab ? undefined : () => pressPin(itemId)}
+      drag={{
+        source: { kind: 'pin', itemId, bound: tab !== undefined },
+        ghost: () => ({ title, faviconUrl: faviconFor(tab?.url ?? pin.url), folder: false }),
+      }}
       onMiddleClick={() => closePin(itemId)}
       onDoubleClick={() => startEditing(itemId)}
       menu={menu}
