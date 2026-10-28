@@ -7,6 +7,8 @@ import {
   moveByKeyboard,
   pressPin,
   setFolderCollapsed,
+  switchSpace,
+  switchSpaceBy,
 } from '@/app/actions';
 import { useSidebar } from '@/state/sidebar';
 import { activateTab, openNewTab, useTabs } from '@/state/tabs';
@@ -16,6 +18,7 @@ import { BottomBar } from './chrome/BottomBar';
 import { DragLayer } from './drag/DragLayer';
 import { fade } from './motion';
 import { Pinned } from './pinned/Pinned';
+import { SpaceHeader } from './spaces/SpaceHeader';
 import { ToastLayer } from './toast/ToastLayer';
 import { Today } from './today/Today';
 
@@ -41,6 +44,19 @@ function onKeyDown(event: KeyboardEvent<HTMLElement>) {
   if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'k') {
     event.preventDefault();
     clearToday();
+    return;
+  }
+
+  // Spaces, as in Arc: ⌃1–9 jumps to one, ⌘⌥←/→ steps through them.
+  if (event.ctrlKey && !event.metaKey && /^Digit[1-9]$/.test(event.code)) {
+    const space = useSidebar.getState().model.spaces[Number(event.code.slice(5)) - 1];
+    if (space) switchSpace(space.id);
+    event.preventDefault();
+    return;
+  }
+  if (event.metaKey && event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+    switchSpaceBy(event.key === 'ArrowLeft' ? -1 : 1);
+    event.preventDefault();
     return;
   }
 
@@ -98,6 +114,7 @@ export function App() {
   const sidebarReady = useSidebar((state) => state.ready);
   const ready = tabsReady && sidebarReady;
   const view = useUi((state) => state.view);
+  const spaceId = useSidebar((state) => state.spaceId);
 
   return (
     // reducedMotion="user": with Reduce Motion on, movement is skipped and fades stay.
@@ -131,11 +148,22 @@ export function App() {
                 exit={{ opacity: 0, x: 12 }}
                 transition={fade}
               >
-                {/* One group, so rows in every section slide together when any changes. */}
-                <LayoutGroup>
-                  <Pinned />
-                  <Today />
-                </LayoutGroup>
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.div
+                    key={spaceId}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={fade}
+                  >
+                    {/* One group, so rows in every section slide together when any changes. */}
+                    <LayoutGroup>
+                      <SpaceHeader spaceId={spaceId} />
+                      <Pinned />
+                      <Today />
+                    </LayoutGroup>
+                  </motion.div>
+                </AnimatePresence>
               </motion.div>
             )}
           </AnimatePresence>

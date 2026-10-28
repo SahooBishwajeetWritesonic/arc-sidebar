@@ -1,7 +1,9 @@
 import { Menu } from '@base-ui/react/menu';
-import { Archive, Check, Ellipsis } from 'lucide-react';
-import { exportSidebar, setArchiveAfter } from '@/app/actions';
+import { Archive, Check, ChevronRight, Plus } from 'lucide-react';
+import { createSpace, exportSidebar, newFolder, setArchiveAfter, switchSpace } from '@/app/actions';
 import menu from '@/app/rows/menu.module.css';
+import { SpaceGlyph } from '@/app/spaces/icons';
+import spaces from '@/app/spaces/spaces.module.css';
 import type { ArchiveAfter } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
 import { showView, useUi } from '@/state/ui';
@@ -14,10 +16,9 @@ const ARCHIVE_CHOICES: { value: ArchiveAfter; label: string }[] = [
   { value: '30d', label: '30 Days' },
 ];
 
-/** Arc's bottom bar: Library (here, the Archive) on the left, more on the right. */
+/** Arc's bottom bar: Library (here, the Archive), the spaces, and "+". */
 export function BottomBar() {
   const view = useUi((state) => state.view);
-  const archiveAfter = useSidebar((state) => state.model.settings?.archiveAfter ?? '12h');
 
   return (
     <footer className={styles.bar}>
@@ -31,42 +32,91 @@ export function BottomBar() {
       >
         <Archive size={16} strokeWidth={1.75} />
       </button>
-
-      <Menu.Root>
-        <Menu.Trigger className={styles.button} aria-label="More">
-          <Ellipsis size={16} strokeWidth={1.75} />
-        </Menu.Trigger>
-        <Menu.Portal>
-          <Menu.Positioner className={menu.positioner} side="top" align="end" sideOffset={6}>
-            <Menu.Popup className={menu.popup}>
-              <Menu.RadioGroup
-                value={archiveAfter}
-                onValueChange={(value) => setArchiveAfter(value as ArchiveAfter)}
-              >
-                <Menu.GroupLabel className={menu.label}>Archive Today tabs after</Menu.GroupLabel>
-                {ARCHIVE_CHOICES.map((choice) => (
-                  <Menu.RadioItem
-                    key={choice.value}
-                    value={choice.value}
-                    className={menu.item}
-                    closeOnClick
-                  >
-                    <Menu.RadioItemIndicator className={menu.check} keepMounted>
-                      <Check size={12} strokeWidth={2.5} />
-                    </Menu.RadioItemIndicator>
-                    {choice.label}
-                  </Menu.RadioItem>
-                ))}
-              </Menu.RadioGroup>
-              <Menu.Separator className={menu.separator} />
-              <Menu.Item className={menu.item} onClick={exportSidebar}>
-                <span className={menu.check} />
-                Export Sidebar…
-              </Menu.Item>
-            </Menu.Popup>
-          </Menu.Positioner>
-        </Menu.Portal>
-      </Menu.Root>
+      <SpaceSwitcher />
+      <AddMenu />
     </footer>
+  );
+}
+
+function SpaceSwitcher() {
+  const all = useSidebar((state) => state.model.spaces);
+  const current = useSidebar((state) => state.spaceId);
+  if (all.length < 2) return <div className={spaces.switcher} />;
+  return (
+    <nav className={spaces.switcher} aria-label="Spaces">
+      {all.map((space, i) => (
+        <button
+          key={space.id}
+          type="button"
+          className={spaces.space}
+          aria-label={space.name}
+          aria-current={space.id === current}
+          title={i < 9 ? `${space.name} (⌃${i + 1})` : space.name}
+          onClick={() => {
+            showView('sidebar');
+            switchSpace(space.id);
+          }}
+        >
+          <SpaceGlyph icon={space.icon} />
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function AddMenu() {
+  const archiveAfter = useSidebar((state) => state.model.settings?.archiveAfter ?? '12h');
+  return (
+    <Menu.Root>
+      <Menu.Trigger className={styles.button} aria-label="More">
+        <Plus size={16} strokeWidth={1.75} />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner className={menu.positioner} side="top" align="end" sideOffset={6}>
+          <Menu.Popup className={menu.popup}>
+            <Menu.Item className={menu.item} onClick={createSpace}>
+              New Space
+            </Menu.Item>
+            <Menu.Item className={menu.item} onClick={newFolder}>
+              New Folder
+            </Menu.Item>
+            <Menu.Separator className={menu.separator} />
+            <Menu.SubmenuRoot>
+              <Menu.SubmenuTrigger className={menu.item}>
+                Archive Today Tabs After
+                <ChevronRight className={menu.chevron} size={12} strokeWidth={2.5} aria-hidden />
+              </Menu.SubmenuTrigger>
+              <Menu.Portal>
+                <Menu.Positioner className={menu.positioner} alignOffset={-5} sideOffset={2}>
+                  <Menu.Popup className={menu.popup}>
+                    <Menu.RadioGroup
+                      value={archiveAfter}
+                      onValueChange={(value) => setArchiveAfter(value as ArchiveAfter)}
+                    >
+                      {ARCHIVE_CHOICES.map((choice) => (
+                        <Menu.RadioItem
+                          key={choice.value}
+                          value={choice.value}
+                          className={menu.item}
+                          closeOnClick
+                        >
+                          <Menu.RadioItemIndicator className={menu.check} keepMounted>
+                            <Check size={12} strokeWidth={2.5} />
+                          </Menu.RadioItemIndicator>
+                          {choice.label}
+                        </Menu.RadioItem>
+                      ))}
+                    </Menu.RadioGroup>
+                  </Menu.Popup>
+                </Menu.Positioner>
+              </Menu.Portal>
+            </Menu.SubmenuRoot>
+            <Menu.Item className={menu.item} onClick={exportSidebar}>
+              Export Sidebar…
+            </Menu.Item>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   );
 }

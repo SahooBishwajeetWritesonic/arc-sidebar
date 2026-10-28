@@ -5,6 +5,7 @@ import {
   emptyArchive,
   emptyModel,
   emptySession,
+  normalizeSession,
   type ArchiveState,
   type Intent,
   type IntentResult,
@@ -67,10 +68,17 @@ function rebuild() {
   for (const itemId of opening.keys()) {
     if (session.bindings[itemId] !== undefined) opening.delete(itemId);
   }
-  useSidebar.setState({ model, session, archive });
+  const shown = session.activeSpaces[String(windowId)];
+  const spaceId =
+    shown && model.spaces.some((space) => space.id === shown)
+      ? shown
+      : (model.spaces[0]?.id ?? DEFAULT_SPACE_ID);
+  useSidebar.setState({ model, session, archive, spaceId });
   useTabs.setState({
     order: session.orders[String(windowId)] ?? [],
     bound: new Set(Object.values(session.bindings)),
+    tabSpaces: session.tabSpaces,
+    spaceId,
     openingUrls: [...opening.values()],
   });
 }
@@ -83,7 +91,7 @@ export async function connectSidebar(source: Platform, windowId: number): Promis
     rebuild();
   });
   const offSession = source.onSessionChange((session) => {
-    saved = { ...saved, session };
+    saved = { ...saved, session: normalizeSession(session) };
     rebuild();
   });
   const offArchive = source.onArchiveChange((archive) => {
@@ -98,7 +106,7 @@ export async function connectSidebar(source: Platform, windowId: number): Promis
   // A change event may have beaten the initial load; keep the newer one.
   saved = {
     model: model.rev >= saved.model.rev ? model : saved.model,
-    session: session.rev >= saved.session.rev ? session : saved.session,
+    session: session.rev >= saved.session.rev ? normalizeSession(session) : saved.session,
     archive: archive.rev >= saved.archive.rev ? archive : saved.archive,
   };
   rebuild();

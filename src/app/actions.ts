@@ -1,5 +1,5 @@
-import { childrenOf, orderAtEnd, orderBefore } from '@/model/tree';
-import type { ArchiveAfter, ArchiveEntry } from '@/model/types';
+import { childrenOf, flattenSpace, orderAtEnd, orderBefore } from '@/model/tree';
+import type { ArchiveAfter, ArchiveEntry, SpaceIcon } from '@/model/types';
 import type { TabInfo } from '@/platform/types';
 import { dispatch, newId, useSidebar } from '@/state/sidebar';
 import {
@@ -48,7 +48,9 @@ export function replacePinUrl(itemId: string) {
 }
 
 export function unpin(itemId: string) {
-  dispatch({ type: 'unpin', itemId, windowId: useSidebar.getState().windowId! });
+  const { model, windowId } = useSidebar.getState();
+  const spaceId = model.items[itemId]?.spaceId;
+  dispatch({ type: 'unpin', itemId, windowId: windowId!, spaceId });
 }
 
 export function pinTab(tabId: number) {
@@ -127,6 +129,7 @@ export function dropOn(source: DragSource, target: DropTarget) {
         type: 'unpin',
         itemId: source.itemId,
         windowId,
+        spaceId: model.items[source.itemId]?.spaceId,
         todayBeforeTabId: target.beforeTabId,
       });
     }
@@ -295,4 +298,99 @@ export function exportSidebar() {
   link.download = `arc-sidebar-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * Like Arc, re-selects the space's last-used tab, else its first open pin, else its top
+ * Today tab; only an empty space gets a new tab.
+ */
+export function switchSpace(spaceId: string) {
+  const { model, session, windowId, spaceId: current } = useSidebar.getState();
+  const tabsState = useTabs.getState();
+  if (windowId === null || spaceId === current) return;
+  if (!model.spaces.some((space) => space.id === spaceId)) return;
+
+  const isOpen = (tabId: number | undefined): tabId is number =>
+    tabId !== undefined && tabsState.tabs.has(tabId);
+  const pinnedTabs = flattenSpace(model, spaceId, () => false)
+    .map(({ item }) => session.bindings[item.id])
+    .filter(isOpen);
+  const todayTabs = selectTodayIds(tabsState, spaceId);
+  const last = session.lastActive[spaceId];
+  const target =
+    isOpen(last) && (pinnedTabs.includes(last) || todayTabs.includes(last))
+      ? last
+      : (pinnedTabs[0] ?? todayTabs[0]);
+
+  dispatch({ type: 'setActiveSpace', windowId, spaceId, openNewTab: target === undefined });
+  if (target !== undefined) activateTab(target);
+}
+
+/** The space before or after the current one (no wrap-around, as in Arc). */
+export function switchSpaceBy(delta: -1 | 1) {
+  const { model, spaceId } = useSidebar.getState();
+  const index = model.spaces.findIndex((space) => space.id === spaceId);
+  const next = model.spaces[index + delta];
+  if (next) switchSpace(next.id);
+}
+
+export function createSpace() {
+  const { model, spaceId, windowId } = useSidebar.getState();
+  if (windowId === null) return;
+  const index = model.spaces.findIndex((space) => space.id === spaceId) + 1;
+  const newSpaceId = newId();
+  dispatch({
+    type: 'createSpace',
+    spaceId: newSpaceId,
+    name: `Space ${model.spaces.length + 1}`,
+    index,
+  });
+  dispatch({ type: 'setActiveSpace', windowId, spaceId: newSpaceId, openNewTab: true });
+  startEditing(newSpaceId);
+}
+
+export function renameSpace(spaceId: string, name: string) {
+  dispatch({ type: 'renameSpace', spaceId, name });
+}
+
+export function setSpaceIcon(spaceId: string, icon: SpaceIcon | null) {
+  dispatch({ type: 'setSpaceIcon', spaceId, icon });
+}
+
+/** Its pins and folders go with it; its tabs move to a neighbouring space. */
+export function deleteSpace(spaceId: string) {
+  const { model, windowId } = useSidebar.getState();
+  const index = model.spaces.findIndex((space) => space.id === spaceId);
+  const space = model.spaces[index];
+  const fallback = model.spaces[index - 1] ?? model.spaces[index + 1];
+  if (!space || !fallback || windowId === null) return;
+  const items = Object.values(model.items).filter((item) => item.spaceId === spaceId);
+  dispatch({
+    type: 'deleteSpace',
+    spaceId,
+    fallbackSpaceId: fallback.id,
+    itemIds: items.map((item) => item.id),
+    windowId,
+  });
+  showToast(`Deleted “${space.name}”`, {
+    label: 'Undo',
+    run: () => dispatch({ type: 'restoreSpace', space, index, items }),
+  });
+}
+
+/** Moves a Today tab to another space; if it was selected, its neighbour takes over here. */
+export function moveTabToSpace(tabId: number, spaceId: string) {
+  const tabsState = useTabs.getState();
+  if (tabsState.activeId === tabId) {
+    const ids = selectTodayIds(tabsState);
+    const index = ids.indexOf(tabId);
+    const next = ids[index + 1] ?? ids[index - 1];
+    if (next !== undefined) activateTab(next);
+  }
+  dispatch({ type: 'moveTabToSpace', tabId, spaceId });
+}
+
+export function moveItemToSpace(itemId: string, spaceId: string) {
+  const { model } = useSidebar.getState();
+  dispatch({ type: 'moveToSpace', itemId, spaceId, order: orderAtEnd(model, spaceId, null) });
 }

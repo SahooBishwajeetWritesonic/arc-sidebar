@@ -1,9 +1,10 @@
 import { memo, useRef, type Ref } from 'react';
 import { Folder, FolderOpen } from 'lucide-react';
-import { deleteFolder, renameItem, setFolderCollapsed } from '@/app/actions';
+import { deleteFolder, moveItemToSpace, renameItem, setFolderCollapsed } from '@/app/actions';
 import { InlineEdit } from '@/app/rows/InlineEdit';
 import { Row } from '@/app/rows/Row';
 import styles from '@/app/rows/rows.module.css';
+import { moveToSpaceMenu } from '@/app/spaces/move-menu';
 import type { FolderItem } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
 import { startEditing, stopEditing, useUi } from '@/state/ui';
@@ -17,6 +18,7 @@ interface FolderRowProps {
 export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderRowProps) {
   const item = useSidebar((state) => state.model.items[itemId]);
   const editing = useUi((state) => state.editingId === itemId);
+  const spaces = useSidebar((state) => state.model.spaces);
 
   const last = useRef<FolderItem | undefined>(undefined);
   if (item?.kind === 'folder') last.current = item;
@@ -40,6 +42,7 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
       }}
       menu={[
         { label: 'Rename…', onSelect: () => startEditing(itemId) },
+        ...moveToSpaceMenu(spaces, folder.spaceId, (target) => moveItemToSpace(itemId, target)),
         'separator',
         { label: 'Delete Folder', onSelect: () => deleteFolder(itemId), danger: true },
       ]}

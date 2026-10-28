@@ -71,3 +71,17 @@
 .check:not([data-checked]) svg {
   visibility: hidden;
 }
+
+.chevron {
+  margin-left: auto;
+  padding-left: 16px;
+  box-sizing: content-box;
+  opacity: 0.7;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  margin-right: 8px;
+}

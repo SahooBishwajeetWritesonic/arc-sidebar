@@ -11,6 +11,10 @@ export interface TabsState {
   order: readonly number[];
   /** Tabs bound to pinned items; they show in Pinned, not Today. */
   bound: ReadonlySet<number>;
+  /** Today tab id → space id, from the service. */
+  tabSpaces: Readonly<Record<string, string>>;
+  /** The space the panel shows. */
+  spaceId: string;
   /** URLs of pinned items whose tab is being opened right now. */
   openingUrls: readonly string[];
   activeId: number | null;
@@ -24,6 +28,8 @@ export const useTabs = create<TabsState>()(() => ({
   tabs: new Map(),
   order: [],
   bound: new Set(),
+  tabSpaces: {},
+  spaceId: '',
   openingUrls: [],
   activeId: null,
   previousId: null,
@@ -33,8 +39,10 @@ export const useTabs = create<TabsState>()(() => ({
  * Today's rows, top first. Tabs the service hasn't placed yet (it lags Chrome by a few ms) go
  * where it will put them; a tab a pinned item is opening never shows, even for a frame.
  */
-export function selectTodayIds(state: TabsState): number[] {
-  const inToday = (id: number) => state.tabs.has(id) && !state.bound.has(id);
+export function selectTodayIds(state: TabsState, spaceId: string = state.spaceId): number[] {
+  // A tab the service hasn't given a space yet is new, so it is in the shown space.
+  const inSpace = (id: number) => (state.tabSpaces[id] ?? state.spaceId) === spaceId;
+  const inToday = (id: number) => state.tabs.has(id) && !state.bound.has(id) && inSpace(id);
   const ordered = state.order.filter(inToday);
   const placed = new Set(state.order);
   const pending = [...state.tabs.values()]

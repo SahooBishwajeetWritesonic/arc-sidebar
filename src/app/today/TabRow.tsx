@@ -1,9 +1,11 @@
 import { memo, useRef, type PointerEvent, type Ref } from 'react';
 import { Volume2, VolumeX, X } from 'lucide-react';
-import { closeTodayTab, pinTab } from '@/app/actions';
+import { closeTodayTab, moveTabToSpace, pinTab } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
 import { Row } from '@/app/rows/Row';
 import styles from '@/app/rows/rows.module.css';
+import { moveToSpaceMenu } from '@/app/spaces/move-menu';
+import { useSidebar } from '@/state/sidebar';
 import { activateTab, faviconFor, toggleMuted, useTabs } from '@/state/tabs';
 
 const stop = (event: PointerEvent) => event.stopPropagation();
@@ -12,6 +14,8 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
   const live = useTabs((state) => state.tabs.get(id));
   const selected = useTabs((state) => state.activeId === id);
   const previous = useTabs((state) => state.previousId === id);
+  const spaceId = useTabs((state) => state.tabSpaces[id] ?? state.spaceId);
+  const spaces = useSidebar((state) => state.model.spaces);
 
   // While the row fades out after a close, the tab is already gone from the
   // store; keep drawing its last state.
@@ -36,6 +40,7 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
       menu={[
         { label: 'Pin Tab', onSelect: () => pinTab(id) },
         { label: tab.muted ? 'Unmute Tab' : 'Mute Tab', onSelect: () => toggleMuted(id) },
+        ...moveToSpaceMenu(spaces, spaceId, (target) => moveTabToSpace(id, target)),
         'separator',
         { label: 'Close Tab', onSelect: () => closeTodayTab(id) },
       ]}

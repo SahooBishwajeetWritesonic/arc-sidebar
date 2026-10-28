@@ -1,0 +1,85 @@
+.emoji {
+  line-height: 1;
+}
+
+/* A space with no icon is a small dot (Arc: about 7–8 pt). */
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* The space's name above its Pinned section: 13 pt, semibold, secondary,
+   aligned with the tab titles (research/07). */
+.header {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  margin-bottom: 4px;
+  padding: 0 7px 0 var(--row-inset);
+  border-radius: var(--row-radius);
+  color: var(--ink-secondary);
+  outline: none;
+}
+
+.header[data-popup-open] {
+  box-shadow: inset 0 0 0 2px var(--menu-highlight);
+}
+
+.glyph {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--favicon-size);
+  height: var(--favicon-size);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  margin-left: var(--favicon-gap);
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: var(--label-size);
+  font-weight: 600;
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+
+/* The switcher in the bottom bar: 34 × 32 pt cells, inactive spaces at 45%. */
+.switcher {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.space {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  background: none;
+  color: var(--ink);
+  opacity: 0.45;
+}
+
+.space:hover {
+  background: var(--bar-hover);
+  opacity: 0.8;
+}
+
+.space[aria-current='true'] {
+  opacity: 1;
+}
+
+.space:focus-visible {
+  outline: 2px dashed var(--focus-ring);
+  outline-offset: -2px;
+}
