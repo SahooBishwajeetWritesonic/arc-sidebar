@@ -1,13 +1,14 @@
 import { Folder, Globe } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { setGhostElement, useDrag } from './drag';
+import { GHOST_TILE, setGhostElement, useDrag } from './drag';
 import styles from './drag.module.css';
 
 /** As in Arc, the list itself doesn't move during a drag: only the drop line and the ghost. */
 export function DragLayer() {
   const ghost = useDrag((state) => state.ghost);
   const target = useDrag((state) => state.target);
-  const line = target && target.lineY !== null ? target : null;
+  const line = target && target.section !== 'favorites' && target.lineY !== null ? target : null;
+  const asTile = target?.section === 'favorites';
   const depth = line?.section === 'pinned' ? line.depth : 0;
 
   return (
@@ -25,7 +26,8 @@ export function DragLayer() {
           <div
             ref={setGhostElement}
             className={styles.ghost}
-            style={{ width: ghost.width }}
+            data-tile={asTile || undefined}
+            style={{ width: asTile ? GHOST_TILE.width : ghost.width }}
             aria-hidden
           >
             {ghost.folder ? (
@@ -35,7 +37,7 @@ export function DragLayer() {
             ) : (
               <Globe className={styles.icon} size={16} strokeWidth={1.75} />
             )}
-            <span className={styles.title}>{ghost.title}</span>
+            {!asTile && <span className={styles.title}>{ghost.title}</span>}
           </div>,
           document.body,
         )}

@@ -45,3 +45,11 @@
   white-space: nowrap;
   mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
 }
+
+/* Over Favorites the ghost is an icon-only tile. */
+.ghost[data-tile] {
+  justify-content: center;
+  height: 47px;
+  padding: 0;
+  border-radius: 12px;
+}

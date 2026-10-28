@@ -1,5 +1,13 @@
 import { childrenOf, flattenSpace, orderAtEnd, orderBefore } from '@/model/tree';
-import type { Appearance, ArchiveAfter, ArchiveEntry, SpaceIcon, SpaceTheme } from '@/model/types';
+import {
+  FAVORITES_ID,
+  FAVORITES_LIMIT,
+  type Appearance,
+  type ArchiveAfter,
+  type ArchiveEntry,
+  type SpaceIcon,
+  type SpaceTheme,
+} from '@/model/types';
 import type { TabInfo } from '@/platform/types';
 import { dispatch, newId, useSidebar } from '@/state/sidebar';
 import {
@@ -47,10 +55,16 @@ export function replacePinUrl(itemId: string) {
   if (tab) dispatch({ type: 'replacePinUrl', itemId, url: tab.url, title: tab.title });
 }
 
+/** The space whose Today an unpinned item's tab goes to: a favorite's goes to the shown one. */
+function homeSpaceOf(itemId: string): string {
+  const { model, spaceId } = useSidebar.getState();
+  const home = model.items[itemId]?.spaceId;
+  return !home || home === FAVORITES_ID ? spaceId : home;
+}
+
 export function unpin(itemId: string) {
-  const { model, windowId } = useSidebar.getState();
-  const spaceId = model.items[itemId]?.spaceId;
-  dispatch({ type: 'unpin', itemId, windowId: windowId!, spaceId });
+  const { windowId } = useSidebar.getState();
+  dispatch({ type: 'unpin', itemId, windowId: windowId!, spaceId: homeSpaceOf(itemId) });
 }
 
 export function pinTab(tabId: number) {
@@ -115,6 +129,28 @@ export function deleteFolder(itemId: string) {
 export function dropOn(source: DragSource, target: DropTarget) {
   const { model, spaceId, windowId } = useSidebar.getState();
   if (windowId === null) return;
+  const sourceId = source.kind === 'tab' ? null : source.itemId;
+
+  if (target.section === 'favorites') {
+    const order = orderForDrop(model, FAVORITES_ID, null, target.beforeId, null, sourceId);
+    if (source.kind === 'tab') {
+      const tab = useTabs.getState().tabs.get(source.tabId);
+      if (!tab || favoriteCount() >= FAVORITES_LIMIT) return;
+      dispatch({
+        type: 'pinTab',
+        itemId: newId(),
+        tabId: source.tabId,
+        spaceId: FAVORITES_ID,
+        parentId: null,
+        order,
+        url: tab.url,
+        title: tab.title,
+      });
+    } else if (source.kind !== 'folder') {
+      dispatch({ type: 'moveToSpace', itemId: source.itemId, spaceId: FAVORITES_ID, order });
+    }
+    return;
+  }
 
   if (target.section === 'today') {
     if (source.kind === 'tab') {
@@ -124,19 +160,18 @@ export function dropOn(source: DragSource, target: DropTarget) {
         tabId: source.tabId,
         beforeTabId: target.beforeTabId,
       });
-    } else if (source.kind === 'pin') {
+    } else if (source.kind === 'pin' || source.kind === 'favorite') {
       dispatch({
         type: 'unpin',
         itemId: source.itemId,
         windowId,
-        spaceId: model.items[source.itemId]?.spaceId,
+        spaceId: homeSpaceOf(source.itemId),
         todayBeforeTabId: target.beforeTabId,
       });
     }
     return;
   }
 
-  const sourceId = source.kind === 'tab' ? null : source.itemId;
   const order = orderForDrop(
     model,
     spaceId,
@@ -159,7 +194,8 @@ export function dropOn(source: DragSource, target: DropTarget) {
       title: tab.title,
     });
   } else {
-    dispatch({ type: 'move', itemId: source.itemId, parentId: target.parentId, order });
+    // A favorite dropped into Pinned joins the shown space.
+    dispatch({ type: 'move', itemId: source.itemId, spaceId, parentId: target.parentId, order });
   }
 }
 
@@ -401,4 +437,34 @@ export function setSpaceTheme(spaceId: string, theme: SpaceTheme | null) {
 
 export function setAppearance(appearance: Appearance) {
   dispatch({ type: 'setAppearance', appearance });
+}
+
+export function favoriteCount(): number {
+  const { model } = useSidebar.getState();
+  return Object.values(model.items).filter((item) => item.spaceId === FAVORITES_ID).length;
+}
+
+export function favoriteTab(tabId: number) {
+  const tab = useTabs.getState().tabs.get(tabId);
+  const { model } = useSidebar.getState();
+  if (!tab || favoriteCount() >= FAVORITES_LIMIT) return;
+  dispatch({
+    type: 'pinTab',
+    itemId: newId(),
+    tabId,
+    spaceId: FAVORITES_ID,
+    parentId: null,
+    order: orderAtEnd(model, FAVORITES_ID, null),
+    url: tab.url,
+    title: tab.title,
+  });
+}
+
+export function favoriteItem(itemId: string) {
+  if (favoriteCount() >= FAVORITES_LIMIT) return;
+  moveItemToSpace(itemId, FAVORITES_ID);
+}
+
+export function unfavoriteToPinned(itemId: string) {
+  moveItemToSpace(itemId, useSidebar.getState().spaceId);
 }

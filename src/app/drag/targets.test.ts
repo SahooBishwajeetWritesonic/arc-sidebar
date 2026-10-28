@@ -31,16 +31,18 @@ const nothingInside = () => false;
 
 describe('findTarget', () => {
   it('drops before or after a pinned tab by half', () => {
-    expect(findTarget(slots, 5, tab, nothingInside)).toMatchObject({
+    expect(findTarget(slots, { x: 100, y: 5 }, tab, nothingInside)).toMatchObject({
       section: 'pinned',
       parentId: null,
       beforeId: 'p1',
     });
-    expect(findTarget(slots, 35, tab, nothingInside)).toMatchObject({ afterId: 'p1' });
+    expect(findTarget(slots, { x: 100, y: 35 }, tab, nothingInside)).toMatchObject({
+      afterId: 'p1',
+    });
   });
 
   it('drops into a folder from its middle, highlighting it instead of drawing a line', () => {
-    expect(findTarget(slots, 61, tab, nothingInside)).toMatchObject({
+    expect(findTarget(slots, { x: 100, y: 61 }, tab, nothingInside)).toMatchObject({
       parentId: 'f1',
       into: 'f1',
       lineY: null,
@@ -48,7 +50,7 @@ describe('findTarget', () => {
   });
 
   it('drops at the start of an open folder from its bottom quarter', () => {
-    expect(findTarget(slots, 79, tab, nothingInside)).toMatchObject({
+    expect(findTarget(slots, { x: 100, y: 79 }, tab, nothingInside)).toMatchObject({
       parentId: 'f1',
       beforeId: 'c1',
       depth: 1,
@@ -56,7 +58,7 @@ describe('findTarget', () => {
   });
 
   it('drops at the end of the top level from the divider gap', () => {
-    expect(findTarget(slots, 140, tab, nothingInside)).toMatchObject({
+    expect(findTarget(slots, { x: 100, y: 140 }, tab, nothingInside)).toMatchObject({
       section: 'pinned',
       parentId: null,
       afterId: 'f1',
@@ -65,7 +67,9 @@ describe('findTarget', () => {
   });
 
   it('drops at the top of Today from the New Tab row', () => {
-    expect(findTarget(slots, 160, { kind: 'tab', tabId: 99 }, nothingInside)).toEqual({
+    expect(
+      findTarget(slots, { x: 100, y: 160 }, { kind: 'tab', tabId: 99 }, nothingInside),
+    ).toEqual({
       section: 'today',
       beforeTabId: 11,
       lineY: 189.5,
@@ -74,26 +78,42 @@ describe('findTarget', () => {
 
   it('drops between Today tabs and at the end', () => {
     const pin: DragSource = { kind: 'pin', itemId: 'p1', bound: true };
-    expect(findTarget(slots, 220, pin, nothingInside)).toMatchObject({ beforeTabId: 12 });
-    expect(findTarget(slots, 400, pin, nothingInside)).toMatchObject({ beforeTabId: null });
+    expect(findTarget(slots, { x: 100, y: 220 }, pin, nothingInside)).toMatchObject({
+      beforeTabId: 12,
+    });
+    expect(findTarget(slots, { x: 100, y: 400 }, pin, nothingInside)).toMatchObject({
+      beforeTabId: null,
+    });
   });
 
   it('keeps folders and closed pinned tabs out of Today', () => {
-    expect(findTarget(slots, 220, { kind: 'folder', itemId: 'f1' }, nothingInside)).toBeNull();
     expect(
-      findTarget(slots, 220, { kind: 'pin', itemId: 'p1', bound: false }, nothingInside),
+      findTarget(slots, { x: 100, y: 220 }, { kind: 'folder', itemId: 'f1' }, nothingInside),
+    ).toBeNull();
+    expect(
+      findTarget(
+        slots,
+        { x: 100, y: 220 },
+        { kind: 'pin', itemId: 'p1', bound: false },
+        nothingInside,
+      ),
     ).toBeNull();
   });
 
   it('refuses to drop a folder inside itself', () => {
     const folder: DragSource = { kind: 'folder', itemId: 'f1' };
-    expect(findTarget(slots, 61, folder, (id) => id === 'f1')).toBeNull();
+    expect(findTarget(slots, { x: 100, y: 61 }, folder, (id) => id === 'f1')).toBeNull();
   });
 
   it('treats a drop next to the dragged item as no move', () => {
-    expect(findTarget(slots, 220, tab, nothingInside)).toBeNull(); // 12 is the tab
+    expect(findTarget(slots, { x: 100, y: 220 }, tab, nothingInside)).toBeNull(); // 12 is the tab
     expect(
-      findTarget(slots, 35, { kind: 'pin', itemId: 'p1', bound: true }, nothingInside),
+      findTarget(
+        slots,
+        { x: 100, y: 35 },
+        { kind: 'pin', itemId: 'p1', bound: true },
+        nothingInside,
+      ),
     ).toBeNull();
   });
 });
@@ -141,5 +161,59 @@ describe('orderForDrop', () => {
 
   it('ignores the dragged item when it is one of the siblings', () => {
     expect(place(orderForDrop(model, 'default', null, null, 'c', 'a'), 'a')).toBe('bca');
+  });
+});
+
+describe('findTarget in Favorites', () => {
+  // Two tiles side by side above the space's title (which starts at 60).
+  const zone = {
+    bottom: 60,
+    full: false,
+    cells: [
+      { id: 'f1', left: 8, right: 168, top: 8, bottom: 55 },
+      { id: 'f2', left: 176, right: 336, top: 8, bottom: 55 },
+    ],
+  };
+  const tab: DragSource = { kind: 'tab', tabId: 11 };
+  const none = () => false;
+
+  it('drops before or after the nearest tile by its centre', () => {
+    expect(findTarget(slots, { x: 40, y: 30 }, tab, none, zone)).toEqual({
+      section: 'favorites',
+      index: 0,
+      beforeId: 'f1',
+    });
+    expect(findTarget(slots, { x: 300, y: 30 }, tab, none, zone)).toEqual({
+      section: 'favorites',
+      index: 2,
+      beforeId: null,
+    });
+  });
+
+  it('rearranges a favorite among the others', () => {
+    const favorite: DragSource = { kind: 'favorite', itemId: 'f1', bound: true };
+    expect(findTarget(slots, { x: 300, y: 30 }, favorite, none, zone)).toMatchObject({ index: 1 });
+  });
+
+  it('refuses folders, and anything new when full', () => {
+    expect(
+      findTarget(slots, { x: 40, y: 30 }, { kind: 'folder', itemId: 'x' }, none, zone),
+    ).toBeNull();
+    expect(findTarget(slots, { x: 40, y: 30 }, tab, none, { ...zone, full: true })).toBeNull();
+  });
+
+  it('opens the first slot of an empty grid', () => {
+    expect(findTarget(slots, { x: 40, y: 4 }, tab, none, { ...zone, cells: [] })).toEqual({
+      section: 'favorites',
+      index: 0,
+      beforeId: null,
+    });
+  });
+
+  it('lets a loaded favorite go back to Today', () => {
+    const favorite: DragSource = { kind: 'favorite', itemId: 'f1', bound: true };
+    expect(findTarget(slots, { x: 100, y: 220 }, favorite, none, zone)).toMatchObject({
+      section: 'today',
+    });
   });
 });

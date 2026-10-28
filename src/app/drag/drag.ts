@@ -1,8 +1,15 @@
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { create } from 'zustand';
 import { isWithin } from '@/model/tree';
+import { FAVORITES_LIMIT } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
-import { findTarget, type DragSource, type DropTarget, type Slot } from './targets';
+import {
+  findTarget,
+  type DragSource,
+  type DropTarget,
+  type FavoritesZone,
+  type Slot,
+} from './targets';
 
 export interface Ghost {
   title: string;
@@ -40,6 +47,7 @@ interface Tracking {
   grabY: number;
   started: boolean;
   slots: Slot[];
+  favorites?: FavoritesZone;
   scrollFrame: number;
 }
 
@@ -94,14 +102,15 @@ function onMove(event: PointerEvent) {
     if (distance < THRESHOLD) return;
     start(tracking);
   }
-  placeGhost();
   updateTarget();
+  placeGhost();
   autoScroll();
 }
 
 function start(t: Tracking) {
   t.started = true;
   t.slots = measure(t.sidebar);
+  t.favorites = measureFavorites(t.sidebar);
   t.sidebar.dataset.dragging = '';
   const width = t.row.getBoundingClientRect().width;
   useDrag.setState({ source: t.source, ghost: { ...t.ghost(), width }, target: null });
@@ -129,23 +138,59 @@ function measure(sidebar: HTMLElement): Slot[] {
   });
 }
 
+/** The Favorites grid and the strip above the shown space's title, where a drop favorites. */
+function measureFavorites(sidebar: HTMLElement): FavoritesZone | undefined {
+  const header = sidebar.querySelector('[data-active-page] [data-space-header]');
+  if (!header) return undefined;
+  const top = contentTop(sidebar);
+  const left = sidebar.getBoundingClientRect().left;
+  const cells = [...sidebar.querySelectorAll<HTMLElement>('[data-favorite-id]')].map((tile) => {
+    const rect = tile.getBoundingClientRect();
+    return {
+      id: tile.dataset.favoriteId!,
+      left: rect.left - left,
+      right: rect.right - left,
+      top: rect.top - top,
+      bottom: rect.bottom - top,
+    };
+  });
+  const title = header.getBoundingClientRect();
+  return {
+    // Down to the middle of the space's title, so an empty grid is easy to hit.
+    bottom: title.top + title.height / 2 - top,
+    cells,
+    full: cells.length >= FAVORITES_LIMIT,
+  };
+}
+
 function updateTarget() {
   if (!tracking?.started) return;
-  const y = tracking.y - contentTop(tracking.sidebar);
+  const point = {
+    x: tracking.x - tracking.sidebar.getBoundingClientRect().left,
+    y: tracking.y - contentTop(tracking.sidebar),
+  };
   const { model } = useSidebar.getState();
   const { source } = tracking;
-  const target = findTarget(tracking.slots, y, source, (folderId) =>
-    source.kind === 'folder' ? isWithin(model, folderId, source.itemId) : false,
+  const target = findTarget(
+    tracking.slots,
+    point,
+    source,
+    (folderId) => (source.kind === 'folder' ? isWithin(model, folderId, source.itemId) : false),
+    tracking.favorites,
   );
   if (JSON.stringify(target) !== JSON.stringify(useDrag.getState().target)) {
     useDrag.setState({ target });
   }
 }
 
+/** Over Favorites the ghost becomes a tile centred on the pointer, as in Arc. */
+export const GHOST_TILE = { width: 72, height: 47 };
+
 function placeGhost() {
   if (!tracking || !ghostElement) return;
-  const x = tracking.x - tracking.grabX;
-  const y = tracking.y - tracking.grabY;
+  const asTile = useDrag.getState().target?.section === 'favorites';
+  const x = tracking.x - (asTile ? GHOST_TILE.width / 2 : tracking.grabX);
+  const y = tracking.y - (asTile ? GHOST_TILE.height / 2 : tracking.grabY);
   ghostElement.style.transform = `translate3d(${x}px, ${y}px, 0)`;
 }
 

@@ -5,7 +5,17 @@ import type { SidebarModel } from '@/model/types';
 export type DragSource =
   | { kind: 'tab'; tabId: number }
   | { kind: 'pin'; itemId: string; bound: boolean }
+  | { kind: 'favorite'; itemId: string; bound: boolean }
   | { kind: 'folder'; itemId: string };
+
+/** The Favorites grid as measured when the drag starts, relative to the sidebar's content. */
+export interface FavoritesZone {
+  /** Everything above this (the shown space's title) drops into Favorites. */
+  bottom: number;
+  cells: { id: string; left: number; right: number; top: number; bottom: number }[];
+  /** Twelve already: nothing new fits. */
+  full: boolean;
+}
 
 /** A row as measured when the drag starts; the list doesn't move during a drag. */
 export interface Slot {
@@ -32,7 +42,9 @@ export type DropTarget =
       lineY: number | null;
       depth: number;
     }
-  | { section: 'today'; beforeTabId: number | null; lineY: number };
+  | { section: 'today'; beforeTabId: number | null; lineY: number }
+  /** Arc makes room in the grid instead of drawing a line. */
+  | { section: 'favorites'; index: number; beforeId: string | null };
 
 const HALF_GAP = 0.5;
 
@@ -42,15 +54,19 @@ const HALF_GAP = 0.5;
  */
 export function findTarget(
   slots: readonly Slot[],
-  y: number,
+  point: { x: number; y: number },
   source: DragSource,
   isInsideSource: (folderId: string) => boolean,
+  favorites?: FavoritesZone,
 ): DropTarget | null {
-  const target = locate(slots, y);
-  if (!target) return null;
+  if (favorites && point.y < favorites.bottom) return favoritesTarget(favorites, point, source);
+
+  const target = locate(slots, point.y);
+  if (!target || target.section === 'favorites') return target;
 
   if (target.section === 'today') {
-    if (source.kind === 'folder' || (source.kind === 'pin' && !source.bound)) return null;
+    if (source.kind === 'folder') return null;
+    if ((source.kind === 'pin' || source.kind === 'favorite') && !source.bound) return null;
     if (source.kind === 'tab' && target.beforeTabId === source.tabId) return null;
     return target;
   }
@@ -60,6 +76,34 @@ export function findTarget(
     if (target.parentId !== null && isInsideSource(target.parentId)) return null;
   }
   return target;
+}
+
+/** The slot in the grid nearest the pointer, before or after that tile by its centre. */
+function favoritesTarget(
+  zone: FavoritesZone,
+  point: { x: number; y: number },
+  source: DragSource,
+): DropTarget | null {
+  if (source.kind === 'folder') return null;
+  if (source.kind !== 'favorite' && zone.full) return null;
+  const cells = zone.cells.filter(
+    (cell) => source.kind !== 'favorite' || cell.id !== source.itemId,
+  );
+  if (!cells.length) return { section: 'favorites', index: 0, beforeId: null };
+
+  const centre = (cell: (typeof cells)[number]) => ({
+    x: (cell.left + cell.right) / 2,
+    y: (cell.top + cell.bottom) / 2,
+  });
+  let nearest = 0;
+  cells.forEach((cell, i) => {
+    const a = centre(cell);
+    const b = centre(cells[nearest]!);
+    if (Math.hypot(point.x - a.x, point.y - a.y) < Math.hypot(point.x - b.x, point.y - b.y))
+      nearest = i;
+  });
+  const index = point.x > centre(cells[nearest]!).x ? nearest + 1 : nearest;
+  return { section: 'favorites', index, beforeId: cells[index]?.id ?? null };
 }
 
 function locate(slots: readonly Slot[], y: number): DropTarget | null {
