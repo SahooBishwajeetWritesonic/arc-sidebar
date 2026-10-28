@@ -191,7 +191,38 @@
 /* The line between Pinned and Today: a 0.5 pt hairline, 10 pt in from each
    side of the content, with about 12.5 pt above and below. */
 .divider {
-  height: 0.5px;
+  position: relative;
   margin: 12px var(--row-inset);
+}
+
+.line {
+  height: 0.5px;
   background: var(--separator);
+}
+
+/* Arc's "Clear" sits on the divider and shows while the pointer is over the sidebar;
+   its background cuts the line. */
+.clear {
+  position: absolute;
+  top: 50%;
+  right: -6px;
+  translate: 0 -50%;
+  height: 20px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--plate);
+  color: var(--ink-secondary);
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+:global([data-sidebar]:hover) .clear,
+.clear:focus-visible {
+  opacity: 1;
+}
+
+.clear:hover {
+  color: var(--ink);
 }

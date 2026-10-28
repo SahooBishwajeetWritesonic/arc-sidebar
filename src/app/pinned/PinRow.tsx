@@ -7,7 +7,7 @@ import {
   renameItem,
   replacePinUrl,
   resetPin,
-  unpin,
+  unpinWithUndo,
 } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
 import { InlineEdit } from '@/app/rows/InlineEdit';
@@ -56,7 +56,7 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
     { label: 'New Folder with Tab', onSelect: () => newFolderWith(itemId) },
     'separator',
     ...(tab ? [{ label: 'Close Tab', onSelect: () => closePin(itemId) }] : []),
-    { label: 'Unpin', onSelect: () => unpin(itemId), danger: true },
+    { label: 'Unpin', onSelect: () => unpinWithUndo(itemId), danger: true },
   ];
 
   return (

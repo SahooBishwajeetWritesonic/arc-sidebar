@@ -1,8 +1,18 @@
 import { childrenOf, orderAtEnd, orderBefore } from '@/model/tree';
+import type { ArchiveAfter, ArchiveEntry } from '@/model/types';
+import type { TabInfo } from '@/platform/types';
 import { dispatch, newId, useSidebar } from '@/state/sidebar';
-import { activateTab, forgetTab, selectTodayIds, useTabs } from '@/state/tabs';
+import {
+  activateTab,
+  forgetTab,
+  leaveTab,
+  openNewTab,
+  selectTodayIds,
+  useTabs,
+} from '@/state/tabs';
 import { startEditing } from '@/state/ui';
 import { orderForDrop, type DragSource, type DropTarget } from './drag/targets';
+import { showToast } from './toast/toast';
 
 /** What the user can do in the sidebar: mouse, keyboard and context menus all go through here. */
 
@@ -179,4 +189,110 @@ export function moveByKeyboard(kind: string, id: string, delta: -1 | 1) {
     id,
   );
   dispatch({ type: 'move', itemId: id, parentId: item.parentId, order });
+}
+
+function archiveEntry(tab: TabInfo, reason: ArchiveEntry['reason'], batchId: string): ArchiveEntry {
+  return {
+    id: newId(),
+    url: tab.url,
+    title: tab.title,
+    spaceId: useSidebar.getState().spaceId,
+    archivedAt: Date.now(),
+    reason,
+    batchId,
+  };
+}
+
+/** Closing a Today tab archives it, as in Arc. */
+export function closeTodayTab(tabId: number) {
+  const tab = useTabs.getState().tabs.get(tabId);
+  const { windowId } = useSidebar.getState();
+  if (!tab || windowId === null || !leaveTab(tabId)) return;
+  dispatch({
+    type: 'archiveTabs',
+    windowId,
+    tabs: [{ tabId, entry: archiveEntry(tab, 'closed', newId()) }],
+  });
+}
+
+export function clearToday() {
+  const tabsState = useTabs.getState();
+  const { windowId } = useSidebar.getState();
+  if (windowId === null) return;
+  const tabs = selectTodayIds(tabsState)
+    .map((id) => tabsState.tabs.get(id))
+    .filter((tab): tab is TabInfo => tab !== undefined && !tab.audible);
+  if (!tabs.length) return;
+
+  // Closing every tab would close the window; keep one open, as Arc does.
+  if (tabs.length === tabsState.tabs.size) openNewTab();
+  const batchId = newId();
+  const archived = tabs.map((tab) => ({
+    tabId: tab.id,
+    entry: archiveEntry(tab, 'cleared', batchId),
+  }));
+  for (const tab of tabs) forgetTab(tab.id);
+  dispatch({ type: 'archiveTabs', windowId, tabs: archived });
+  showToast(`Cleared ${tabs.length} ${tabs.length === 1 ? 'tab' : 'tabs'}`, {
+    label: 'Undo',
+    run: () => restoreArchived(archived.map(({ entry }) => entry.id)),
+  });
+}
+
+export function restoreArchived(entryIds: string[]) {
+  const { windowId } = useSidebar.getState();
+  if (windowId !== null) dispatch({ type: 'restoreArchived', windowId, entryIds });
+}
+
+export function forgetArchived(entryIds: string[]) {
+  dispatch({ type: 'forgetArchived', entryIds });
+}
+
+export function setArchiveAfter(archiveAfter: ArchiveAfter) {
+  dispatch({ type: 'setArchiveAfter', archiveAfter });
+}
+
+/**
+ * Unpin from the menu. It drops the saved URL and custom name, so it offers
+ * Undo: a loaded pin is pinned again from its tab, an unloaded one restored.
+ */
+export function unpinWithUndo(itemId: string) {
+  const { model, session } = useSidebar.getState();
+  const item = model.items[itemId];
+  if (item?.kind !== 'pin') return;
+  const tabId = session.bindings[itemId];
+  unpin(itemId);
+  showToast(`Unpinned “${item.customTitle ?? item.title}”`, {
+    label: 'Undo',
+    run: () => {
+      if (tabId === undefined || !useTabs.getState().tabs.has(tabId)) {
+        dispatch({ type: 'restoreItems', items: [item] });
+        return;
+      }
+      dispatch({
+        type: 'pinTab',
+        itemId: item.id,
+        tabId,
+        spaceId: item.spaceId,
+        parentId: item.parentId,
+        order: item.order,
+        url: item.url,
+        title: item.title,
+      });
+      if (item.customTitle) renameItem(item.id, item.customTitle);
+    },
+  });
+}
+
+export function exportSidebar() {
+  const { model } = useSidebar.getState();
+  const data = { app: 'arc-sidebar', format: 1, exportedAt: new Date().toISOString(), model };
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+  );
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `arc-sidebar-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

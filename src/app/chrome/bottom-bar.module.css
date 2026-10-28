@@ -1,0 +1,39 @@
+/* Measured from Arc's bottom bar (research/07). */
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--bottom-bar-height);
+  padding: 0 var(--pad-side);
+  background: var(--plate);
+}
+
+.button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  background: none;
+  color: var(--ink-secondary);
+}
+
+.button:hover,
+.button[data-popup-open],
+.button[aria-pressed='true'] {
+  background: var(--bar-hover);
+  color: var(--ink);
+}
+
+.button:focus-visible {
+  outline: 2px dashed var(--focus-ring);
+  outline-offset: -2px;
+}

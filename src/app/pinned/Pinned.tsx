@@ -1,10 +1,11 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useMemo } from 'react';
+import { clearToday } from '@/app/actions';
 import { spring } from '@/app/motion';
 import styles from '@/app/rows/rows.module.css';
 import { flattenSpace } from '@/model/tree';
 import { useSidebar } from '@/state/sidebar';
-import { useTabs } from '@/state/tabs';
+import { selectTodayIds, useTabs } from '@/state/tabs';
 import { FolderRow } from './FolderRow';
 import { PinRow } from './PinRow';
 
@@ -13,6 +14,9 @@ export function Pinned() {
   const bindings = useSidebar((state) => state.session.bindings);
   const spaceId = useSidebar((state) => state.spaceId);
   const activeId = useTabs((state) => state.activeId);
+  const canClear = useTabs((state) =>
+    selectTodayIds(state).some((id) => !state.tabs.get(id)?.audible),
+  );
 
   const rows = useMemo(
     () => flattenSpace(model, spaceId, (item) => bindings[item.id] === activeId),
@@ -32,12 +36,19 @@ export function Pinned() {
           )}
         </AnimatePresence>
       </ul>
-      <motion.div
-        layout="position"
-        transition={{ layout: spring.row }}
-        className={styles.divider}
-        role="separator"
-      />
+      <motion.div layout="position" transition={{ layout: spring.row }} className={styles.divider}>
+        <div className={styles.line} role="separator" />
+        {canClear && (
+          <button
+            type="button"
+            className={styles.clear}
+            title="Archive all Today tabs (⌘⇧K)"
+            onClick={clearToday}
+          >
+            Clear
+          </button>
+        )}
+      </motion.div>
     </section>
   );
 }

@@ -15,6 +15,7 @@ export function DragLayer() {
       {line && (
         <div
           className={styles.line}
+          data-drop-line
           style={{ top: line.lineY!, '--depth': depth } as React.CSSProperties}
           aria-hidden
         />

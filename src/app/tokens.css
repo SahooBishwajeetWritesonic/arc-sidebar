@@ -15,6 +15,7 @@
   --favicon-gap: 11px; /* favicon to title */
   --accessory-size: 24px;
   --accessory-radius: 6px;
+  --bottom-bar-height: 44px;
 
   --font-ui: system-ui, -apple-system, sans-serif;
   --title-size: 14px;
@@ -30,6 +31,7 @@
   --row-selected-edge: light-dark(rgb(0 0 0 / 0.07), transparent);
   --row-selected-shadow: light-dark(rgb(0 0 0 / 0.12), transparent);
   --accessory-hover: light-dark(rgb(0 0 0 / 0.07), rgb(255 255 255 / 0.1));
+  --bar-hover: light-dark(rgb(0 0 0 / 0.05), rgb(255 255 255 / 0.078));
   --separator: light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.14));
   --focus-ring: #ffd60a; /* Arc's keyboard focus is a yellow ring */
   --slash: light-dark(rgb(0 0 0 / 0.3), rgb(255 255 255 / 0.3));

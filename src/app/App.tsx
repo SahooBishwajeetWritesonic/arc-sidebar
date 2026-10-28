@@ -1,10 +1,22 @@
-import { LayoutGroup, MotionConfig } from 'motion/react';
+import { AnimatePresence, LayoutGroup, MotionConfig, motion } from 'motion/react';
 import type { KeyboardEvent } from 'react';
-import { closePin, moveByKeyboard, pressPin, setFolderCollapsed } from '@/app/actions';
+import {
+  clearToday,
+  closePin,
+  closeTodayTab,
+  moveByKeyboard,
+  pressPin,
+  setFolderCollapsed,
+} from '@/app/actions';
 import { useSidebar } from '@/state/sidebar';
-import { activateTab, closeTab, openNewTab, useTabs } from '@/state/tabs';
+import { activateTab, openNewTab, useTabs } from '@/state/tabs';
+import { useUi } from '@/state/ui';
+import { ArchiveView } from './archive/ArchiveView';
+import { BottomBar } from './chrome/BottomBar';
 import { DragLayer } from './drag/DragLayer';
+import { fade } from './motion';
 import { Pinned } from './pinned/Pinned';
+import { ToastLayer } from './toast/ToastLayer';
 import { Today } from './today/Today';
 
 /** Enter on a row does what a click does. */
@@ -20,11 +32,18 @@ function press(kind: string, id: string) {
 
 /** Delete closes a tab (pinned tabs keep their pin). */
 function remove(kind: string, id: string) {
-  if (kind === 'tab') closeTab(Number(id));
+  if (kind === 'tab') closeTodayTab(Number(id));
   if (kind === 'pin') closePin(id);
 }
 
 function onKeyDown(event: KeyboardEvent<HTMLElement>) {
+  // Arc's Clear: ⌘⇧K (only while the panel has focus; Chrome keeps it otherwise).
+  if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
+    clearToday();
+    return;
+  }
+
   const rows = [...event.currentTarget.querySelectorAll<HTMLElement>('[data-nav-row]')];
   const index = rows.findIndex((row) => row === document.activeElement);
   if (index === -1) return;
@@ -78,23 +97,53 @@ export function App() {
   const tabsReady = useTabs((state) => state.ready);
   const sidebarReady = useSidebar((state) => state.ready);
   const ready = tabsReady && sidebarReady;
+  const view = useUi((state) => state.view);
+
   return (
     // reducedMotion="user": with Reduce Motion on, movement is skipped and fades stay.
     <MotionConfig reducedMotion="user">
       <main
         data-sidebar
-        style={{ position: 'relative', padding: '8px var(--pad-side)', color: 'var(--ink)' }}
+        style={{
+          position: 'relative',
+          padding: '8px var(--pad-side) calc(var(--bottom-bar-height) + 8px)',
+          color: 'var(--ink)',
+        }}
         onKeyDown={onKeyDown}
       >
         {ready && (
-          // One group, so rows in every section slide together when any changes.
-          <LayoutGroup>
-            <Pinned />
-            <Today />
-          </LayoutGroup>
+          <AnimatePresence mode="wait" initial={false}>
+            {view === 'archive' ? (
+              <motion.div
+                key="archive"
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -12 }}
+                transition={fade}
+              >
+                <ArchiveView />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="sidebar"
+                initial={{ opacity: 0, x: 12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 12 }}
+                transition={fade}
+              >
+                {/* One group, so rows in every section slide together when any changes. */}
+                <LayoutGroup>
+                  <Pinned />
+                  <Today />
+                </LayoutGroup>
+              </motion.div>
+            )}
+          </AnimatePresence>
         )}
         <DragLayer />
       </main>
+      <BottomBar />
+      <ToastLayer />
     </MotionConfig>
   );
 }

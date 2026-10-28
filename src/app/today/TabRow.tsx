@@ -1,10 +1,10 @@
 import { memo, useRef, type PointerEvent, type Ref } from 'react';
 import { Volume2, VolumeX, X } from 'lucide-react';
-import { pinTab } from '@/app/actions';
+import { closeTodayTab, pinTab } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
 import { Row } from '@/app/rows/Row';
 import styles from '@/app/rows/rows.module.css';
-import { activateTab, closeTab, faviconFor, toggleMuted, useTabs } from '@/state/tabs';
+import { activateTab, faviconFor, toggleMuted, useTabs } from '@/state/tabs';
 
 const stop = (event: PointerEvent) => event.stopPropagation();
 
@@ -28,7 +28,7 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
       selected={selected}
       previous={previous}
       onPress={() => activateTab(id)}
-      onMiddleClick={() => closeTab(id)}
+      onMiddleClick={() => closeTodayTab(id)}
       drag={{
         source: { kind: 'tab', tabId: id },
         ghost: () => ({ title: tab.title, faviconUrl: faviconFor(tab.url), folder: false }),
@@ -37,7 +37,7 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
         { label: 'Pin Tab', onSelect: () => pinTab(id) },
         { label: tab.muted ? 'Unmute Tab' : 'Mute Tab', onSelect: () => toggleMuted(id) },
         'separator',
-        { label: 'Close Tab', onSelect: () => closeTab(id) },
+        { label: 'Close Tab', onSelect: () => closeTodayTab(id) },
       ]}
     >
       <Favicon url={tab.url} loading={tab.loading && !tab.favIconUrl} />
@@ -60,7 +60,7 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
         aria-label="Close tab"
         tabIndex={-1}
         onPointerDown={stop}
-        onClick={() => closeTab(id)}
+        onClick={() => closeTodayTab(id)}
       >
         <X size={14} />
       </button>
