@@ -9,11 +9,17 @@ import {
   type Intent,
   type SessionState,
   type SidebarModel,
+  type TodaySnapshot,
 } from '@/model/types';
 import { SidebarService, type LiveTab } from './service';
 
 /** A tiny in-memory Chrome for the service. */
-function setup(options: { tabs: LiveTab[]; model?: SidebarModel; session?: SessionState }) {
+function setup(options: {
+  tabs: LiveTab[];
+  model?: SidebarModel;
+  session?: SessionState;
+  snapshot?: TodaySnapshot;
+}) {
   const tabs = [...options.tabs];
   let nextId = 100;
   let nextUuid = 0;
@@ -23,6 +29,7 @@ function setup(options: { tabs: LiveTab[]; model?: SidebarModel; session?: Sessi
     session: options.session ?? emptySession(),
     archive: emptyArchive() as ArchiveState,
     backups: [] as Backup[],
+    snapshot: options.snapshot ?? ({} as TodaySnapshot),
   };
   const calls: string[] = [];
   let service!: SidebarService;
@@ -50,6 +57,9 @@ function setup(options: { tabs: LiveTab[]; model?: SidebarModel; session?: Sessi
     saveArchive: async (archive) => void (saved.archive = archive),
     loadBackups: async () => saved.backups,
     saveBackups: async (backups) => void (saved.backups = backups),
+    loadTodaySnapshot: async () => saved.snapshot,
+    saveTodaySnapshot: async (snapshot) => void (saved.snapshot = snapshot),
+    defer: () => {}, // tests call snapshotToday() themselves
     now: () => now,
     newId: () => `id${nextUuid++}`,
   });
@@ -269,5 +279,108 @@ describe('SidebarService', () => {
     const { service } = setup({ tabs: [], model: old as SidebarModel });
     await service.ready;
     expect(service.snapshot().model.settings).toEqual({ archiveAfter: '12h' });
+  });
+
+  describe('spaces', () => {
+    const twoSpaces = (): SidebarModel => ({
+      ...emptyModel(),
+      spaces: [
+        { id: 'home', name: 'Home' },
+        { id: 'work', name: 'Work' },
+      ],
+    });
+
+    it('puts new tabs in the window\u2019s space and follows activation into another', async () => {
+      const { service, saved } = setup({ tabs: [tab(1, 'https://a.com')], model: twoSpaces() });
+      await service.ready;
+      expect(saved.session.tabSpaces).toEqual({ 1: 'home' });
+
+      await service.handleIntent({ type: 'setActiveSpace', windowId: 1, spaceId: 'work' });
+      await service.onTabCreated(tab(2, 'https://b.com'));
+      expect(saved.session.tabSpaces[2]).toBe('work');
+
+      // Activating a Home tab (say from Chrome's tab strip) switches the sidebar back.
+      await service.onTabActivated(1, 1);
+      expect(saved.session.activeSpaces['1']).toBe('home');
+      expect(saved.session.lastActive).toMatchObject({ home: 1 });
+    });
+
+    it('opens a new tab in a space that has nothing to select', async () => {
+      const { service, saved, calls } = setup({
+        tabs: [tab(1, 'https://a.com')],
+        model: twoSpaces(),
+      });
+      await service.handleIntent({
+        type: 'setActiveSpace',
+        windowId: 1,
+        spaceId: 'work',
+        openNewTab: true,
+      });
+      expect(calls).toContain('create chrome://newtab/');
+      expect(saved.session.tabSpaces[100]).toBe('work');
+    });
+
+    it('a pinned tab belongs to its pin\u2019s space', async () => {
+      const { service, saved } = setup({ tabs: [tab(1, 'https://a.com')], model: twoSpaces() });
+      await service.handleIntent({
+        ...pinIntent('p1', 1, 'https://a.com'),
+        spaceId: 'work',
+      } as Intent);
+      expect(saved.session.tabSpaces).toEqual({});
+      await service.onTabActivated(1, 1);
+      expect(saved.session.activeSpaces['1']).toBe('work');
+    });
+
+    it('deleting a space removes its pins and moves its Today tabs to another space', async () => {
+      const model = twoSpaces();
+      const { service, saved } = setup({
+        tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')],
+        model,
+      });
+      await service.handleIntent({ type: 'moveTabToSpace', tabId: 2, spaceId: 'work' });
+      await service.handleIntent({
+        ...pinIntent('p1', 1, 'https://a.com'),
+        spaceId: 'work',
+      } as Intent);
+      await service.handleIntent({
+        type: 'deleteSpace',
+        spaceId: 'work',
+        fallbackSpaceId: 'home',
+        itemIds: ['p1'],
+        windowId: 1,
+      });
+      expect(saved.model.spaces.map((space) => space.id)).toEqual(['home']);
+      expect(saved.model.items.p1).toBeUndefined();
+      expect(saved.session.tabSpaces[2]).toBe('home');
+      // The tab p1 had open is released into Home's Today, not left bound to nothing.
+      expect(saved.session.bindings).toEqual({});
+      expect(saved.session.tabSpaces[1]).toBe('home');
+      expect(saved.session.orders['1']).toContain(1);
+    });
+
+    it('puts restored tabs back in their spaces after a restart', async () => {
+      const { service, saved } = setup({
+        model: twoSpaces(),
+        snapshot: { home: ['https://a.com/'], work: ['https://b.com/', 'https://c.com/'] },
+        // Fresh session: Chrome has restarted and restored the tabs with new ids.
+        tabs: [tab(7, 'https://c.com/'), tab(8, 'https://a.com/'), tab(9, 'https://new.com/')],
+      });
+      await service.ready;
+      expect(saved.session.tabSpaces).toEqual({ 7: 'work', 8: 'home', 9: 'home' });
+
+      // One Chrome restores a moment later is matched too.
+      await service.onTabCreated(tab(10, 'https://b.com/'));
+      expect(saved.session.tabSpaces[10]).toBe('work');
+    });
+
+    it('snapshots each space\u2019s Today URLs, top first', async () => {
+      const { service, saved } = setup({
+        model: twoSpaces(),
+        tabs: [tab(1, 'https://a.com/'), tab(2, 'https://b.com/')],
+      });
+      await service.handleIntent({ type: 'moveTabToSpace', tabId: 2, spaceId: 'work' });
+      await service.snapshotToday();
+      expect(saved.snapshot).toEqual({ work: ['https://b.com/'], home: ['https://a.com/'] });
+    });
   });
 });

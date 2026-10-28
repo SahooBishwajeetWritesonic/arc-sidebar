@@ -21,6 +21,8 @@ const state = (change: Partial<TabsState> = {}): TabsState => ({
   tabs: new Map([1, 2, 3].map((id) => [id, tab(id)])),
   order: [1, 2, 3],
   bound: new Set(),
+  tabSpaces: {},
+  spaceId: 'home',
   openingUrls: [],
   activeId: 1,
   previousId: null,
@@ -49,6 +51,12 @@ describe('selectTodayIds', () => {
     tabs.set(5, tab(5));
     const ids = selectTodayIds(state({ tabs, openingUrls: ['https://mail.google.com/mail/u/0/'] }));
     expect(ids).toEqual([5, 1, 2, 3]);
+  });
+
+  it('shows only the tabs of the space it is asked for', () => {
+    const tabSpaces = { 1: 'home', 2: 'work', 3: 'home' };
+    expect(selectTodayIds(state({ tabSpaces }))).toEqual([1, 3]);
+    expect(selectTodayIds(state({ tabSpaces }), 'work')).toEqual([2]);
   });
 
   it('skips ids in the order that have no tab', () => {
