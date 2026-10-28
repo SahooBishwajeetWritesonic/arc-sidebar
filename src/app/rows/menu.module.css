@@ -1,0 +1,51 @@
+/* Mirrors Arc's native macOS menus: they appear at once and fade out quickly. */
+
+.positioner {
+  outline: none;
+  z-index: 10;
+}
+
+.popup {
+  min-width: 200px;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--menu-bg);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  backdrop-filter: blur(24px) saturate(1.8);
+  box-shadow:
+    0 0 0 0.5px var(--menu-edge),
+    0 10px 30px rgb(0 0 0 / 0.22);
+  color: var(--ink);
+  font-size: var(--menu-size);
+  outline: none;
+  transition: opacity 150ms ease-out;
+}
+
+.popup[data-ending-style] {
+  opacity: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 5px;
+  outline: none;
+  cursor: default;
+}
+
+.item[data-highlighted] {
+  background: var(--menu-highlight);
+  color: #fff;
+}
+
+.item[data-danger]:not([data-highlighted]) {
+  color: light-dark(#d70015, #ff6961);
+}
+
+.separator {
+  height: 1px;
+  margin: 5px 10px;
+  background: var(--separator);
+}

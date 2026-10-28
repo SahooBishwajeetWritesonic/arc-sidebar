@@ -10,6 +10,7 @@
   --row-gap: 1px;
   --row-radius: 10px;
   --row-inset: 10px; /* pill edge to favicon */
+  --indent: 16px; /* per folder level */
   --favicon-size: 16px;
   --favicon-gap: 11px; /* favicon to title */
   --accessory-size: 24px;
@@ -31,4 +32,11 @@
   --accessory-hover: light-dark(rgb(0 0 0 / 0.07), rgb(255 255 255 / 0.1));
   --separator: light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.14));
   --focus-ring: #ffd60a; /* Arc's keyboard focus is a yellow ring */
+  --slash: light-dark(rgb(0 0 0 / 0.3), rgb(255 255 255 / 0.3));
+
+  /* Context menus: macOS-style, Arc's own menu highlight */
+  --menu-bg: light-dark(rgb(246 246 248 / 0.88), rgb(42 42 45 / 0.88));
+  --menu-edge: light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.14));
+  --menu-highlight: #3970c5;
+  --menu-size: 13px;
 }

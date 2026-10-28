@@ -1,16 +1,13 @@
 import { useState } from 'react';
 import { Globe } from 'lucide-react';
-import type { TabInfo } from '@/platform/types';
 import { faviconFor } from '@/state/tabs';
-import styles from './today.module.css';
+import styles from './rows.module.css';
 
-export function Favicon({ tab }: { tab: TabInfo }) {
-  const src = faviconFor(tab);
+export function Favicon({ url, loading }: { url: string; loading?: boolean }) {
+  const src = faviconFor(url);
   const [failed, setFailed] = useState<string | undefined>();
 
-  if (tab.loading && !tab.favIconUrl) {
-    return <span className={styles.spinner} aria-hidden />;
-  }
+  if (loading) return <span className={styles.spinner} aria-hidden />;
   if (!src || failed === src) {
     return <Globe className={styles.favicon} size={16} strokeWidth={1.75} aria-hidden />;
   }
