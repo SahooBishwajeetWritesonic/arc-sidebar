@@ -9,7 +9,7 @@ const panel = (page: Page) => page.frameLocator('iframe[title="Sidebar"]');
 /** The sidebar's rows, top to bottom, as "kind:depth:title". */
 async function rows(page: Page) {
   return panel(page)
-    .locator('[data-sidebar] [data-nav-row]')
+    .locator('[data-active-page] [data-nav-row]')
     .evaluateAll((elements) =>
       elements.map((el) => {
         const element = el as HTMLElement;
@@ -21,12 +21,12 @@ async function rows(page: Page) {
 
 async function ready(page: Page) {
   await page.goto('/');
-  await expect(panel(page).locator('[data-nav-row="folder"]')).toHaveCount(1);
-  await expect(panel(page).locator('[data-nav-row="tab"]')).toHaveCount(4);
+  await expect(panel(page).locator('[data-active-page] [data-nav-row="folder"]')).toHaveCount(1);
+  await expect(panel(page).locator('[data-active-page] [data-nav-row="tab"]')).toHaveCount(4);
 }
 
 const row = (page: Page, title: string) =>
-  panel(page).locator('[data-sidebar] [data-nav-row]', { hasText: title }).first();
+  panel(page).locator('[data-active-page] [data-nav-row]', { hasText: title }).first();
 
 /** Presses a row, moves to a fraction of another row's height, releases. */
 async function drag(page: Page, from: string, to: string, fraction: number) {

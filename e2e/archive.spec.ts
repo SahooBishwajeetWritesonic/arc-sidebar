@@ -8,7 +8,7 @@ const panel = (page: Page) => page.frameLocator('iframe[title="Sidebar"]');
 
 async function today(page: Page) {
   return panel(page)
-    .locator('[data-sidebar] [data-nav-row="tab"]')
+    .locator('[data-active-page] [data-nav-row="tab"]')
     .evaluateAll((elements) =>
       elements.map(
         (el) => el.querySelector('span[class*="title"]')?.textContent?.slice(0, 16) ?? '',
@@ -18,8 +18,8 @@ async function today(page: Page) {
 
 async function ready(page: Page) {
   await page.goto('/');
-  await expect(panel(page).locator('[data-nav-row="folder"]')).toHaveCount(1);
-  await expect(panel(page).locator('[data-nav-row="tab"]')).toHaveCount(4);
+  await expect(panel(page).locator('[data-active-page] [data-nav-row="folder"]')).toHaveCount(1);
+  await expect(panel(page).locator('[data-active-page] [data-nav-row="tab"]')).toHaveCount(4);
 }
 
 test('Clear archives Today except audio, and Undo brings it back in order', async ({ page }) => {
@@ -56,7 +56,7 @@ test('auto-archive skips the active tab and tabs playing audio', async ({ page }
   await page.getByRole('button', { name: 'Make inactive tabs 13 hours old' }).click();
   await page.getByRole('button', { name: 'Run auto-archive now' }).click();
   await expect.poll(() => today(page)).toEqual(['Lo-fi beats to c']);
-  await expect(panel(page).locator('[data-nav-row="pin"]')).toHaveCount(4);
+  await expect(panel(page).locator('[data-active-page] [data-nav-row="pin"]')).toHaveCount(4);
 });
 
 test('the archive time follows the setting', async ({ page }) => {
