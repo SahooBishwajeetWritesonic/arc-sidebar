@@ -1,27 +1,32 @@
 import { expect, test, type Page } from '@playwright/test';
 
+/** The sidebar runs in a frame on the harness page, as in Chrome's side panel. */
+const panel = (page: Page) => page.frameLocator('iframe[title="Sidebar"]');
+
 // The harness seeds: Pinned = Gmail, Calendar, Dev (Linear, GitHub);
 // Today = Engineering Wiki, Figma, chrome.sidePanel docs, YouTube.
 
 /** The sidebar's rows, top to bottom, as "kind:depth:title". */
 async function rows(page: Page) {
-  return page.locator('[data-sidebar] [data-nav-row]').evaluateAll((elements) =>
-    elements.map((el) => {
-      const element = el as HTMLElement;
-      const title = element.querySelector('span[class*="title"]')?.textContent ?? '';
-      return `${element.dataset.navRow}:${element.dataset.depth ?? 0}:${title.slice(0, 18)}`;
-    }),
-  );
+  return panel(page)
+    .locator('[data-sidebar] [data-nav-row]')
+    .evaluateAll((elements) =>
+      elements.map((el) => {
+        const element = el as HTMLElement;
+        const title = element.querySelector('span[class*="title"]')?.textContent ?? '';
+        return `${element.dataset.navRow}:${element.dataset.depth ?? 0}:${title.slice(0, 18)}`;
+      }),
+    );
 }
 
 async function ready(page: Page) {
   await page.goto('/');
-  await expect(page.locator('[data-nav-row="folder"]')).toHaveCount(1);
-  await expect(page.locator('[data-nav-row="tab"]')).toHaveCount(4);
+  await expect(panel(page).locator('[data-nav-row="folder"]')).toHaveCount(1);
+  await expect(panel(page).locator('[data-nav-row="tab"]')).toHaveCount(4);
 }
 
 const row = (page: Page, title: string) =>
-  page.locator('[data-sidebar] [data-nav-row]', { hasText: title }).first();
+  panel(page).locator('[data-sidebar] [data-nav-row]', { hasText: title }).first();
 
 /** Presses a row, moves to a fraction of another row's height, releases. */
 async function drag(page: Page, from: string, to: string, fraction: number) {
@@ -92,11 +97,11 @@ test('Escape cancels a drag, and the list never moves during one', async ({ page
   await page.mouse.move(source.x + 60, source.y + 20);
   await page.mouse.down();
   await page.mouse.move(source.x + 60, source.y - 120, { steps: 10 });
-  await expect(page.locator('[class*="line"]')).toHaveCount(1);
+  await expect(panel(page).locator('[data-drop-line]')).toHaveCount(1);
   expect(await rows(page)).toEqual(before);
   await page.keyboard.press('Escape');
   await page.mouse.up();
-  await expect(page.locator('[class*="line"]')).toHaveCount(0);
+  await expect(panel(page).locator('[data-drop-line]')).toHaveCount(0);
   expect(await rows(page)).toEqual(before);
 });
 

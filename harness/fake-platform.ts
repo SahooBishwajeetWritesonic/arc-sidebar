@@ -2,8 +2,11 @@ import { generateNKeysBetween } from 'fractional-indexing';
 import { SidebarService, type LiveTab } from '@/background/service';
 import {
   DEFAULT_SPACE_ID,
+  emptyArchive,
   emptyModel,
   emptySession,
+  type ArchiveState,
+  type Backup,
   type Intent,
   type SessionState,
   type SidebarModel,
@@ -19,6 +22,8 @@ export interface Fixture {
 const WINDOW_ID = 1;
 const MODEL_KEY = 'harness:model';
 const SESSION_KEY = 'harness:session';
+const ARCHIVE_KEY = 'harness:archive';
+const BACKUPS_KEY = 'harness:backups';
 
 function read<T>(storage: Storage, key: string, fallback: T): T {
   try {
@@ -37,6 +42,13 @@ export class FakePlatform implements Platform {
   private nextId = 1;
   private model: SidebarModel = read(localStorage, MODEL_KEY, emptyModel());
   private session: SessionState = read(sessionStorage, SESSION_KEY, emptySession());
+  private archive: ArchiveState = read(localStorage, ARCHIVE_KEY, emptyArchive());
+  private backups: Backup[] = read(localStorage, BACKUPS_KEY, []);
+  /** When each tab was last viewed, like Chrome's tab.lastAccessed. */
+  private accessed = new Map<number, number>();
+  private archiveListeners = new Set<(archive: ArchiveState) => void>();
+  /** Titles seen per URL, so a reopened tab gets its page title back. */
+  private titles = new Map<string, string>();
   private tabListeners = new Set<(event: TabEvent) => void>();
   private modelListeners = new Set<(model: SidebarModel) => void>();
   private sessionListeners = new Set<(session: SessionState) => void>();
@@ -46,11 +58,8 @@ export class FakePlatform implements Platform {
     this.tabs = fixtures.map((fixture, i) => this.makeTab(fixture, i === 0));
     this.service = new SidebarService({
       queryTabs: async () => this.tabs.map((tab, index) => this.live(tab, index)),
-      getTab: async (tabId) => {
-        const index = this.tabs.findIndex((tab) => tab.id === tabId);
-        return index === -1 ? undefined : this.live(this.tabs[index]!, index);
-      },
-      createTab: async (_windowId, url) => this.openTab({ title: new URL(url).hostname, url }),
+      createTab: async (_windowId, url, active) =>
+        this.openTab({ title: this.titles.get(url) ?? new URL(url).hostname, url }, active),
       activateTab: async (tabId) => this.activateTab(tabId),
       navigateTab: async (tabId, url) => this.navigate(tabId, url),
       closeTab: async (tabId) => this.closeTab(tabId),
@@ -66,7 +75,19 @@ export class FakePlatform implements Platform {
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
         this.later(12, () => this.sessionListeners.forEach((listener) => listener(session)));
       },
+      loadArchive: async () => this.archive,
+      saveArchive: async (archive) => {
+        this.archive = archive;
+        localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive));
+        this.later(12, () => this.archiveListeners.forEach((listener) => listener(archive)));
+      },
+      loadBackups: async () => this.backups,
+      saveBackups: async (backups) => {
+        this.backups = backups;
+        localStorage.setItem(BACKUPS_KEY, JSON.stringify(backups));
+      },
       now: () => Date.now(),
+      newId: () => crypto.randomUUID(),
     });
     void this.seed();
   }
@@ -104,6 +125,16 @@ export class FakePlatform implements Platform {
     return () => void this.sessionListeners.delete(listener);
   }
 
+  async loadArchive() {
+    await this.service.ready;
+    return this.archive;
+  }
+
+  onArchiveChange(listener: (archive: ArchiveState) => void) {
+    this.archiveListeners.add(listener);
+    return () => void this.archiveListeners.delete(listener);
+  }
+
   async sendIntent(intent: Intent) {
     await new Promise((resolve) => setTimeout(resolve, 6)); // message hop
     return this.service.handleIntent(intent);
@@ -113,6 +144,7 @@ export class FakePlatform implements Platform {
     const current = this.tabs.find((tab) => tab.active);
     if (current?.id === tabId || !this.tabs.some((tab) => tab.id === tabId)) return;
     for (const tab of this.tabs) tab.active = tab.id === tabId;
+    this.accessed.set(tabId, Date.now());
     this.emit({ type: 'activate', tabId, windowId: WINDOW_ID });
   }
 
@@ -144,12 +176,12 @@ export class FakePlatform implements Platform {
 
   // Simulation helpers for the harness controls
 
-  openTab(fixture: Fixture) {
+  openTab(fixture: Fixture, active = true) {
     const tab = this.makeTab(fixture, false);
     this.tabs.push(tab);
     this.emit({ type: 'upsert', tab: { ...tab } });
     void this.service.onTabCreated(this.live(tab, this.tabs.length - 1));
-    this.activateTab(tab.id);
+    if (active) this.activateTab(tab.id);
     if (/^https?:/.test(tab.url)) this.simulateLoad(tab.id);
   }
 
@@ -177,6 +209,16 @@ export class FakePlatform implements Platform {
     this.navigate(tab.id, url.href, `Another page on ${url.hostname}`);
   }
 
+  /** Pretends nobody has looked at the inactive tabs for `hours`. */
+  ageTabs(hours: number) {
+    const then = Date.now() - hours * 3600_000;
+    for (const tab of this.tabs) if (!tab.active) this.accessed.set(tab.id, then);
+  }
+
+  runAutoArchive() {
+    return this.service.archiveStale();
+  }
+
   activeTabId() {
     return this.tabs.find((tab) => tab.active)?.id;
   }
@@ -189,6 +231,8 @@ export class FakePlatform implements Platform {
 
   resetEverything() {
     localStorage.removeItem(MODEL_KEY);
+    localStorage.removeItem(ARCHIVE_KEY);
+    localStorage.removeItem(BACKUPS_KEY);
     sessionStorage.removeItem(SESSION_KEY);
     location.reload();
   }
@@ -227,10 +271,21 @@ export class FakePlatform implements Platform {
   }
 
   private live(tab: TabInfo, index: number): LiveTab {
-    return { id: tab.id, windowId: tab.windowId, index, url: tab.url };
+    return {
+      id: tab.id,
+      windowId: tab.windowId,
+      index,
+      url: tab.url,
+      title: tab.title,
+      active: tab.active,
+      audible: tab.audible,
+      lastAccessed: this.accessed.get(tab.id),
+    };
   }
 
   private makeTab(fixture: Fixture, active: boolean): TabInfo {
+    this.accessed.set(this.nextId, Date.now());
+    this.titles.set(fixture.url, fixture.title);
     return {
       id: this.nextId++,
       windowId: WINDOW_ID,

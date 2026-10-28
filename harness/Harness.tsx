@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { App } from '@/app/App';
 import type { FakePlatform } from './fake-platform';
 import { morePages } from './fixtures';
 import styles from './harness.module.css';
@@ -48,6 +47,10 @@ export function Harness({ platform }: { platform: FakePlatform }) {
         <button onClick={() => platform.toggleAudibleRandom()}>Toggle audio</button>
         <button onClick={() => platform.navigateActive()}>Follow a link in the active tab</button>
 
+        <h2>Archive</h2>
+        <button onClick={() => platform.ageTabs(13)}>Make inactive tabs 13 hours old</button>
+        <button onClick={() => void platform.runAutoArchive()}>Run auto-archive now</button>
+
         <h2>Browser</h2>
         <button onClick={() => platform.restartChrome()}>
           Restart Chrome (clears the session)
@@ -75,12 +78,15 @@ export function Harness({ platform }: { platform: FakePlatform }) {
         </label>
       </aside>
 
-      {/* Chrome draws a header above every side panel; this approximates it. */}
+      {/* Mimics Chrome's panel header; the frame gives the panel its own viewport. */}
       <div className={styles.panel} style={{ width }}>
         <div className={styles.chromeHeader}>Arc Sidebar</div>
-        <div className={styles.panelBody}>
-          <App />
-        </div>
+        <iframe
+          key={scheme}
+          title="Sidebar"
+          className={styles.frame}
+          src={`/panel.html?theme=${scheme === 'light dark' ? 'system' : scheme}`}
+        />
       </div>
     </div>
   );
