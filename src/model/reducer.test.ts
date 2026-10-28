@@ -218,3 +218,91 @@ describe('settings, undo and archive', () => {
     expect(next.orders['1']).toEqual([1, 3]);
   });
 });
+
+describe('spaces', () => {
+  const twoSpaces = (): SidebarModel => ({
+    ...emptyModel(),
+    spaces: [
+      { id: 'home', name: 'Home' },
+      { id: 'work', name: 'Work' },
+    ],
+  });
+  const ids = (model: SidebarModel) => model.spaces.map((space) => space.id);
+
+  it('creates a space at an index, once', () => {
+    const intent: Intent = { type: 'createSpace', spaceId: 'play', name: 'Play', index: 1 };
+    const once = applyIntent(twoSpaces(), intent);
+    expect(ids(once)).toEqual(['home', 'play', 'work']);
+    expect(applyIntent(once, intent)).toBe(once);
+  });
+
+  it('renames, sets and removes icons, and reorders', () => {
+    let model = applyIntent(twoSpaces(), {
+      type: 'renameSpace',
+      spaceId: 'work',
+      name: ' Office ',
+    });
+    expect(model.spaces[1]!.name).toBe('Office');
+    model = applyIntent(model, {
+      type: 'setSpaceIcon',
+      spaceId: 'work',
+      icon: { type: 'symbol', name: 'code' },
+    });
+    expect(model.spaces[1]!.icon).toEqual({ type: 'symbol', name: 'code' });
+    model = applyIntent(model, { type: 'setSpaceIcon', spaceId: 'work', icon: null });
+    expect(model.spaces[1]).not.toHaveProperty('icon');
+    model = applyIntent(model, { type: 'moveSpace', spaceId: 'work', index: 0 });
+    expect(ids(model)).toEqual(['work', 'home']);
+  });
+
+  it('never deletes the last space', () => {
+    const one = emptyModel();
+    const intent: Intent = {
+      type: 'deleteSpace',
+      spaceId: 'default',
+      fallbackSpaceId: 'default',
+      itemIds: [],
+      windowId: 1,
+    };
+    expect(applyIntent(one, intent)).toBe(one);
+  });
+
+  it('moves a folder and its contents to another space', () => {
+    let model = applyIntent(twoSpaces(), {
+      type: 'createFolder',
+      itemId: 'f1',
+      spaceId: 'home',
+      parentId: null,
+      order: 'a0',
+      name: 'Dev',
+    });
+    model = applyIntent(model, { ...pin('p1', 'a0', 'f1'), spaceId: 'home' } as Intent);
+    model = applyIntent(model, { type: 'moveToSpace', itemId: 'f1', spaceId: 'work', order: 'a0' });
+    expect(model.items.f1).toMatchObject({ spaceId: 'work', parentId: null });
+    expect(model.items.p1).toMatchObject({ spaceId: 'work', parentId: 'f1' });
+  });
+
+  it('switches the active space and moves Today tabs between spaces', () => {
+    const session = {
+      ...emptySession(),
+      orders: { '1': [1, 2] },
+      tabSpaces: { 1: 'home', 2: 'home' },
+    };
+    const moved = applySessionIntent(session, {
+      type: 'moveTabToSpace',
+      tabId: 2,
+      spaceId: 'work',
+    });
+    expect(moved.tabSpaces).toEqual({ 1: 'home', 2: 'work' });
+    expect(moved.orders['1']).toEqual([2, 1]); // on top of the other space's Today
+    const shown = applySessionIntent(moved, {
+      type: 'setActiveSpace',
+      windowId: 1,
+      spaceId: 'work',
+    });
+    expect(shown.activeSpaces).toEqual({ '1': 'work' });
+    expect(
+      applySessionIntent(shown, { type: 'setActiveSpace', windowId: 1, spaceId: 'work' }),
+    ).toBe(shown);
+  });
+});
