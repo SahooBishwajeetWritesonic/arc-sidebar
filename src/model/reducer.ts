@@ -1,5 +1,5 @@
 import { generateNKeysBetween } from 'fractional-indexing';
-import { withTabOnTop, withoutTab } from '@/platform/today-order';
+import { withTabBefore, withTabOnTop, withoutTab } from '@/platform/today-order';
 import { childrenOf, isWithin } from './tree';
 import type { Intent, Item, SessionState, SidebarModel } from './types';
 
@@ -97,16 +97,13 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
     case 'openPin':
     case 'closePin':
     case 'resetPin':
+    case 'reorderToday':
       return model;
   }
 }
 
 /** The session part of an intent that a panel can predict. */
-export function applySessionIntent(
-  session: SessionState,
-  intent: Intent,
-  windowId: number,
-): SessionState {
+export function applySessionIntent(session: SessionState, intent: Intent): SessionState {
   switch (intent.type) {
     case 'pinTab': {
       const orders = Object.fromEntries(
@@ -124,12 +121,21 @@ export function applySessionIntent(
       if (tabId === undefined) return session;
       const { [intent.itemId]: _unbound, ...bindings } = session.bindings;
       if (intent.type === 'closePin') return { ...session, bindings };
-      const key = String(windowId);
-      return {
-        ...session,
-        bindings,
-        orders: { ...session.orders, [key]: withTabOnTop(session.orders[key] ?? [], tabId) },
-      };
+      const key = String(intent.windowId);
+      const order = session.orders[key] ?? [];
+      const placed =
+        intent.todayBeforeTabId === undefined
+          ? withTabOnTop(order, tabId)
+          : withTabBefore(order, tabId, intent.todayBeforeTabId);
+      return { ...session, bindings, orders: { ...session.orders, [key]: placed } };
+    }
+    case 'reorderToday': {
+      const key = String(intent.windowId);
+      const order = session.orders[key] ?? [];
+      const placed = withTabBefore(order, intent.tabId, intent.beforeTabId);
+      if (placed.every((id, i) => id === order[i]) && placed.length === order.length)
+        return session;
+      return { ...session, orders: { ...session.orders, [key]: placed } };
     }
     default:
       return session;

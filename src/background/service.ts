@@ -85,14 +85,10 @@ export class SidebarService {
     const tabId = 'itemId' in intent ? this.session.bindings[intent.itemId] : undefined;
     const item = 'itemId' in intent ? this.model.items[intent.itemId] : undefined;
 
-    let windowId = 'windowId' in intent ? intent.windowId : -1;
-    if (intent.type === 'unpin' && tabId !== undefined) {
-      windowId = (await this.deps.getTab(tabId))?.windowId ?? windowId;
-    }
-
+    // State changes first, synchronously, so intents apply in arrival order; side effects after.
     const model = applyIntent(this.model, intent);
     if (model !== this.model) this.writeModel(model);
-    const session = applySessionIntent(this.session, intent, windowId);
+    const session = applySessionIntent(this.session, intent);
     if (session !== this.session) this.writeSession(session);
 
     switch (intent.type) {

@@ -73,7 +73,14 @@ export type Intent =
       url: string;
       title: string;
     }
-  | { type: 'unpin'; itemId: string; windowId: number }
+  | {
+      type: 'unpin';
+      itemId: string;
+      windowId: number;
+      /** Where the tab goes in Today: before this tab, null for the end, omitted for the top. */
+      todayBeforeTabId?: number | null;
+    }
+  | { type: 'reorderToday'; windowId: number; tabId: number; beforeTabId: number | null }
   | { type: 'openPin'; itemId: string; windowId: number }
   | { type: 'closePin'; itemId: string }
   | { type: 'resetPin'; itemId: string }

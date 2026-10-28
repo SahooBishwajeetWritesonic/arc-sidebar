@@ -54,7 +54,7 @@ function rebuild() {
   let { model, session } = saved;
   for (const { intent } of pending) {
     model = applyIntent(model, intent);
-    session = applySessionIntent(session, intent, windowId ?? -1);
+    session = applySessionIntent(session, intent);
   }
   for (const itemId of opening.keys()) {
     if (session.bindings[itemId] !== undefined) opening.delete(itemId);

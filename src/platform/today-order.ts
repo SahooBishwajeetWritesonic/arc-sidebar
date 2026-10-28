@@ -9,6 +9,18 @@ export function withTabOnTop(order: readonly number[], tabId: number): number[] 
   return [tabId, ...order.filter((id) => id !== tabId)];
 }
 
+/** Moves (or inserts) a tab just before another one, or to the end for null. */
+export function withTabBefore(
+  order: readonly number[],
+  tabId: number,
+  beforeTabId: number | null,
+): number[] {
+  const rest = order.filter((id) => id !== tabId);
+  const index = beforeTabId === null ? -1 : rest.indexOf(beforeTabId);
+  if (index === -1) return [...rest, tabId];
+  return [...rest.slice(0, index), tabId, ...rest.slice(index)];
+}
+
 export function withoutTab(order: readonly number[], tabId: number): number[] {
   return order.filter((id) => id !== tabId);
 }
