@@ -1,9 +1,11 @@
 import { create } from 'zustand';
-import { applyIntent, applySessionIntent } from '@/model/reducer';
+import { applyArchiveIntent, applyIntent, applySessionIntent } from '@/model/reducer';
 import {
   DEFAULT_SPACE_ID,
+  emptyArchive,
   emptyModel,
   emptySession,
+  type ArchiveState,
   type Intent,
   type IntentResult,
   type SessionState,
@@ -19,6 +21,7 @@ export interface SidebarState {
   /** What the panel shows: the saved state plus intents still in flight. */
   model: SidebarModel;
   session: SessionState;
+  archive: ArchiveState;
 }
 
 export const useSidebar = create<SidebarState>()(() => ({
@@ -27,10 +30,11 @@ export const useSidebar = create<SidebarState>()(() => ({
   spaceId: DEFAULT_SPACE_ID,
   model: emptyModel(),
   session: emptySession(),
+  archive: emptyArchive(),
 }));
 
 let platform: Platform | undefined;
-let saved = { model: emptyModel(), session: emptySession() };
+let saved = { model: emptyModel(), session: emptySession(), archive: emptyArchive() };
 
 interface Pending {
   intent: Intent;
@@ -49,17 +53,21 @@ function rebuild() {
   const { windowId } = useSidebar.getState();
   pending = pending.filter(
     ({ result }) =>
-      !result || saved.model.rev < result.modelRev || saved.session.rev < result.sessionRev,
+      !result ||
+      saved.model.rev < result.modelRev ||
+      saved.session.rev < result.sessionRev ||
+      saved.archive.rev < result.archiveRev,
   );
-  let { model, session } = saved;
+  let { model, session, archive } = saved;
   for (const { intent } of pending) {
     model = applyIntent(model, intent);
     session = applySessionIntent(session, intent);
+    archive = applyArchiveIntent(archive, intent);
   }
   for (const itemId of opening.keys()) {
     if (session.bindings[itemId] !== undefined) opening.delete(itemId);
   }
-  useSidebar.setState({ model, session });
+  useSidebar.setState({ model, session, archive });
   useTabs.setState({
     order: session.orders[String(windowId)] ?? [],
     bound: new Set(Object.values(session.bindings)),
@@ -78,17 +86,27 @@ export async function connectSidebar(source: Platform, windowId: number): Promis
     saved = { ...saved, session };
     rebuild();
   });
-  const [model, session] = await Promise.all([source.loadModel(), source.loadSession()]);
+  const offArchive = source.onArchiveChange((archive) => {
+    saved = { ...saved, archive };
+    rebuild();
+  });
+  const [model, session, archive] = await Promise.all([
+    source.loadModel(),
+    source.loadSession(),
+    source.loadArchive(),
+  ]);
   // A change event may have beaten the initial load; keep the newer one.
   saved = {
     model: model.rev >= saved.model.rev ? model : saved.model,
     session: session.rev >= saved.session.rev ? session : saved.session,
+    archive: archive.rev >= saved.archive.rev ? archive : saved.archive,
   };
   rebuild();
   useSidebar.setState({ ready: true });
   return () => {
     offModel();
     offSession();
+    offArchive();
   };
 }
 

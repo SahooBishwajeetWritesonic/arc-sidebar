@@ -7,7 +7,24 @@ export interface SidebarModel {
   rev: number;
   spaces: Space[];
   items: Record<string, Item>;
+  settings: Settings;
 }
+
+/** Arc's choices for how long an unviewed Today tab stays before it archives. */
+export type ArchiveAfter = '12h' | '24h' | '7d' | '30d';
+
+export const ARCHIVE_AFTER_MS: Record<ArchiveAfter, number> = {
+  '12h': 12 * 3600_000,
+  '24h': 24 * 3600_000,
+  '7d': 7 * 24 * 3600_000,
+  '30d': 30 * 24 * 3600_000,
+};
+
+export interface Settings {
+  archiveAfter: ArchiveAfter;
+}
+
+export const defaultSettings = (): Settings => ({ archiveAfter: '12h' });
 
 export interface Space {
   id: string;
@@ -45,7 +62,37 @@ export const emptyModel = (): SidebarModel => ({
   rev: 0,
   spaces: [{ id: DEFAULT_SPACE_ID, name: 'Space' }],
   items: {},
+  settings: defaultSettings(),
 });
+
+/** A Today tab that was archived: auto-archived, cleared or closed. */
+export interface ArchiveEntry {
+  id: string;
+  url: string;
+  title: string;
+  spaceId: string;
+  archivedAt: number;
+  reason: 'auto' | 'cleared' | 'closed';
+  /** Entries archived together (one Clear) share a batch, so Undo restores them all. */
+  batchId: string;
+}
+
+/** Newest first. */
+export interface ArchiveState {
+  rev: number;
+  entries: ArchiveEntry[];
+}
+
+export const emptyArchive = (): ArchiveState => ({ rev: 0, entries: [] });
+
+/** The most entries the archive keeps; older ones fall off the end. */
+export const ARCHIVE_LIMIT = 500;
+
+/** A copy of the saved sidebar from before a change. */
+export interface Backup {
+  savedAt: number;
+  model: SidebarModel;
+}
 
 /**
  * Per browser session (cleared when Chrome restarts): Today order per window
@@ -81,6 +128,14 @@ export type Intent =
       todayBeforeTabId?: number | null;
     }
   | { type: 'reorderToday'; windowId: number; tabId: number; beforeTabId: number | null }
+  /** Closes Today tabs and records them in the archive (entries made by the panel). */
+  | { type: 'archiveTabs'; windowId: number; tabs: { tabId: number; entry: ArchiveEntry }[] }
+  /** Reopens archived tabs at the top of Today, in their original order. */
+  | { type: 'restoreArchived'; windowId: number; entryIds: string[] }
+  | { type: 'forgetArchived'; entryIds: string[] }
+  | { type: 'setArchiveAfter'; archiveAfter: ArchiveAfter }
+  /** Puts back items that were removed (undo). */
+  | { type: 'restoreItems'; items: Item[] }
   | { type: 'openPin'; itemId: string; windowId: number }
   | { type: 'closePin'; itemId: string }
   | { type: 'resetPin'; itemId: string }
@@ -104,4 +159,5 @@ export type Intent =
 export interface IntentResult {
   modelRev: number;
   sessionRev: number;
+  archiveRev: number;
 }

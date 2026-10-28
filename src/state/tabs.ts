@@ -157,8 +157,16 @@ export function activateTab(id: number) {
  * for the last row) at once, rather than wherever Chrome's tab strip would go.
  */
 export function closeTab(id: number) {
+  if (leaveTab(id)) platform?.closeTab(id);
+}
+
+/**
+ * The panel side of closing a Today tab: selection moves to its neighbour
+ * and the row goes at once. Returns false if the tab is already gone.
+ */
+export function leaveTab(id: number): boolean {
   const state = useTabs.getState();
-  if (!state.tabs.has(id)) return;
+  if (!state.tabs.has(id)) return false;
   if (state.activeId === id) {
     const ids = selectTodayIds(state);
     const index = ids.indexOf(id);
@@ -166,7 +174,7 @@ export function closeTab(id: number) {
     if (next !== undefined) activateTab(next);
   }
   forgetTab(id);
-  platform?.closeTab(id);
+  return true;
 }
 
 /** Drops a tab the panel is closing, before Chrome confirms it. */

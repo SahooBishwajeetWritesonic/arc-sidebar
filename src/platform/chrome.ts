@@ -1,6 +1,6 @@
 import { browser, type Browser } from 'wxt/browser';
 import type { IntentResult } from '@/model/types';
-import { modelItem, sessionItem } from './storage-items';
+import { archiveItem, modelItem, sessionItem } from './storage-items';
 import type { Platform, TabEvent, TabInfo } from './types';
 
 function toTabInfo(tab: Browser.tabs.Tab): TabInfo | undefined {
@@ -66,6 +66,8 @@ export const chromePlatform: Platform = {
   onModelChange: (listener) => modelItem.watch((model) => listener(model)),
   loadSession: () => sessionItem.getValue(),
   onSessionChange: (listener) => sessionItem.watch((session) => listener(session)),
+  loadArchive: () => archiveItem.getValue(),
+  onArchiveChange: (listener) => archiveItem.watch((archive) => listener(archive)),
 
   async sendIntent(intent) {
     const response = (await browser.runtime.sendMessage({ kind: 'intent', intent })) as

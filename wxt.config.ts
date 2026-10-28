@@ -6,7 +6,7 @@ export default defineConfig({
   manifest: {
     name: 'Arc Sidebar',
     description: "Arc's sidebar, in Chrome's side panel",
-    permissions: ['sidePanel', 'tabs', 'storage', 'unlimitedStorage', 'favicon'],
+    permissions: ['sidePanel', 'tabs', 'storage', 'unlimitedStorage', 'favicon', 'alarms'],
     action: { default_title: 'Toggle Arc Sidebar' },
   },
   // Load the unpacked build into the everyday Chrome profile instead of

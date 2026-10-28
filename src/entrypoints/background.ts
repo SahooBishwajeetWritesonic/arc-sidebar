@@ -1,7 +1,9 @@
 import { browser, type Browser } from 'wxt/browser';
 import { SidebarService, type LiveTab } from '@/background/service';
 import type { Intent } from '@/model/types';
-import { modelItem, sessionItem } from '@/platform/storage-items';
+import { archiveItem, backupsItem, modelItem, sessionItem } from '@/platform/storage-items';
+
+const AUTO_ARCHIVE_ALARM = 'auto-archive';
 
 function toLiveTab(tab: Browser.tabs.Tab): LiveTab | undefined {
   if (tab.id === undefined) return undefined;
@@ -10,6 +12,10 @@ function toLiveTab(tab: Browser.tabs.Tab): LiveTab | undefined {
     windowId: tab.windowId,
     index: tab.index,
     url: tab.url || tab.pendingUrl || '',
+    title: tab.title || tab.url || '',
+    active: tab.active,
+    audible: tab.audible ?? false,
+    lastAccessed: tab.lastAccessed,
   };
 }
 
@@ -19,15 +25,8 @@ export default defineBackground(() => {
   const service = new SidebarService({
     queryTabs: async () =>
       (await browser.tabs.query({})).map(toLiveTab).filter((tab) => tab !== undefined),
-    getTab: async (tabId) => {
-      try {
-        return toLiveTab(await browser.tabs.get(tabId));
-      } catch {
-        return undefined; // already closed
-      }
-    },
-    createTab: async (windowId, url) =>
-      void (await browser.tabs.create({ windowId, url, active: true })),
+    createTab: async (windowId, url, active) =>
+      void (await browser.tabs.create({ windowId, url, active })),
     activateTab: async (tabId) => void (await browser.tabs.update(tabId, { active: true })),
     navigateTab: async (tabId, url) => void (await browser.tabs.update(tabId, { url })),
     closeTab: async (tabId) => void (await browser.tabs.remove(tabId).catch(() => {})),
@@ -35,7 +34,12 @@ export default defineBackground(() => {
     saveModel: (model) => modelItem.setValue(model),
     loadSession: () => sessionItem.getValue(),
     saveSession: (session) => sessionItem.setValue(session),
+    loadArchive: () => archiveItem.getValue(),
+    saveArchive: (archive) => archiveItem.setValue(archive),
+    loadBackups: () => backupsItem.getValue(),
+    saveBackups: (backups) => backupsItem.setValue(backups),
     now: () => Date.now(),
+    newId: () => crypto.randomUUID(),
   });
 
   // Registered synchronously so the events that wake the worker aren't missed.
@@ -56,6 +60,14 @@ export default defineBackground(() => {
     (tabId, { oldWindowId }) => void service.onTabDetached(tabId, oldWindowId),
   );
   browser.windows.onRemoved.addListener((windowId) => void service.onWindowRemoved(windowId));
+
+  // Chrome can drop alarms on restart, so recreate it each time the worker starts.
+  browser.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === AUTO_ARCHIVE_ALARM) void service.archiveStale();
+  });
+  void browser.alarms.get(AUTO_ARCHIVE_ALARM).then((alarm) => {
+    if (!alarm) void browser.alarms.create(AUTO_ARCHIVE_ALARM, { periodInMinutes: 5 });
+  });
 
   browser.runtime.onMessage.addListener(
     (message: { kind?: string; intent?: Intent }, _sender, sendResponse) => {

@@ -1,7 +1,14 @@
 import { generateNKeysBetween } from 'fractional-indexing';
 import { withTabBefore, withTabOnTop, withoutTab } from '@/platform/today-order';
 import { childrenOf, isWithin } from './tree';
-import type { Intent, Item, SessionState, SidebarModel } from './types';
+import {
+  ARCHIVE_LIMIT,
+  type ArchiveState,
+  type Intent,
+  type Item,
+  type SessionState,
+  type SidebarModel,
+} from './types';
 
 /**
  * The saved part of an intent. Pure: panels apply it at once for instant feedback,
@@ -94,10 +101,22 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
       return { ...model, items: rest };
     }
 
+    case 'setArchiveAfter':
+      if (model.settings.archiveAfter === intent.archiveAfter) return model;
+      return { ...model, settings: { ...model.settings, archiveAfter: intent.archiveAfter } };
+
+    case 'restoreItems': {
+      const missing = intent.items.filter((restored) => !items[restored.id]);
+      return missing.length ? put(...missing) : model;
+    }
+
     case 'openPin':
     case 'closePin':
     case 'resetPin':
     case 'reorderToday':
+    case 'archiveTabs':
+    case 'restoreArchived':
+    case 'forgetArchived':
       return model;
   }
 }
@@ -137,7 +156,37 @@ export function applySessionIntent(session: SessionState, intent: Intent): Sessi
         return session;
       return { ...session, orders: { ...session.orders, [key]: placed } };
     }
+    case 'archiveTabs': {
+      const closed = new Set(intent.tabs.map(({ tabId }) => tabId));
+      const orders = Object.fromEntries(
+        Object.entries(session.orders).map(([w, order]) => [
+          w,
+          order.filter((id) => !closed.has(id)),
+        ]),
+      );
+      return { ...session, orders };
+    }
     default:
       return session;
+  }
+}
+
+/** The archive part of an intent. Pure and idempotent, like the others. */
+export function applyArchiveIntent(archive: ArchiveState, intent: Intent): ArchiveState {
+  switch (intent.type) {
+    case 'archiveTabs': {
+      const known = new Set(archive.entries.map((entry) => entry.id));
+      const added = intent.tabs.map(({ entry }) => entry).filter((entry) => !known.has(entry.id));
+      if (!added.length) return archive;
+      return { ...archive, entries: [...added, ...archive.entries].slice(0, ARCHIVE_LIMIT) };
+    }
+    case 'restoreArchived':
+    case 'forgetArchived': {
+      const gone = new Set(intent.entryIds);
+      const entries = archive.entries.filter((entry) => !gone.has(entry.id));
+      return entries.length === archive.entries.length ? archive : { ...archive, entries };
+    }
+    default:
+      return archive;
   }
 }

@@ -1,4 +1,4 @@
-import type { Intent, IntentResult, SessionState, SidebarModel } from '@/model/types';
+import type { ArchiveState, Intent, IntentResult, SessionState, SidebarModel } from '@/model/types';
 
 /** The slice of a Chrome tab the sidebar renders. */
 export interface TabInfo {
@@ -35,6 +35,8 @@ export interface Platform {
   onModelChange(listener: (model: SidebarModel) => void): () => void;
   loadSession(): Promise<SessionState>;
   onSessionChange(listener: (session: SessionState) => void): () => void;
+  loadArchive(): Promise<ArchiveState>;
+  onArchiveChange(listener: (archive: ArchiveState) => void): () => void;
   /** Resolves once the service has applied the intent; rejects if it failed. */
   sendIntent(intent: Intent): Promise<IntentResult>;
 
