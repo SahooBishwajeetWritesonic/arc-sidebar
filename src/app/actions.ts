@@ -1,3 +1,5 @@
+import type { ArcSidebar } from '@/import/arc';
+import { planImport, type ImportChoice } from '@/import/plan';
 import { childrenOf, flattenSpace, orderAtEnd, orderBefore } from '@/model/tree';
 import {
   FAVORITES_ID,
@@ -334,6 +336,21 @@ export function exportSidebar() {
   link.download = `arc-sidebar-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Adds the chosen part of Arc's sidebar. */
+export function importFromArc(arc: ArcSidebar, choice: ImportChoice) {
+  const { model } = useSidebar.getState();
+  const plan = planImport(model, arc, choice, newId);
+  if (!plan.spaces.length && !plan.items.length) return;
+  dispatch({ type: 'importSidebar', spaces: plan.spaces, items: plan.items });
+  const tabs = plan.items.filter((item) => item.kind === 'pin').length;
+  const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
+  showToast(
+    plan.spaces.length
+      ? `Imported ${count(plan.spaces.length, 'space')} and ${count(tabs, 'tab')}`
+      : `Imported ${count(tabs, 'tab')}`,
+  );
 }
 
 /**

@@ -6,7 +6,7 @@ import { SpaceGlyph } from '@/app/spaces/icons';
 import spaces from '@/app/spaces/spaces.module.css';
 import type { ArchiveAfter } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
-import { showView, useUi } from '@/state/ui';
+import { setImporting, showView, useUi } from '@/state/ui';
 import styles from './bottom-bar.module.css';
 
 const ARCHIVE_CHOICES: { value: ArchiveAfter; label: string }[] = [
@@ -111,6 +111,9 @@ function AddMenu() {
                 </Menu.Positioner>
               </Menu.Portal>
             </Menu.SubmenuRoot>
+            <Menu.Item className={menu.item} onClick={() => setImporting(true)}>
+              Import from Arc…
+            </Menu.Item>
             <Menu.Item className={menu.item} onClick={exportSidebar}>
               Export Sidebar…
             </Menu.Item>

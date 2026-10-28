@@ -17,6 +17,7 @@ import { ArchiveView } from './archive/ArchiveView';
 import { BottomBar } from './chrome/BottomBar';
 import { DragLayer } from './drag/DragLayer';
 import { Favorites } from './favorites/Favorites';
+import { ImportDialog } from './import/ImportDialog';
 import { fade } from './motion';
 import styles from './app.module.css';
 import { SpacePager } from './spaces/SpacePager';
@@ -161,6 +162,7 @@ export function App() {
       </div>
       <ToastLayer />
       <ThemePicker />
+      <ImportDialog />
     </MotionConfig>
   );
 }

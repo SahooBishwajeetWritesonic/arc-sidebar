@@ -1,0 +1,260 @@
+/* A sheet near the panel's top; it grows downwards between steps, top edge fixed. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--scrim);
+  transition: opacity var(--popup-in) var(--ease-out);
+}
+
+.backdrop[data-starting-style],
+.backdrop[data-ending-style] {
+  opacity: 0;
+}
+
+.backdrop[data-ending-style] {
+  transition-duration: var(--popup-out);
+}
+
+.popup {
+  position: fixed;
+  top: 48px;
+  left: 12px;
+  right: 12px;
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 96px);
+  padding: 16px 16px 12px;
+  border-radius: var(--sheet-radius);
+  background: var(--sheet);
+  box-shadow:
+    0 0 0 0.5px var(--menu-edge),
+    0 12px 32px rgb(0 0 0 / 0.24);
+  color: var(--ink);
+  font-size: var(--label-size);
+  outline: none;
+  transform-origin: top center;
+  transition:
+    opacity var(--popup-in) var(--ease-out),
+    scale var(--popup-in) var(--ease-out);
+}
+
+.popup[data-starting-style],
+.popup[data-ending-style] {
+  opacity: 0;
+  scale: 0.97;
+}
+
+.popup[data-ending-style] {
+  transition-duration: var(--popup-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popup[data-starting-style],
+  .popup[data-ending-style] {
+    scale: 1;
+  }
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.description {
+  margin: 6px 0 12px;
+  color: var(--ink-secondary);
+  line-height: 1.4;
+}
+
+.hint {
+  margin: 8px 0 0;
+  color: var(--ink-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.error {
+  margin: 8px 0 0;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Arc's file path, selectable, with a copy button. */
+.path {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 7px 4px 7px 10px;
+  border-radius: 8px;
+  background: var(--field);
+}
+
+.path code {
+  flex: 1;
+  min-width: 0;
+  font:
+    12px/1.45 ui-monospace,
+    'SF Mono',
+    Menlo,
+    monospace;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--accessory-size);
+  height: var(--accessory-size);
+  margin-top: -2px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--accessory-radius);
+  background: none;
+  color: var(--ink-secondary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0 -8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--row-height);
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.choice[data-disabled] {
+  opacity: 0.5;
+}
+
+.checkbox {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--separator);
+  color: #fff;
+  outline: none;
+}
+
+.checkbox[data-checked] {
+  background: var(--menu-highlight);
+  box-shadow: none;
+}
+
+.checkbox:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.check {
+  display: grid;
+  place-items: center;
+}
+
+.glyph {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  color: var(--ink-secondary);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name,
+.meta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.name {
+  font-size: var(--title-size);
+}
+
+.meta {
+  color: var(--ink-secondary);
+  font-size: 12px;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.button,
+.primary {
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--field);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  outline: none;
+  transition: scale 70ms linear;
+}
+
+.primary {
+  background: var(--menu-highlight);
+  color: #fff;
+}
+
+.primary:disabled {
+  opacity: 0.4;
+}
+
+.button:active,
+.primary:not(:disabled):active {
+  scale: 0.97;
+}
+
+.button:focus-visible,
+.primary:focus-visible,
+.icon:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .choice:not([data-disabled]):hover {
+    background: var(--row-hover);
+  }
+
+  .button:hover,
+  .icon:hover {
+    background: var(--accessory-hover);
+  }
+
+  .primary:not(:disabled):hover {
+    filter: brightness(1.08);
+  }
+}
