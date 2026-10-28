@@ -1,0 +1,33 @@
+:root {
+  color-scheme: light dark;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+
+  --ink: rgb(0 0 0 / 0.85);
+  --ink-secondary: rgb(0 0 0 / 0.3);
+  --plate: #e9eaee;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: rgb(255 255 255 / 0.9);
+    --ink-secondary: rgb(255 255 255 / 0.45);
+    --plate: #2b2c30;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--plate);
+  color: var(--ink);
+}

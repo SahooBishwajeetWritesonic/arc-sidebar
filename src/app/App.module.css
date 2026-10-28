@@ -1,0 +1,9 @@
+.sidebar {
+  min-height: 100%;
+  padding: 8px;
+}
+
+.placeholder {
+  margin: 0;
+  color: var(--ink-secondary);
+}

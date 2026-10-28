@@ -1,0 +1,8 @@
+node_modules/
+.output/
+.wxt/
+.DS_Store
+*.log
+
+# Working notes and reference images, kept local
+research/
