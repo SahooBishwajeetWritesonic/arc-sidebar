@@ -24,6 +24,7 @@ const MODEL_KEY = 'harness:model';
 const SESSION_KEY = 'harness:session';
 const ARCHIVE_KEY = 'harness:archive';
 const BACKUPS_KEY = 'harness:backups';
+const SNAPSHOT_KEY = 'harness:todaySnapshot';
 
 function read<T>(storage: Storage, key: string, fallback: T): T {
   try {
@@ -48,7 +49,7 @@ export class FakePlatform implements Platform {
   private accessed = new Map<number, number>();
   private archiveListeners = new Set<(archive: ArchiveState) => void>();
   /** Titles seen per URL, so a reopened tab gets its page title back. */
-  private titles = new Map<string, string>();
+  private titles = new Map<string, string>([['chrome://newtab/', 'New Tab']]);
   private tabListeners = new Set<(event: TabEvent) => void>();
   private modelListeners = new Set<(model: SidebarModel) => void>();
   private sessionListeners = new Set<(session: SessionState) => void>();
@@ -87,6 +88,10 @@ export class FakePlatform implements Platform {
         localStorage.setItem(BACKUPS_KEY, JSON.stringify(backups));
       },
       now: () => Date.now(),
+      loadTodaySnapshot: async () => read(localStorage, SNAPSHOT_KEY, {}),
+      saveTodaySnapshot: async (snapshot) =>
+        localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot)),
+      defer: (run, ms) => void setTimeout(run, ms),
       newId: () => crypto.randomUUID(),
     });
     void this.seed();
@@ -146,6 +151,7 @@ export class FakePlatform implements Platform {
     for (const tab of this.tabs) tab.active = tab.id === tabId;
     this.accessed.set(tabId, Date.now());
     this.emit({ type: 'activate', tabId, windowId: WINDOW_ID });
+    void this.service.onTabActivated(tabId, WINDOW_ID);
   }
 
   closeTab(tabId: number) {
@@ -233,6 +239,7 @@ export class FakePlatform implements Platform {
     localStorage.removeItem(MODEL_KEY);
     localStorage.removeItem(ARCHIVE_KEY);
     localStorage.removeItem(BACKUPS_KEY);
+    localStorage.removeItem(SNAPSHOT_KEY);
     sessionStorage.removeItem(SESSION_KEY);
     location.reload();
   }
