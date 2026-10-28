@@ -10,10 +10,12 @@
     "harness": "vite --config harness/vite.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "e2e": "playwright test",
     "format": "prettier --write .",
     "postinstall": "wxt prepare"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@types/node": "26.6.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",

@@ -3,6 +3,8 @@ node_modules/
 .wxt/
 .DS_Store
 *.log
+test-results/
+playwright-report/
 
 # Working notes and reference images, kept local
 research/
