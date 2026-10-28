@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { reconcileOrder, withTabOnTop, withTabReplaced, withoutTab } from './today-order';
+import {
+  reconcileOrder,
+  withTabBefore,
+  withTabOnTop,
+  withTabReplaced,
+  withoutTab,
+} from './today-order';
 
 describe('Today order', () => {
   it('puts a new tab on top', () => {
@@ -8,6 +14,13 @@ describe('Today order', () => {
 
   it('moves an existing tab to the top instead of duplicating it', () => {
     expect(withTabOnTop([3, 1, 2], 1)).toEqual([1, 3, 2]);
+  });
+
+  it('moves a tab before another, or to the end', () => {
+    expect(withTabBefore([1, 2, 3, 4], 4, 2)).toEqual([1, 4, 2, 3]);
+    expect(withTabBefore([1, 2, 3, 4], 1, null)).toEqual([2, 3, 4, 1]);
+    expect(withTabBefore([1, 2, 3], 9, 1)).toEqual([9, 1, 2, 3]);
+    expect(withTabBefore([1, 2, 3], 2, 42)).toEqual([1, 3, 2]); // unknown anchor: end
   });
 
   it('removes a closed tab', () => {

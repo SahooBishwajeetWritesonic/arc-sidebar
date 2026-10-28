@@ -113,21 +113,35 @@ describe('flattenSpace', () => {
 describe('applySessionIntent', () => {
   it('binds a pinned tab and takes it out of Today', () => {
     const session = { ...emptySession(), orders: { '1': [5, 6] } };
-    const next = applySessionIntent(session, pin('p6', 'a0'), 1);
+    const next = applySessionIntent(session, pin('p6', 'a0'));
     expect(next.bindings).toEqual({ p6: 6 });
     expect(next.orders['1']).toEqual([5]);
   });
 
   it('puts an unpinned tab back on top of Today', () => {
     const session = { ...emptySession(), orders: { '1': [5] }, bindings: { p6: 6 } };
-    const next = applySessionIntent(session, { type: 'unpin', itemId: 'p6', windowId: 1 }, 1);
+    const next = applySessionIntent(session, { type: 'unpin', itemId: 'p6', windowId: 1 });
     expect(next.bindings).toEqual({});
     expect(next.orders['1']).toEqual([6, 5]);
   });
 
+  it('puts an unpinned tab where it was dropped in Today', () => {
+    const session = { ...emptySession(), orders: { '1': [5, 7] }, bindings: { p6: 6 } };
+    const intent: Intent = { type: 'unpin', itemId: 'p6', windowId: 1, todayBeforeTabId: 7 };
+    expect(applySessionIntent(session, intent).orders['1']).toEqual([5, 6, 7]);
+  });
+
+  it('reorders Today and is idempotent', () => {
+    const session = { ...emptySession(), orders: { '1': [5, 6, 7] } };
+    const intent: Intent = { type: 'reorderToday', windowId: 1, tabId: 7, beforeTabId: 5 };
+    const once = applySessionIntent(session, intent);
+    expect(once.orders['1']).toEqual([7, 5, 6]);
+    expect(applySessionIntent(once, intent)).toBe(once);
+  });
+
   it('unbinds a closed pinned tab without touching Today', () => {
     const session = { ...emptySession(), orders: { '1': [5] }, bindings: { p6: 6 } };
-    const next = applySessionIntent(session, { type: 'closePin', itemId: 'p6' }, 1);
+    const next = applySessionIntent(session, { type: 'closePin', itemId: 'p6' });
     expect(next.bindings).toEqual({});
     expect(next.orders['1']).toEqual([5]);
   });
