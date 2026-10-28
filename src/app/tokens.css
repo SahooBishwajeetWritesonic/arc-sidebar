@@ -1,0 +1,34 @@
+/*
+ * Layout: Arc's compact sidebar (research/07). Colours: Arc's overlays (research/05), hover
+ * from live captures. light-dark() lets `color-scheme` on the root switch the theme.
+ */
+:root {
+  color-scheme: light dark;
+
+  --pad-side: 8px;
+  --row-height: 40px;
+  --row-gap: 1px;
+  --row-radius: 10px;
+  --row-inset: 10px; /* pill edge to favicon */
+  --favicon-size: 16px;
+  --favicon-gap: 11px; /* favicon to title */
+  --accessory-size: 24px;
+  --accessory-radius: 6px;
+
+  --font-ui: system-ui, -apple-system, sans-serif;
+  --title-size: 14px;
+  --label-size: 13px;
+
+  --plate: light-dark(#e7e8ec, #36373a);
+  --ink: light-dark(rgb(0 0 0 / 0.85), rgb(255 255 255 / 0.92));
+  --ink-secondary: light-dark(rgb(0 0 0 / 0.45), rgb(255 255 255 / 0.5));
+  --row-hover: light-dark(rgb(0 0 0 / 0.045), rgb(250 251 255 / 0.07));
+  --row-previous: light-dark(rgb(255 255 255 / 0.32), rgb(250 251 255 / 0.08));
+  --row-previous-hover: light-dark(rgb(255 255 255 / 0.5), rgb(250 251 255 / 0.12));
+  --row-selected: light-dark(rgb(255 255 255 / 0.85), rgb(250 251 255 / 0.2));
+  --row-selected-edge: light-dark(rgb(0 0 0 / 0.07), transparent);
+  --row-selected-shadow: light-dark(rgb(0 0 0 / 0.12), transparent);
+  --accessory-hover: light-dark(rgb(0 0 0 / 0.07), rgb(255 255 255 / 0.1));
+  --separator: light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.14));
+  --focus-ring: #ffd60a; /* Arc's keyboard focus is a yellow ring */
+}

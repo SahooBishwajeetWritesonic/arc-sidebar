@@ -1,0 +1,137 @@
+.today {
+  display: flex;
+  flex-direction: column;
+  gap: var(--row-gap);
+}
+
+.list {
+  position: relative; /* rows that are fading out are positioned against this */
+  display: flex;
+  flex-direction: column;
+  gap: var(--row-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row,
+.newTab {
+  display: block;
+  height: var(--row-height);
+  outline: none;
+  cursor: default;
+}
+
+.newTab {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: var(--ink-secondary);
+}
+
+/* The pill. Hover and selection change in a single frame, as in Arc. */
+.plate {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 7px 0 var(--row-inset);
+  border-radius: var(--row-radius);
+  transition: scale 70ms linear;
+}
+
+.row:hover .plate,
+.newTab:hover .plate {
+  background: var(--row-hover);
+}
+
+.row[data-previous] .plate {
+  background: var(--row-previous);
+}
+
+.row[data-previous]:hover .plate {
+  background: var(--row-previous-hover);
+}
+
+.row[data-selected] .plate {
+  background: var(--row-selected);
+  box-shadow:
+    0 0 0 0.5px var(--row-selected-edge),
+    0 1px 2px var(--row-selected-shadow);
+}
+
+/* Press: the pill shrinks to 0.99 over 70 ms (CSS `scale`, so it never fights
+   Motion's transform on the row). Not when the press is on a button inside. */
+.row:active:not(:has(button:active)) .plate,
+.newTab:active .plate {
+  scale: 0.99;
+}
+
+.row:focus-visible .plate,
+.newTab:focus-visible .plate {
+  outline: 2px dashed var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.favicon {
+  flex: none;
+  width: var(--favicon-size);
+  height: var(--favicon-size);
+}
+
+.spinner {
+  flex: none;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin: 1px;
+  border: 1.5px solid var(--ink-secondary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    rotate: 1turn;
+  }
+}
+
+/* Long titles fade out at the end instead of an ellipsis. */
+.title {
+  flex: 1;
+  min-width: 0;
+  margin-left: var(--favicon-gap);
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: var(--title-size);
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+
+.accessory {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--accessory-size);
+  height: var(--accessory-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--accessory-radius);
+  background: none;
+  color: var(--ink-secondary);
+}
+
+.accessory:hover {
+  background: var(--accessory-hover);
+  color: var(--ink);
+}
+
+.close {
+  opacity: 0;
+}
+
+.row:hover .close,
+.row:focus-visible .close {
+  opacity: 1;
+}
