@@ -1,0 +1,291 @@
+{
+  "version": 1,
+  "sidebar": {
+    "containers": [
+      { "global": {} },
+      {
+        "spaces": [
+          "S-LITTLE",
+          {
+            "id": "S-LITTLE",
+            "title": "Little Arc",
+            "profile": { "default": true },
+            "containerIDs": ["pinned", "C-LITTLE-PIN", "unpinned", "C-LITTLE-TODAY"]
+          }
+        ],
+        "items": [],
+        "topAppsContainerIDs": []
+      },
+      {
+        "spaces": [
+          "S-WORK",
+          {
+            "id": "S-WORK",
+            "title": "Work",
+            "customInfo": { "iconType": { "icon": "planet" } },
+            "profile": { "default": true },
+            "containerIDs": ["pinned", "C-WORK-PIN", "unpinned", "C-WORK-TODAY"],
+            "newContainerIDs": [
+              { "pinned": {} },
+              "C-WORK-PIN",
+              { "unpinned": { "_0": { "shared": {} } } },
+              "C-WORK-TODAY"
+            ]
+          },
+          "S-LAB",
+          {
+            "id": "S-LAB",
+            "title": "Lab",
+            "customInfo": { "iconType": { "emoji_v2": "🧪" } },
+            "profile": { "default": true },
+            "containerIDs": ["unpinned", "C-LAB-TODAY", "pinned", "C-LAB-PIN"]
+          },
+          "S-HOME",
+          {
+            "id": "S-HOME",
+            "title": "Home",
+            "customInfo": { "iconType": { "icon": "cloudOutline" } },
+            "profile": {
+              "custom": { "_0": { "directoryBasename": "Profile 2", "machineID": "M-1" } }
+            },
+            "containerIDs": ["pinned", "C-HOME-PIN", "unpinned", "C-HOME-TODAY"]
+          },
+          "S-MISC",
+          {
+            "id": "S-MISC",
+            "title": "Misc",
+            "customInfo": { "iconType": { "icon": "restaurant" } },
+            "profile": { "default": true },
+            "containerIDs": ["pinned", "C-MISC-PIN", "unpinned", "C-MISC-TODAY"]
+          }
+        ],
+        "items": [
+          "C-WORK-PIN",
+          {
+            "id": "C-WORK-PIN",
+            "data": { "itemContainer": { "containerType": { "spaceItems": { "_0": "S-WORK" } } } },
+            "childrenIds": ["T-MAIL", "F-DOCS", "F-PRS", "N-NOTE", "T-ARC"],
+            "title": null
+          },
+          "T-MAIL",
+          {
+            "id": "T-MAIL",
+            "parentID": "C-WORK-PIN",
+            "data": {
+              "tab": { "savedURL": "https://mail.example.com/inbox", "savedTitle": "Inbox" }
+            },
+            "childrenIds": [],
+            "title": null
+          },
+          "F-DOCS",
+          {
+            "id": "F-DOCS",
+            "parentID": "C-WORK-PIN",
+            "data": { "list": {} },
+            "childrenIds": ["T-SPEC", "F-OLD"],
+            "title": "Docs"
+          },
+          "T-SPEC",
+          {
+            "id": "T-SPEC",
+            "parentID": "F-DOCS",
+            "data": {
+              "tab": { "savedURL": "https://docs.example.com/spec", "savedTitle": "Spec v2 – Docs" }
+            },
+            "childrenIds": [],
+            "title": "Spec"
+          },
+          "F-OLD",
+          {
+            "id": "F-OLD",
+            "parentID": "F-DOCS",
+            "data": { "list": {} },
+            "childrenIds": ["T-ARCHIVE"],
+            "title": "Old"
+          },
+          "T-ARCHIVE",
+          {
+            "id": "T-ARCHIVE",
+            "parentID": "F-OLD",
+            "data": {
+              "tab": { "savedURL": "https://docs.example.com/archive", "savedTitle": "Archive" }
+            },
+            "childrenIds": [],
+            "title": null
+          },
+          "F-PRS",
+          {
+            "id": "F-PRS",
+            "parentID": "C-WORK-PIN",
+            "data": { "list": { "automaticLiveFolderData": { "github": {} } } },
+            "childrenIds": ["T-PR"],
+            "title": "Pull Requests"
+          },
+          "T-PR",
+          {
+            "id": "T-PR",
+            "parentID": "F-PRS",
+            "data": {
+              "tab": { "savedURL": "https://git.example.com/pull/1", "savedTitle": "Fix the build" }
+            },
+            "childrenIds": [],
+            "title": null
+          },
+          "N-NOTE",
+          {
+            "id": "N-NOTE",
+            "parentID": "C-WORK-PIN",
+            "data": { "arcDocument": { "arcDocumentID": "D-1" } },
+            "childrenIds": [],
+            "title": "Scratch note"
+          },
+          "T-ARC",
+          {
+            "id": "T-ARC",
+            "parentID": "C-WORK-PIN",
+            "data": { "tab": { "savedURL": "arc://boost/new", "savedTitle": "New Boost" } },
+            "childrenIds": [],
+            "title": null
+          },
+          "C-WORK-TODAY",
+          {
+            "id": "C-WORK-TODAY",
+            "data": { "itemContainer": { "containerType": { "spaceItems": { "_0": "S-WORK" } } } },
+            "childrenIds": ["T-TODAY-1", "T-TODAY-2"],
+            "title": null
+          },
+          "T-TODAY-1",
+          {
+            "id": "T-TODAY-1",
+            "parentID": "C-WORK-TODAY",
+            "data": { "tab": { "savedURL": "https://news.example.com/", "savedTitle": "News" } },
+            "childrenIds": [],
+            "title": null
+          },
+          "T-TODAY-2",
+          {
+            "id": "T-TODAY-2",
+            "parentID": "C-WORK-TODAY",
+            "data": {
+              "tab": { "savedURL": "https://search.example.com/?q=arc", "savedTitle": "arc" }
+            },
+            "childrenIds": [],
+            "title": null
+          },
+          "C-LAB-PIN",
+          {
+            "id": "C-LAB-PIN",
+            "data": { "itemContainer": { "containerType": { "spaceItems": { "_0": "S-LAB" } } } },
+            "childrenIds": ["T-PAPER"],
+            "title": null
+          },
+          "T-PAPER",
+          {
+            "id": "T-PAPER",
+            "parentID": "C-LAB-PIN",
+            "data": {
+              "tab": { "savedURL": "https://papers.example.com/1", "savedTitle": "Paper" }
+            },
+            "childrenIds": [],
+            "title": null
+          },
+          "T-NOTEBOOK",
+          {
+            "id": "T-NOTEBOOK",
+            "parentID": "C-LAB-PIN",
+            "data": {
+              "tab": { "savedURL": "https://notebook.example.com/", "savedTitle": "Notebook" }
+            },
+            "childrenIds": [],
+            "title": null
+          },
+          "C-HOME-PIN",
+          {
+            "id": "C-HOME-PIN",
+            "data": { "itemContainer": { "containerType": { "spaceItems": { "_0": "S-HOME" } } } },
+            "childrenIds": ["T-BANK"],
+            "title": null
+          },
+          "T-BANK",
+          {
+            "id": "T-BANK",
+            "parentID": "C-HOME-PIN",
+            "data": { "tab": { "savedURL": "https://bank.example.com/", "savedTitle": "Bank" } },
+            "childrenIds": [],
+            "title": null
+          },
+          "C-FAV-DEFAULT",
+          {
+            "id": "C-FAV-DEFAULT",
+            "data": {
+              "itemContainer": { "containerType": { "topApps": { "_0": { "default": true } } } }
+            },
+            "childrenIds": ["T-CAL", "T-ISSUES", "T-DESIGN"],
+            "title": null
+          },
+          "T-CAL",
+          {
+            "id": "T-CAL",
+            "parentID": "C-FAV-DEFAULT",
+            "data": {
+              "tab": { "savedURL": "https://calendar.example.com/", "savedTitle": "Calendar" }
+            },
+            "childrenIds": [],
+            "title": null
+          },
+          "T-ISSUES",
+          {
+            "id": "T-ISSUES",
+            "parentID": "C-FAV-DEFAULT",
+            "data": {
+              "tab": { "savedURL": "https://issues.example.com/", "savedTitle": "Issues" }
+            },
+            "childrenIds": [],
+            "title": null
+          },
+          "T-DESIGN",
+          {
+            "id": "T-DESIGN",
+            "parentID": "C-FAV-DEFAULT",
+            "data": {
+              "tab": { "savedURL": "https://design.example.com/", "savedTitle": "Design" }
+            },
+            "childrenIds": [],
+            "title": null
+          },
+          "C-FAV-HOME",
+          {
+            "id": "C-FAV-HOME",
+            "data": {
+              "itemContainer": {
+                "containerType": {
+                  "topApps": {
+                    "_0": {
+                      "custom": { "_0": { "directoryBasename": "Profile 2", "machineID": "M-1" } }
+                    }
+                  }
+                }
+              }
+            },
+            "childrenIds": ["T-MUSIC"],
+            "title": null
+          },
+          "T-MUSIC",
+          {
+            "id": "T-MUSIC",
+            "parentID": "C-FAV-HOME",
+            "data": { "tab": { "savedURL": "https://music.example.com/", "savedTitle": "Music" } },
+            "childrenIds": [],
+            "title": null
+          }
+        ],
+        "topAppsContainerIDs": [
+          { "custom": { "_0": { "directoryBasename": "Profile 2", "machineID": "M-1" } } },
+          "C-FAV-HOME",
+          { "default": true },
+          "C-FAV-DEFAULT"
+        ]
+      }
+    ]
+  }
+}
