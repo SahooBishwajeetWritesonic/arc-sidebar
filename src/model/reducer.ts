@@ -1,0 +1,137 @@
+import { generateNKeysBetween } from 'fractional-indexing';
+import { withTabOnTop, withoutTab } from '@/platform/today-order';
+import { childrenOf, isWithin } from './tree';
+import type { Intent, Item, SessionState, SidebarModel } from './types';
+
+/**
+ * The saved part of an intent. Pure: panels apply it at once for instant feedback,
+ * then the service applies it again and saves the result.
+ */
+export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
+  const items = model.items;
+  const item = 'itemId' in intent ? items[intent.itemId] : undefined;
+  const put = (...changed: Item[]): SidebarModel => ({
+    ...model,
+    items: { ...items, ...Object.fromEntries(changed.map((i) => [i.id, i])) },
+  });
+
+  switch (intent.type) {
+    case 'pinTab':
+      if (item) return model;
+      return put({
+        kind: 'pin',
+        id: intent.itemId,
+        spaceId: intent.spaceId,
+        parentId: intent.parentId,
+        order: intent.order,
+        url: intent.url,
+        title: intent.title,
+      });
+
+    case 'unpin': {
+      if (item?.kind !== 'pin') return model;
+      const { [item.id]: _removed, ...rest } = items;
+      return { ...model, items: rest };
+    }
+
+    case 'replacePinUrl':
+      if (item?.kind !== 'pin') return model;
+      return put({ ...item, url: intent.url, title: intent.title });
+
+    case 'rename': {
+      if (!item) return model;
+      const title = intent.title?.trim() || null;
+      if (item.kind === 'folder') return title ? put({ ...item, name: title }) : model;
+      const { customTitle: _old, ...pin } = item;
+      return put(title && title !== item.title ? { ...pin, customTitle: title } : pin);
+    }
+
+    case 'createFolder': {
+      if (item) return model;
+      const folder: Item = {
+        kind: 'folder',
+        id: intent.itemId,
+        spaceId: intent.spaceId,
+        parentId: intent.parentId,
+        order: intent.order,
+        name: intent.name,
+        collapsed: false,
+      };
+      const moved = (intent.childIds ?? [])
+        .map((id) => items[id])
+        .filter((child): child is Item => child !== undefined);
+      const keys = generateNKeysBetween(null, null, moved.length);
+      return put(
+        folder,
+        ...moved.map((child, i) => ({ ...child, parentId: folder.id, order: keys[i]! })),
+      );
+    }
+
+    case 'setFolderCollapsed':
+      if (item?.kind !== 'folder' || item.collapsed === intent.collapsed) return model;
+      return put({ ...item, collapsed: intent.collapsed });
+
+    case 'move':
+      if (!item) return model;
+      if (intent.parentId && isWithin(model, intent.parentId, item.id)) return model;
+      return put({ ...item, parentId: intent.parentId, order: intent.order });
+
+    case 'deleteFolder': {
+      if (item?.kind !== 'folder') return model;
+      // Its contents move up into the folder's place, keeping their order.
+      const siblings = childrenOf(model, item.spaceId, item.parentId);
+      const index = siblings.findIndex((s) => s.id === item.id);
+      const children = childrenOf(model, item.spaceId, item.id);
+      const keys = generateNKeysBetween(
+        siblings[index - 1]?.order ?? null,
+        siblings[index + 1]?.order ?? null,
+        children.length,
+      );
+      const { [item.id]: _removed, ...rest } = items;
+      children.forEach((child, i) => {
+        rest[child.id] = { ...child, parentId: item.parentId, order: keys[i]! };
+      });
+      return { ...model, items: rest };
+    }
+
+    case 'openPin':
+    case 'closePin':
+    case 'resetPin':
+      return model;
+  }
+}
+
+/** The session part of an intent that a panel can predict. */
+export function applySessionIntent(
+  session: SessionState,
+  intent: Intent,
+  windowId: number,
+): SessionState {
+  switch (intent.type) {
+    case 'pinTab': {
+      const orders = Object.fromEntries(
+        Object.entries(session.orders).map(([w, order]) => [w, withoutTab(order, intent.tabId)]),
+      );
+      return {
+        ...session,
+        orders,
+        bindings: { ...session.bindings, [intent.itemId]: intent.tabId },
+      };
+    }
+    case 'unpin':
+    case 'closePin': {
+      const tabId = session.bindings[intent.itemId];
+      if (tabId === undefined) return session;
+      const { [intent.itemId]: _unbound, ...bindings } = session.bindings;
+      if (intent.type === 'closePin') return { ...session, bindings };
+      const key = String(windowId);
+      return {
+        ...session,
+        bindings,
+        orders: { ...session.orders, [key]: withTabOnTop(session.orders[key] ?? [], tabId) },
+      };
+    }
+    default:
+      return session;
+  }
+}
