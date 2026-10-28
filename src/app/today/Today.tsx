@@ -5,8 +5,8 @@ import { selectTodayIds, useTabs } from '@/state/tabs';
 import { NewTabRow } from './NewTabRow';
 import { TabRow } from './TabRow';
 
-export function Today() {
-  const ids = useTabs(useShallow(selectTodayIds));
+export function Today({ spaceId }: { spaceId: string }) {
+  const ids = useTabs(useShallow((state) => selectTodayIds(state, spaceId)));
   return (
     <section aria-label="Today">
       <NewTabRow />

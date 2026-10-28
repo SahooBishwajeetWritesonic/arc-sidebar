@@ -110,7 +110,8 @@ function start(t: Tracking) {
 /** Rows in display order, relative to the sidebar's top edge. */
 function measure(sidebar: HTMLElement): Slot[] {
   const top = sidebar.getBoundingClientRect().top;
-  return [...sidebar.querySelectorAll<HTMLElement>('[data-nav-row]')].map((element) => {
+  const page = sidebar.querySelector('[data-active-page]') ?? sidebar;
+  return [...page.querySelectorAll<HTMLElement>('[data-nav-row]')].map((element) => {
     const rect = element.getBoundingClientRect();
     return {
       kind: element.dataset.navRow as Slot['kind'],

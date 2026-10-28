@@ -1,4 +1,4 @@
-import { AnimatePresence, LayoutGroup, MotionConfig, motion } from 'motion/react';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import type { KeyboardEvent } from 'react';
 import {
   clearToday,
@@ -17,10 +17,8 @@ import { ArchiveView } from './archive/ArchiveView';
 import { BottomBar } from './chrome/BottomBar';
 import { DragLayer } from './drag/DragLayer';
 import { fade } from './motion';
-import { Pinned } from './pinned/Pinned';
-import { SpaceHeader } from './spaces/SpaceHeader';
+import { SpacePager } from './spaces/SpacePager';
 import { ToastLayer } from './toast/ToastLayer';
-import { Today } from './today/Today';
 
 /** Enter on a row does what a click does. */
 function press(kind: string, id: string) {
@@ -60,7 +58,8 @@ function onKeyDown(event: KeyboardEvent<HTMLElement>) {
     return;
   }
 
-  const rows = [...event.currentTarget.querySelectorAll<HTMLElement>('[data-nav-row]')];
+  const page = event.currentTarget.querySelector('[data-active-page]') ?? event.currentTarget;
+  const rows = [...page.querySelectorAll<HTMLElement>('[data-nav-row]')];
   const index = rows.findIndex((row) => row === document.activeElement);
   if (index === -1) return;
   const row = rows[index]!;
@@ -114,7 +113,6 @@ export function App() {
   const sidebarReady = useSidebar((state) => state.ready);
   const ready = tabsReady && sidebarReady;
   const view = useUi((state) => state.view);
-  const spaceId = useSidebar((state) => state.spaceId);
 
   return (
     // reducedMotion="user": with Reduce Motion on, movement is skipped and fades stay.
@@ -148,22 +146,7 @@ export function App() {
                 exit={{ opacity: 0, x: 12 }}
                 transition={fade}
               >
-                <AnimatePresence mode="popLayout" initial={false}>
-                  <motion.div
-                    key={spaceId}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={fade}
-                  >
-                    {/* One group, so rows in every section slide together when any changes. */}
-                    <LayoutGroup>
-                      <SpaceHeader spaceId={spaceId} />
-                      <Pinned />
-                      <Today />
-                    </LayoutGroup>
-                  </motion.div>
-                </AnimatePresence>
+                <SpacePager />
               </motion.div>
             )}
           </AnimatePresence>

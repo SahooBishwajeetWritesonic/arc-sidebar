@@ -9,13 +9,12 @@ import { selectTodayIds, useTabs } from '@/state/tabs';
 import { FolderRow } from './FolderRow';
 import { PinRow } from './PinRow';
 
-export function Pinned() {
+export function Pinned({ spaceId }: { spaceId: string }) {
   const model = useSidebar((state) => state.model);
   const bindings = useSidebar((state) => state.session.bindings);
-  const spaceId = useSidebar((state) => state.spaceId);
   const activeId = useTabs((state) => state.activeId);
   const canClear = useTabs((state) =>
-    selectTodayIds(state).some((id) => !state.tabs.get(id)?.audible),
+    selectTodayIds(state, spaceId).some((id) => !state.tabs.get(id)?.audible),
   );
 
   const rows = useMemo(

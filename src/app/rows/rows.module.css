@@ -50,8 +50,10 @@
   background: var(--row-previous-hover);
 }
 
-/* While dragging, only a folder the drop would go into lights up under the pointer. */
-:global([data-sidebar][data-dragging]) .row:not([data-selected], [data-previous]):hover .plate {
+/* While dragging or swiping, rows don't light up under the pointer; a folder
+   a drop would go into does. */
+:global([data-sidebar][data-dragging]) .row:not([data-selected], [data-previous]):hover .plate,
+:global([data-sidebar][data-swiping]) .row:not([data-selected], [data-previous]):hover .plate {
   background: none;
 }
 
@@ -184,7 +186,8 @@
   opacity: 1;
 }
 
-:global([data-sidebar][data-dragging]) .close {
+:global([data-sidebar][data-dragging]) .close,
+:global([data-sidebar][data-swiping]) .close {
   opacity: 0;
 }
 

@@ -8,6 +8,7 @@ body,
 }
 
 body {
+  overscroll-behavior-x: none;
   background: var(--plate);
   color: var(--ink);
   font-family: var(--font-ui);

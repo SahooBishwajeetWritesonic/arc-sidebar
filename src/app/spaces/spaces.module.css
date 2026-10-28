@@ -83,3 +83,23 @@
   outline: 2px dashed var(--focus-ring);
   outline-offset: -2px;
 }
+
+/* The pager spans the panel's full width (outside the side padding), so a
+   sliding page is clipped at the panel's edge, not 8 pt inside it. */
+.viewport {
+  margin: 0 calc(-1 * var(--pad-side));
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+
+.track {
+  display: flex;
+  align-items: flex-start;
+}
+
+.page {
+  flex: 0 0 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 0 var(--pad-side);
+}
