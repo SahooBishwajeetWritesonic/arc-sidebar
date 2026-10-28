@@ -274,6 +274,20 @@ describe('SidebarService', () => {
     expect(saved.backups[0]!.model.items.p1).toMatchObject({ customTitle: 'B' });
   });
 
+  it('always backs up the model before an import', async () => {
+    const { service, saved } = setup({ tabs: [tab(1, 'https://a.com')] });
+    await service.handleIntent(pinIntent('p1', 1, 'https://a.com'));
+    await service.handleIntent({ type: 'rename', itemId: 'p1', title: 'A' });
+    expect(saved.backups).toHaveLength(1);
+    await service.handleIntent({
+      type: 'importSidebar',
+      spaces: [{ id: 'w', name: 'Work' }],
+      items: [],
+    });
+    expect(saved.backups).toHaveLength(2); // within the hour, but kept anyway
+    expect(saved.backups[0]!.model.spaces).toHaveLength(1);
+  });
+
   it('fills in settings for models saved before settings existed', async () => {
     const { settings: _none, ...old } = emptyModel();
     const { service } = setup({ tabs: [], model: old as SidebarModel });

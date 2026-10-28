@@ -202,6 +202,28 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
       };
     }
 
+    case 'importSidebar': {
+      const spaces = [
+        ...model.spaces,
+        ...intent.spaces.filter((space) => !model.spaces.some((s) => s.id === space.id)),
+      ];
+      let room =
+        FAVORITES_LIMIT - Object.values(items).filter((i) => i.spaceId === FAVORITES_ID).length;
+      const added = intent.items.filter((imported) => {
+        if (items[imported.id]) return false;
+        if (imported.spaceId !== FAVORITES_ID) {
+          return spaces.some((space) => space.id === imported.spaceId);
+        }
+        return imported.kind === 'pin' && imported.parentId === null && room-- > 0;
+      });
+      if (spaces.length === model.spaces.length && !added.length) return model;
+      return {
+        ...model,
+        spaces,
+        items: { ...items, ...Object.fromEntries(added.map((i) => [i.id, i])) },
+      };
+    }
+
     case 'moveToSpace': {
       if (!item) return model;
       if (intent.spaceId === FAVORITES_ID) {

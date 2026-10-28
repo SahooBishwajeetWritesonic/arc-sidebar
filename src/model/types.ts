@@ -212,6 +212,8 @@ export type Intent =
       windowId: number;
     }
   | { type: 'restoreSpace'; space: Space; index: number; items: Item[] }
+  /** Adds imported spaces (after the others) and items; anything already there is kept. */
+  | { type: 'importSidebar'; spaces: Space[]; items: Item[] }
   /** Moves a pinned item (and a folder's contents) to the top level of another space. */
   | { type: 'moveToSpace'; itemId: string; spaceId: string; order: string }
   | { type: 'moveTabToSpace'; tabId: number; spaceId: string }

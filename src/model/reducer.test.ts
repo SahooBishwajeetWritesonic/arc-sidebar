@@ -373,3 +373,55 @@ describe('favorites', () => {
     expect(moved.items.f0!.order).toBe('b0');
   });
 });
+
+describe('importSidebar', () => {
+  const imported: Intent = {
+    type: 'importSidebar',
+    spaces: [{ id: 'w', name: 'Work' }],
+    items: [
+      {
+        id: 'i1',
+        kind: 'pin',
+        spaceId: 'w',
+        parentId: null,
+        order: 'a0',
+        url: 'https://a.com',
+        title: 'A',
+      },
+      {
+        id: 'i2',
+        kind: 'pin',
+        spaceId: 'gone',
+        parentId: null,
+        order: 'a0',
+        url: 'https://b.com',
+        title: 'B',
+      },
+    ],
+  };
+
+  it('adds spaces at the end and items whose space exists, once', () => {
+    const model = applyIntent(emptyModel(), imported);
+    expect(model.spaces.map((s) => s.id)).toEqual([S, 'w']);
+    expect(Object.keys(model.items)).toEqual(['i1']);
+    expect(applyIntent(model, imported)).toBe(model);
+  });
+
+  it('stops adding favorites at the limit', () => {
+    const favorites = Array.from({ length: FAVORITES_LIMIT + 3 }, (_, i) => ({
+      id: `f${i}`,
+      kind: 'pin' as const,
+      spaceId: FAVORITES_ID,
+      parentId: null,
+      order: `a${i}`,
+      url: `https://f${i}.com`,
+      title: `f${i}`,
+    }));
+    const model = applyIntent(emptyModel(), {
+      type: 'importSidebar',
+      spaces: [],
+      items: favorites,
+    });
+    expect(Object.keys(model.items)).toHaveLength(FAVORITES_LIMIT);
+  });
+});

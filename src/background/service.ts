@@ -170,7 +170,8 @@ export class SidebarService {
 
     // State changes first, synchronously, so intents apply in arrival order; side effects after.
     const model = applyIntent(this.model, intent);
-    if (model !== this.model) this.writeModel(model);
+    // An import is big enough to always keep a backup of what came before.
+    if (model !== this.model) this.writeModel(model, intent.type === 'importSidebar');
     const session = applySessionIntent(this.session, intent);
     if (session !== this.session) this.writeSession(session);
     const archive = applyArchiveIntent(this.archive, intent);
@@ -419,19 +420,19 @@ export class SidebarService {
     });
   }
 
-  private writeModel(model: SidebarModel) {
+  private writeModel(model: SidebarModel, alwaysBackUp = false) {
     const previous = this.model;
     this.model = { ...model, rev: previous.rev + 1 };
     void this.deps.saveModel(this.model);
-    this.backUp(previous);
+    this.backUp(previous, alwaysBackUp);
   }
 
-  /** Copies the model as it was before a change, at most hourly. */
-  private backUp(model: SidebarModel) {
+  /** Copies the model as it was before a change, at most hourly unless `always`. */
+  private backUp(model: SidebarModel, always = false) {
     const now = this.deps.now();
     const latest = this.backups[0];
     if (Object.keys(model.items).length === 0) return;
-    if (latest && now - latest.savedAt < BACKUP_EVERY_MS) return;
+    if (!always && latest && now - latest.savedAt < BACKUP_EVERY_MS) return;
     this.backups = [{ savedAt: now, model }, ...this.backups].slice(0, BACKUPS_KEPT);
     void this.deps.saveBackups(this.backups);
   }
