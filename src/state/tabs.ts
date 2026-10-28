@@ -1,12 +1,18 @@
 import { create } from 'zustand';
+import { isSamePage } from '@/model/urls';
 import type { Platform, TabEvent, TabInfo } from '@/platform/types';
 
+/** The window's live Chrome tabs, plus what the sidebar store tells us about them. */
 export interface TabsState {
   ready: boolean;
   windowId: number | null;
   tabs: ReadonlyMap<number, TabInfo>;
-  /** Today's tab ids, top first, as the background worker ordered them. */
+  /** Today order from the service (tab ids, top first). */
   order: readonly number[];
+  /** Tabs bound to pinned items; they show in Pinned, not Today. */
+  bound: ReadonlySet<number>;
+  /** URLs of pinned items whose tab is being opened right now. */
+  openingUrls: readonly string[];
   activeId: number | null;
   /** The tab that was active before the current one; Arc tints it faintly. */
   previousId: number | null;
@@ -17,18 +23,25 @@ export const useTabs = create<TabsState>()(() => ({
   windowId: null,
   tabs: new Map(),
   order: [],
+  bound: new Set(),
+  openingUrls: [],
   activeId: null,
   previousId: null,
 }));
 
 /**
- * Tabs the worker hasn't ordered yet (it writes a few ms after Chrome's event) go on
- * top, newest first, which is where the worker will put them.
+ * Today's rows, top first. Tabs the service hasn't placed yet (it lags Chrome by a few ms) go
+ * where it will put them; a tab a pinned item is opening never shows, even for a frame.
  */
 export function selectTodayIds(state: TabsState): number[] {
-  const ordered = state.order.filter((id) => state.tabs.has(id));
-  const placed = new Set(ordered);
-  const pending = [...state.tabs.keys()].filter((id) => !placed.has(id)).reverse();
+  const inToday = (id: number) => state.tabs.has(id) && !state.bound.has(id);
+  const ordered = state.order.filter(inToday);
+  const placed = new Set(state.order);
+  const pending = [...state.tabs.values()]
+    .filter((tab) => !placed.has(tab.id) && inToday(tab.id))
+    .filter((tab) => !state.openingUrls.some((url) => isSamePage(url, tab.url)))
+    .map((tab) => tab.id)
+    .reverse();
   return [...pending, ...ordered];
 }
 
@@ -106,43 +119,28 @@ function flush() {
   useTabs.setState((state) => applyTabEvents(state, events));
 }
 
-export async function connectTabs(source: Platform): Promise<() => void> {
+export async function connectTabs(source: Platform, windowId: number): Promise<() => void> {
   platform = source;
   // Listen before querying so nothing that happens in between is lost.
   const early: TabEvent[] = [];
   let live = false;
-  const offTabs = source.onTabEvent((event) => (live ? enqueue(event) : early.push(event)));
+  const off = source.onTabEvent((event) => (live ? enqueue(event) : early.push(event)));
 
-  const windowId = await source.currentWindowId();
-  let latestOrder: number[] | null = null;
-  const offOrder = source.onTodayOrderChange(windowId, (order) => {
-    latestOrder = order;
-    if (live) useTabs.setState({ order });
-  });
-
-  const [tabs, storedOrder] = await Promise.all([
-    source.queryTabs(windowId),
-    source.getTodayOrder(windowId),
-  ]);
+  const tabs = await source.queryTabs(windowId);
   useTabs.setState({
     ready: true,
     windowId,
     tabs: new Map(tabs.map((tab) => [tab.id, tab])),
-    order: latestOrder ?? (storedOrder.length ? storedOrder : tabs.map((tab) => tab.id)),
     activeId: tabs.find((tab) => tab.active)?.id ?? null,
     previousId: null,
   });
   live = true;
   early.forEach(enqueue);
-
-  return () => {
-    offTabs();
-    offOrder();
-  };
+  return off;
 }
 
-export function faviconFor(tab: TabInfo): string | undefined {
-  return platform?.faviconUrl(tab);
+export function faviconFor(pageUrl: string): string | undefined {
+  return platform?.faviconUrl(pageUrl);
 }
 
 export function activateTab(id: number) {
@@ -155,8 +153,8 @@ export function activateTab(id: number) {
 }
 
 /**
- * Like Arc, selection moves at once to the row below (or above, for the last row),
- * rather than wherever Chrome's tab strip would go.
+ * Closes a Today tab. Like Arc, selection moves to the row below (or above,
+ * for the last row) at once, rather than wherever Chrome's tab strip would go.
  */
 export function closeTab(id: number) {
   const state = useTabs.getState();
@@ -167,10 +165,15 @@ export function closeTab(id: number) {
     const next = ids[index + 1] ?? ids[index - 1];
     if (next !== undefined) activateTab(next);
   }
+  forgetTab(id);
+  platform?.closeTab(id);
+}
+
+/** Drops a tab the panel is closing, before Chrome confirms it. */
+export function forgetTab(id: number) {
   useTabs.setState((current) => applyTabEvents(current, [{ type: 'remove', tabId: id }]));
   // Ignore late updates for this tab until Chrome's own 'remove' arrives.
   closing.add(id);
-  platform?.closeTab(id);
 }
 
 export function openNewTab() {

@@ -1,76 +1,69 @@
-import {
-  reconcileOrder,
-  todayOrderKey,
-  withTabOnTop,
-  withTabReplaced,
-  withoutTab,
-} from '@/platform/today-order';
+import { browser, type Browser } from 'wxt/browser';
+import { SidebarService, type LiveTab } from '@/background/service';
+import type { Intent } from '@/model/types';
+import { modelItem, sessionItem } from '@/platform/storage-items';
+
+function toLiveTab(tab: Browser.tabs.Tab): LiveTab | undefined {
+  if (tab.id === undefined) return undefined;
+  return {
+    id: tab.id,
+    windowId: tab.windowId,
+    index: tab.index,
+    url: tab.url || tab.pendingUrl || '',
+  };
+}
 
 export default defineBackground(() => {
-  browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+  void browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
-  // Listeners register synchronously so events that wake the worker aren't missed;
-  // each awaits the initial load, and sharing that promise keeps arrival order.
-  const orders = new Map<number, number[]>();
-  const ready = load();
+  const service = new SidebarService({
+    queryTabs: async () =>
+      (await browser.tabs.query({})).map(toLiveTab).filter((tab) => tab !== undefined),
+    getTab: async (tabId) => {
+      try {
+        return toLiveTab(await browser.tabs.get(tabId));
+      } catch {
+        return undefined; // already closed
+      }
+    },
+    createTab: async (windowId, url) =>
+      void (await browser.tabs.create({ windowId, url, active: true })),
+    activateTab: async (tabId) => void (await browser.tabs.update(tabId, { active: true })),
+    navigateTab: async (tabId, url) => void (await browser.tabs.update(tabId, { url })),
+    closeTab: async (tabId) => void (await browser.tabs.remove(tabId).catch(() => {})),
+    loadModel: () => modelItem.getValue(),
+    saveModel: (model) => modelItem.setValue(model),
+    loadSession: () => sessionItem.getValue(),
+    saveSession: (session) => sessionItem.setValue(session),
+    now: () => Date.now(),
+  });
 
-  async function load() {
-    const [stored, tabs] = await Promise.all([
-      browser.storage.session.get(null),
-      browser.tabs.query({}),
-    ]);
-    const liveByWindow = new Map<number, number[]>();
-    for (const tab of tabs.sort((a, b) => a.index - b.index)) {
-      if (tab.id === undefined) continue;
-      liveByWindow.set(tab.windowId, [...(liveByWindow.get(tab.windowId) ?? []), tab.id]);
-    }
-    for (const [windowId, liveIds] of liveByWindow) {
-      const saved = stored[todayOrderKey(windowId)];
-      orders.set(windowId, reconcileOrder(Array.isArray(saved) ? saved : [], liveIds));
-    }
-    const stale = Object.keys(stored).filter(
-      (key) => key.startsWith('today:') && !liveByWindow.has(Number(key.slice(6))),
-    );
-    await browser.storage.session.remove(stale);
-    await Promise.all([...orders.keys()].map(save));
-  }
-
-  function save(windowId: number) {
-    const order = orders.get(windowId);
-    return order
-      ? browser.storage.session.set({ [todayOrderKey(windowId)]: order })
-      : browser.storage.session.remove(todayOrderKey(windowId));
-  }
-
-  async function update(windowId: number, change: (order: number[]) => number[]) {
-    await ready;
-    orders.set(windowId, change(orders.get(windowId) ?? []));
-    void save(windowId);
-  }
-
+  // Registered synchronously so the events that wake the worker aren't missed.
   browser.tabs.onCreated.addListener((tab) => {
-    if (tab.id !== undefined) void update(tab.windowId, (o) => withTabOnTop(o, tab.id!));
+    const live = toLiveTab(tab);
+    if (live) void service.onTabCreated(live);
   });
-  browser.tabs.onRemoved.addListener((tabId, { windowId }) => {
-    void update(windowId, (o) => withoutTab(o, tabId));
-  });
-  browser.tabs.onAttached.addListener((tabId, { newWindowId }) => {
-    void update(newWindowId, (o) => withTabOnTop(o, tabId));
-  });
-  browser.tabs.onDetached.addListener((tabId, { oldWindowId }) => {
-    void update(oldWindowId, (o) => withoutTab(o, tabId));
-  });
-  browser.tabs.onReplaced.addListener(async (addedTabId, removedTabId) => {
-    await ready;
-    for (const [windowId, order] of orders) {
-      if (!order.includes(removedTabId)) continue;
-      orders.set(windowId, withTabReplaced(order, removedTabId, addedTabId));
-      void save(windowId);
-    }
-  });
-  browser.windows.onRemoved.addListener(async (windowId) => {
-    await ready;
-    orders.delete(windowId);
-    void save(windowId);
-  });
+  browser.tabs.onRemoved.addListener(
+    (tabId, { windowId }) => void service.onTabRemoved(tabId, windowId),
+  );
+  browser.tabs.onReplaced.addListener(
+    (added, removed) => void service.onTabReplaced(added, removed),
+  );
+  browser.tabs.onAttached.addListener(
+    (tabId, { newWindowId }) => void service.onTabAttached(tabId, newWindowId),
+  );
+  browser.tabs.onDetached.addListener(
+    (tabId, { oldWindowId }) => void service.onTabDetached(tabId, oldWindowId),
+  );
+  browser.windows.onRemoved.addListener((windowId) => void service.onWindowRemoved(windowId));
+
+  browser.runtime.onMessage.addListener(
+    (message: { kind?: string; intent?: Intent }, _sender, sendResponse) => {
+      if (message?.kind !== 'intent' || !message.intent) return;
+      service
+        .handleIntent(message.intent)
+        .then(sendResponse, (error: unknown) => sendResponse({ error: String(error) }));
+      return true; // keeps the channel open for the async response
+    },
+  );
 });

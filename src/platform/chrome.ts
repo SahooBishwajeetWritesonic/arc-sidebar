@@ -1,5 +1,6 @@
 import { browser, type Browser } from 'wxt/browser';
-import { todayOrderKey } from './today-order';
+import type { IntentResult } from '@/model/types';
+import { modelItem, sessionItem } from './storage-items';
 import type { Platform, TabEvent, TabInfo } from './types';
 
 function toTabInfo(tab: Browser.tabs.Tab): TabInfo | undefined {
@@ -16,10 +17,6 @@ function toTabInfo(tab: Browser.tabs.Tab): TabInfo | undefined {
     muted: tab.mutedInfo?.muted ?? false,
     discarded: tab.discarded,
   };
-}
-
-function readOrder(value: unknown): number[] {
-  return Array.isArray(value) ? value.filter((id): id is number => typeof id === 'number') : [];
 }
 
 export const chromePlatform: Platform = {
@@ -65,18 +62,16 @@ export const chromePlatform: Platform = {
     };
   },
 
-  async getTodayOrder(windowId) {
-    const key = todayOrderKey(windowId);
-    return readOrder((await browser.storage.session.get(key))[key]);
-  },
+  loadModel: () => modelItem.getValue(),
+  onModelChange: (listener) => modelItem.watch((model) => listener(model)),
+  loadSession: () => sessionItem.getValue(),
+  onSessionChange: (listener) => sessionItem.watch((session) => listener(session)),
 
-  onTodayOrderChange(windowId, listener) {
-    const key = todayOrderKey(windowId);
-    const onChanged = (changes: Record<string, Browser.storage.StorageChange>) => {
-      if (key in changes) listener(readOrder(changes[key]?.newValue));
-    };
-    browser.storage.session.onChanged.addListener(onChanged);
-    return () => browser.storage.session.onChanged.removeListener(onChanged);
+  async sendIntent(intent) {
+    const response = (await browser.runtime.sendMessage({ kind: 'intent', intent })) as
+      IntentResult | { error: string };
+    if ('error' in response) throw new Error(response.error);
+    return response;
   },
 
   activateTab(tabId) {
@@ -95,9 +90,9 @@ export const chromePlatform: Platform = {
     void browser.tabs.update(tabId, { muted });
   },
 
-  faviconUrl(tab) {
-    if (!tab.url) return undefined;
-    const params = new URLSearchParams({ pageUrl: tab.url, size: '32' });
+  faviconUrl(pageUrl) {
+    if (!pageUrl) return undefined;
+    const params = new URLSearchParams({ pageUrl, size: '32' });
     return `chrome-extension://${browser.runtime.id}/_favicon/?${params}`;
   },
 };

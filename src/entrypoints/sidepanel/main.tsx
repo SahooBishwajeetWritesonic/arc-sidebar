@@ -2,10 +2,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '@/app/App';
 import { chromePlatform } from '@/platform/chrome';
-import { connectTabs } from '@/state/tabs';
+import { connect } from '@/state/connect';
 import '@/app/global.css';
 
-void connectTabs(chromePlatform);
+void connect(chromePlatform);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
