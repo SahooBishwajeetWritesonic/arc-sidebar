@@ -390,4 +390,25 @@ describe('SidebarService', () => {
       expect(saved.snapshot).toEqual({ work: ['https://b.com/'], home: ['https://a.com/'] });
     });
   });
+
+  it('opening a favorite keeps the shown space', async () => {
+    const model: SidebarModel = {
+      ...emptyModel(),
+      spaces: [
+        { id: 'home', name: 'Home' },
+        { id: 'work', name: 'Work' },
+      ],
+    };
+    const { service, saved } = setup({
+      tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')],
+      model,
+    });
+    await service.handleIntent({ type: 'setActiveSpace', windowId: 1, spaceId: 'work' });
+    await service.handleIntent({
+      ...pinIntent('fav', 1, 'https://a.com'),
+      spaceId: 'favorites',
+    } as Intent);
+    await service.onTabActivated(1, 1);
+    expect(saved.session.activeSpaces['1']).toBe('work');
+  });
 });

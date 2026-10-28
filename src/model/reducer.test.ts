@@ -3,6 +3,8 @@ import { applyArchiveIntent, applyIntent, applySessionIntent } from './reducer';
 import { childrenOf, flattenSpace } from './tree';
 import {
   ARCHIVE_LIMIT,
+  FAVORITES_ID,
+  FAVORITES_LIMIT,
   emptyArchive,
   emptyModel,
   emptySession,
@@ -304,5 +306,70 @@ describe('spaces', () => {
     expect(
       applySessionIntent(shown, { type: 'setActiveSpace', windowId: 1, spaceId: 'work' }),
     ).toBe(shown);
+  });
+});
+
+describe('favorites', () => {
+  const pinIn = (itemId: string, spaceId: string, order: string): Intent => ({
+    type: 'pinTab',
+    itemId,
+    tabId: 1,
+    spaceId,
+    parentId: null,
+    order,
+    url: `https://example.com/${itemId}`,
+    title: itemId,
+  });
+
+  it('takes pinned tabs, not folders', () => {
+    let model = applyIntent(emptyModel(), pinIn('p1', 'default', 'a0'));
+    model = applyIntent(model, {
+      type: 'createFolder',
+      itemId: 'f1',
+      spaceId: 'default',
+      parentId: null,
+      order: 'a1',
+      name: 'Dev',
+    });
+    model = applyIntent(model, {
+      type: 'moveToSpace',
+      itemId: 'p1',
+      spaceId: FAVORITES_ID,
+      order: 'a0',
+    });
+    expect(model.items.p1).toMatchObject({ spaceId: FAVORITES_ID, parentId: null });
+    const same = applyIntent(model, {
+      type: 'moveToSpace',
+      itemId: 'f1',
+      spaceId: FAVORITES_ID,
+      order: 'a1',
+    });
+    expect(same).toBe(model);
+  });
+
+  it('stops at twelve, and reorders within', () => {
+    let model = emptyModel();
+    for (let i = 0; i < FAVORITES_LIMIT; i++) {
+      model = applyIntent(
+        model,
+        pinIn(`f${i}`, FAVORITES_ID, `a${i < 10 ? i : String.fromCharCode(55 + i)}`),
+      );
+    }
+    model = applyIntent(model, pinIn('extra', 'default', 'a0'));
+    expect(
+      applyIntent(model, {
+        type: 'moveToSpace',
+        itemId: 'extra',
+        spaceId: FAVORITES_ID,
+        order: 'b0',
+      }),
+    ).toBe(model);
+    const moved = applyIntent(model, {
+      type: 'moveToSpace',
+      itemId: 'f0',
+      spaceId: FAVORITES_ID,
+      order: 'b0',
+    });
+    expect(moved.items.f0!.order).toBe('b0');
   });
 });

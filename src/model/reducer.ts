@@ -3,6 +3,8 @@ import { withTabBefore, withTabOnTop, withoutTab } from '@/platform/today-order'
 import { childrenOf, descendants, isWithin } from './tree';
 import {
   ARCHIVE_LIMIT,
+  FAVORITES_ID,
+  FAVORITES_LIMIT,
   type ArchiveState,
   type Intent,
   type Item,
@@ -95,7 +97,12 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
     case 'move':
       if (!item) return model;
       if (intent.parentId && isWithin(model, intent.parentId, item.id)) return model;
-      return put({ ...item, parentId: intent.parentId, order: intent.order });
+      return put({
+        ...item,
+        spaceId: intent.spaceId ?? item.spaceId,
+        parentId: intent.parentId,
+        order: intent.order,
+      });
 
     case 'deleteFolder': {
       if (item?.kind !== 'folder') return model;
@@ -196,7 +203,15 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
     }
 
     case 'moveToSpace': {
-      if (!item || !model.spaces.some((space) => space.id === intent.spaceId)) return model;
+      if (!item) return model;
+      if (intent.spaceId === FAVORITES_ID) {
+        const count = Object.values(items).filter((i) => i.spaceId === FAVORITES_ID).length;
+        if (item.kind !== 'pin' || item.spaceId === FAVORITES_ID || count >= FAVORITES_LIMIT) {
+          return item.spaceId === FAVORITES_ID ? put({ ...item, order: intent.order }) : model;
+        }
+      } else if (!model.spaces.some((space) => space.id === intent.spaceId)) {
+        return model;
+      }
       const inside = item.kind === 'folder' ? descendants(model, item.id) : [];
       return put(
         { ...item, spaceId: intent.spaceId, parentId: null, order: intent.order },

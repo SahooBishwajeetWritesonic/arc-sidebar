@@ -3,6 +3,7 @@ import {
   ARCHIVE_AFTER_MS,
   DEFAULT_SPACE_ID,
   defaultSettings,
+  FAVORITES_ID,
   normalizeSession,
   type ArchiveEntry,
   type ArchiveState,
@@ -362,7 +363,11 @@ export class SidebarService {
 
   private spaceOfTab(tabId: number): string | undefined {
     const itemId = Object.entries(this.session.bindings).find(([, id]) => id === tabId)?.[0];
-    if (itemId) return this.model.items[itemId]?.spaceId;
+    if (itemId) {
+      const spaceId = this.model.items[itemId]?.spaceId;
+      // Favorites belong to every space: opening one doesn't switch.
+      return spaceId === FAVORITES_ID ? undefined : spaceId;
+    }
     return this.session.tabSpaces[tabId];
   }
 

@@ -85,6 +85,13 @@ export type Item = PinItem | FolderItem;
 
 export const DEFAULT_SPACE_ID = 'default';
 
+/**
+ * Favorites are pinned tabs in this pseudo-space: shared by every space,
+ * icon-only, at most 12 (Arc's limit).
+ */
+export const FAVORITES_ID = 'favorites';
+export const FAVORITES_LIMIT = 12;
+
 export const emptyModel = (): SidebarModel => ({
   rev: 0,
   spaces: [{ id: DEFAULT_SPACE_ID, name: 'Space' }],
@@ -226,7 +233,7 @@ export type Intent =
       childIds?: string[];
     }
   | { type: 'setFolderCollapsed'; itemId: string; collapsed: boolean }
-  | { type: 'move'; itemId: string; parentId: string | null; order: string }
+  | { type: 'move'; itemId: string; parentId: string | null; order: string; spaceId?: string }
   | { type: 'deleteFolder'; itemId: string };
 
 /** The service's answer: the revisions at which the intent was applied. */
