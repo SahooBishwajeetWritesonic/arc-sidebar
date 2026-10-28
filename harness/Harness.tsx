@@ -14,10 +14,13 @@ export function Harness({ platform }: { platform: FakePlatform }) {
   });
   const [page, setPage] = useState(0);
 
-  // On the root, so colours resolved on <body> follow it too.
+  // The controls follow the chosen scheme; the panel follows the Appearance
+  // setting, which this sets through the real service.
   useEffect(() => {
     document.documentElement.style.colorScheme = scheme;
-  }, [scheme]);
+    const appearance = scheme === 'light dark' ? 'auto' : scheme;
+    void platform.service.handleIntent({ type: 'setAppearance', appearance });
+  }, [scheme, platform]);
 
   const openTab = () => {
     platform.openTab(morePages[page % morePages.length]!);
@@ -81,12 +84,7 @@ export function Harness({ platform }: { platform: FakePlatform }) {
       {/* Mimics Chrome's panel header; the frame gives the panel its own viewport. */}
       <div className={styles.panel} style={{ width }}>
         <div className={styles.chromeHeader}>Arc Sidebar</div>
-        <iframe
-          key={scheme}
-          title="Sidebar"
-          className={styles.frame}
-          src={`/panel.html?theme=${scheme === 'light dark' ? 'system' : scheme}`}
-        />
+        <iframe title="Sidebar" className={styles.frame} src="/panel.html" />
       </div>
     </div>
   );

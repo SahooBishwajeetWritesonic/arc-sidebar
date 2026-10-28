@@ -5,10 +5,8 @@ import { connect } from '@/state/connect';
 import type { FakePlatform } from './fake-platform';
 import '@/app/global.css';
 
-// The sidebar as the side panel loads it, against the fake Chrome in the parent page.
-const theme = new URLSearchParams(location.search).get('theme');
-document.documentElement.style.colorScheme =
-  theme === 'light' ? 'light' : theme === 'system' ? 'light dark' : 'dark';
+// The sidebar as Chrome's side panel loads it, against the fake Chrome in the parent page.
+// Its colour scheme follows the Appearance setting, which the harness's Theme control sets.
 
 const platform = (window.parent as Window & { harnessPlatform: FakePlatform }).harnessPlatform;
 const connection = connect(platform);
