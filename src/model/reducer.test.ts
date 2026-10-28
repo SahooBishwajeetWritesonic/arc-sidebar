@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { applyIntent, applySessionIntent } from './reducer';
+import { applyArchiveIntent, applyIntent, applySessionIntent } from './reducer';
 import { childrenOf, flattenSpace } from './tree';
-import { emptyModel, emptySession, type Intent, type SidebarModel } from './types';
+import {
+  ARCHIVE_LIMIT,
+  emptyArchive,
+  emptyModel,
+  emptySession,
+  type ArchiveEntry,
+  type Intent,
+  type SidebarModel,
+} from './types';
 
 const S = 'default';
 
@@ -144,5 +152,69 @@ describe('applySessionIntent', () => {
     const next = applySessionIntent(session, { type: 'closePin', itemId: 'p6' });
     expect(next.bindings).toEqual({});
     expect(next.orders['1']).toEqual([5]);
+  });
+});
+
+describe('settings, undo and archive', () => {
+  it('sets how long until Today tabs archive', () => {
+    const model = applyIntent(emptyModel(), { type: 'setArchiveAfter', archiveAfter: '7d' });
+    expect(model.settings.archiveAfter).toBe('7d');
+  });
+
+  it('restores removed items, once', () => {
+    const model = build(pin('p1', 'a0'));
+    const removed = model.items.p1!;
+    const unpinned = applyIntent(model, { type: 'unpin', itemId: 'p1', windowId: 1 });
+    const restored = applyIntent(unpinned, { type: 'restoreItems', items: [removed] });
+    expect(restored.items.p1).toEqual(removed);
+    expect(applyIntent(restored, { type: 'restoreItems', items: [removed] })).toBe(restored);
+  });
+
+  const entry = (id: string): ArchiveEntry => ({
+    id,
+    url: `https://example.com/${id}`,
+    title: id,
+    spaceId: 'default',
+    archivedAt: 0,
+    reason: 'cleared',
+    batchId: 'b',
+  });
+
+  it('adds archived tabs on top, idempotently, and caps the archive', () => {
+    const intent: Intent = {
+      type: 'archiveTabs',
+      windowId: 1,
+      tabs: [{ tabId: 1, entry: entry('e1') }],
+    };
+    const once = applyArchiveIntent(emptyArchive(), intent);
+    expect(applyArchiveIntent(once, intent)).toBe(once);
+    const full = {
+      rev: 0,
+      entries: Array.from({ length: ARCHIVE_LIMIT }, (_, i) => entry(`old${i}`)),
+    };
+    const capped = applyArchiveIntent(full, intent);
+    expect(capped.entries).toHaveLength(ARCHIVE_LIMIT);
+    expect(capped.entries[0]!.id).toBe('e1');
+  });
+
+  it('removes restored or forgotten entries', () => {
+    const archive = { rev: 0, entries: [entry('e1'), entry('e2')] };
+    expect(
+      applyArchiveIntent(archive, { type: 'forgetArchived', entryIds: ['e1'] }).entries,
+    ).toEqual([entry('e2')]);
+    expect(
+      applyArchiveIntent(archive, { type: 'restoreArchived', windowId: 1, entryIds: ['e2'] })
+        .entries,
+    ).toEqual([entry('e1')]);
+  });
+
+  it('takes archived tabs out of Today', () => {
+    const session = { ...emptySession(), orders: { '1': [1, 2, 3] } };
+    const next = applySessionIntent(session, {
+      type: 'archiveTabs',
+      windowId: 1,
+      tabs: [{ tabId: 2, entry: entry('e2') }],
+    });
+    expect(next.orders['1']).toEqual([1, 3]);
   });
 });
