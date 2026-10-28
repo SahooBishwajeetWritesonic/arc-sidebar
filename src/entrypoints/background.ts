@@ -1,7 +1,13 @@
 import { browser, type Browser } from 'wxt/browser';
 import { SidebarService, type LiveTab } from '@/background/service';
 import type { Intent } from '@/model/types';
-import { archiveItem, backupsItem, modelItem, sessionItem } from '@/platform/storage-items';
+import {
+  archiveItem,
+  backupsItem,
+  modelItem,
+  sessionItem,
+  todaySnapshotItem,
+} from '@/platform/storage-items';
 
 const AUTO_ARCHIVE_ALARM = 'auto-archive';
 
@@ -38,6 +44,9 @@ export default defineBackground(() => {
     saveArchive: (archive) => archiveItem.setValue(archive),
     loadBackups: () => backupsItem.getValue(),
     saveBackups: (backups) => backupsItem.setValue(backups),
+    loadTodaySnapshot: () => todaySnapshotItem.getValue(),
+    saveTodaySnapshot: (snapshot) => todaySnapshotItem.setValue(snapshot),
+    defer: (run, ms) => void setTimeout(run, ms),
     now: () => Date.now(),
     newId: () => crypto.randomUUID(),
   });
@@ -47,6 +56,9 @@ export default defineBackground(() => {
     const live = toLiveTab(tab);
     if (live) void service.onTabCreated(live);
   });
+  browser.tabs.onActivated.addListener(
+    ({ tabId, windowId }) => void service.onTabActivated(tabId, windowId),
+  );
   browser.tabs.onRemoved.addListener(
     (tabId, { windowId }) => void service.onTabRemoved(tabId, windowId),
   );
@@ -63,7 +75,9 @@ export default defineBackground(() => {
 
   // Chrome can drop alarms on restart, so recreate it each time the worker starts.
   browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === AUTO_ARCHIVE_ALARM) void service.archiveStale();
+    if (alarm.name !== AUTO_ARCHIVE_ALARM) return;
+    void service.archiveStale();
+    void service.snapshotToday(); // also catches pages navigated since the last change
   });
   void browser.alarms.get(AUTO_ARCHIVE_ALARM).then((alarm) => {
     if (!alarm) void browser.alarms.create(AUTO_ARCHIVE_ALARM, { periodInMinutes: 5 });

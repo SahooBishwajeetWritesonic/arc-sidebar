@@ -29,7 +29,11 @@ export const defaultSettings = (): Settings => ({ archiveAfter: '12h' });
 export interface Space {
   id: string;
   name: string;
+  icon?: SpaceIcon;
 }
+
+/** An emoji, or one of the sidebar's symbol icons (see app/spaces/icons.ts). */
+export type SpaceIcon = { type: 'emoji'; char: string } | { type: 'symbol'; name: string };
 
 interface ItemBase {
   id: string;
@@ -100,13 +104,35 @@ export interface Backup {
  */
 export interface SessionState {
   rev: number;
-  /** Window id → Today tab ids, top first. */
+  /** Window id → Today tab ids, top first (all spaces; each space shows its own). */
   orders: Record<string, number[]>;
   /** Pin id → tab id. */
   bindings: Record<string, number>;
+  /** Today tab id → space id. Pinned tabs belong to their pin's space instead. */
+  tabSpaces: Record<string, string>;
+  /** Window id → the space it shows. */
+  activeSpaces: Record<string, string>;
+  /** Space id → the tab last used there, re-selected when switching back. */
+  lastActive: Record<string, number>;
 }
 
-export const emptySession = (): SessionState => ({ rev: 0, orders: {}, bindings: {} });
+export const emptySession = (): SessionState => ({
+  rev: 0,
+  orders: {},
+  bindings: {},
+  tabSpaces: {},
+  activeSpaces: {},
+  lastActive: {},
+});
+
+/** Fills in fields that sessions saved by older versions don't have. */
+export const normalizeSession = (session: Partial<SessionState>): SessionState => ({
+  ...emptySession(),
+  ...session,
+});
+
+/** Per space, its Today tabs' URLs, top first, to re-match after a Chrome restart. */
+export type TodaySnapshot = Record<string, string[]>;
 
 /** Every change to the sidebar, sent from a panel to the service. */
 export type Intent =
@@ -124,6 +150,8 @@ export type Intent =
       type: 'unpin';
       itemId: string;
       windowId: number;
+      /** The space whose Today the tab goes to (the pin's space). */
+      spaceId?: string;
       /** Where the tab goes in Today: before this tab, null for the end, omitted for the top. */
       todayBeforeTabId?: number | null;
     }
@@ -136,6 +164,27 @@ export type Intent =
   | { type: 'setArchiveAfter'; archiveAfter: ArchiveAfter }
   /** Puts back items that were removed (undo). */
   | { type: 'restoreItems'; items: Item[] }
+  | { type: 'createSpace'; spaceId: string; name: string; index: number; icon?: SpaceIcon }
+  | { type: 'renameSpace'; spaceId: string; name: string }
+  | { type: 'setSpaceIcon'; spaceId: string; icon: SpaceIcon | null }
+  | { type: 'moveSpace'; spaceId: string; index: number }
+  /**
+   * Removes a space and its pins and folders (`itemIds`). Its Today tabs, and
+   * any tabs its pins had open, move to `fallbackSpaceId`'s Today.
+   */
+  | {
+      type: 'deleteSpace';
+      spaceId: string;
+      fallbackSpaceId: string;
+      itemIds: string[];
+      windowId: number;
+    }
+  | { type: 'restoreSpace'; space: Space; index: number; items: Item[] }
+  /** Moves a pinned item (and a folder's contents) to the top level of another space. */
+  | { type: 'moveToSpace'; itemId: string; spaceId: string; order: string }
+  | { type: 'moveTabToSpace'; tabId: number; spaceId: string }
+  /** Shows a space in a window; `openNewTab` when it has no tab to select. */
+  | { type: 'setActiveSpace'; windowId: number; spaceId: string; openNewTab?: boolean }
   | { type: 'openPin'; itemId: string; windowId: number }
   | { type: 'closePin'; itemId: string }
   | { type: 'resetPin'; itemId: string }

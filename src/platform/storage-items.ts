@@ -8,6 +8,7 @@ import {
   type Backup,
   type SessionState,
   type SidebarModel,
+  type TodaySnapshot,
 } from '@/model/types';
 
 /** Pins, folders, spaces and settings. Versioned so schema changes can migrate. */
@@ -36,4 +37,8 @@ export const archiveItem = storage.defineItem<ArchiveState>('local:archive', {
 /** Rolling copies of the model, newest first. */
 export const backupsItem = storage.defineItem<Backup[]>('local:backups', {
   fallback: [],
+});
+
+export const todaySnapshotItem = storage.defineItem<TodaySnapshot>('local:todaySnapshot', {
+  fallback: {},
 });

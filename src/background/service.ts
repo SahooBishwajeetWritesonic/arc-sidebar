@@ -1,7 +1,9 @@
 import { applyArchiveIntent, applyIntent, applySessionIntent } from '@/model/reducer';
 import {
   ARCHIVE_AFTER_MS,
+  DEFAULT_SPACE_ID,
   defaultSettings,
+  normalizeSession,
   type ArchiveEntry,
   type ArchiveState,
   type Backup,
@@ -10,6 +12,7 @@ import {
   type PinItem,
   type SessionState,
   type SidebarModel,
+  type TodaySnapshot,
 } from '@/model/types';
 import { isSamePage, isSamePath } from '@/model/urls';
 import { reconcileOrder, withTabOnTop, withTabReplaced, withoutTab } from '@/platform/today-order';
@@ -41,6 +44,10 @@ export interface ServiceDeps {
   saveArchive(archive: ArchiveState): Promise<void>;
   loadBackups(): Promise<Backup[]>;
   saveBackups(backups: Backup[]): Promise<void>;
+  loadTodaySnapshot(): Promise<TodaySnapshot>;
+  saveTodaySnapshot(snapshot: TodaySnapshot): Promise<void>;
+  /** Runs `run` later (setTimeout in Chrome; tests can run it at once or not at all). */
+  defer(run: () => void, ms: number): void;
   now(): number;
   newId(): string;
 }
@@ -51,6 +58,7 @@ const RESTORE_WINDOW_MS = 10_000;
 const OPEN_TIMEOUT_MS = 5_000;
 const BACKUP_EVERY_MS = 3600_000;
 const BACKUPS_KEPT = 20;
+const SNAPSHOT_DELAY_MS = 2_000;
 
 /**
  * The only writer of saved state. Public methods wait for the initial load; after that their
@@ -62,6 +70,9 @@ export class SidebarService {
   private archive!: ArchiveState;
   private backups: Backup[] = [];
   private restoringUntil = 0;
+  /** Today URLs per space from before a restart, not yet matched to a tab. */
+  private unmatched: TodaySnapshot = {};
+  private snapshotQueued = false;
   private opening: { itemId: string; url: string; expires: number }[] = [];
   readonly ready: Promise<void>;
 
@@ -70,19 +81,26 @@ export class SidebarService {
   }
 
   private async load() {
-    const [model, session, archive, backups, tabs] = await Promise.all([
+    const [model, stored, archive, backups, snapshot, tabs] = await Promise.all([
       this.deps.loadModel(),
       this.deps.loadSession(),
       this.deps.loadArchive(),
       this.deps.loadBackups(),
+      this.deps.loadTodaySnapshot(),
       this.deps.queryTabs(),
     ]);
+    const session = normalizeSession(stored);
     // Models saved before settings existed get the defaults.
     this.model = { ...model, settings: { ...defaultSettings(), ...model.settings } };
     this.archive = archive;
     this.backups = backups;
     // Session storage is empty at the start of every browser session.
-    if (session.rev === 0) this.restoringUntil = this.deps.now() + RESTORE_WINDOW_MS;
+    if (session.rev === 0) {
+      this.restoringUntil = this.deps.now() + RESTORE_WINDOW_MS;
+      this.unmatched = Object.fromEntries(
+        Object.entries(snapshot).map(([s, urls]) => [s, [...urls]]),
+      );
+    }
 
     const live = new Set(tabs.map((tab) => tab.id));
     const bindings: Record<string, number> = {};
@@ -102,7 +120,33 @@ export class SidebarService {
     for (const [windowId, ids] of stripOrder) {
       orders[windowId] = reconcileOrder(session.orders[windowId] ?? [], ids);
     }
-    this.writeSession({ ...this.session, orders });
+    // A Today tab's space: its pre-restart one if the URL matches, else its window's.
+    const tabSpaces: Record<string, string> = {};
+    for (const tab of [...tabs].sort((a, b) => a.index - b.index)) {
+      if (bound.has(tab.id)) continue;
+      const known = this.session.tabSpaces[tab.id];
+      tabSpaces[tab.id] =
+        known && this.hasSpace(known)
+          ? known
+          : (this.matchSnapshot(tab.url) ?? this.activeSpaceOf(tab.windowId));
+    }
+    this.writeSession({ ...this.session, orders, tabSpaces });
+  }
+
+  /** Saves each space's Today URLs, top first, for matching after a restart. */
+  async snapshotToday() {
+    await this.ready;
+    this.snapshotQueued = false;
+    const urls = new Map((await this.deps.queryTabs()).map((tab) => [tab.id, tab.url]));
+    const snapshot: TodaySnapshot = {};
+    for (const order of Object.values(this.session.orders)) {
+      for (const tabId of order) {
+        const space = this.session.tabSpaces[tabId];
+        const url = urls.get(tabId);
+        if (space && url) (snapshot[space] ??= []).push(url);
+      }
+    }
+    await this.deps.saveTodaySnapshot(snapshot);
   }
 
   snapshot() {
@@ -160,6 +204,9 @@ export class SidebarService {
           await this.deps.createTab(intent.windowId, entry.url, false);
         }
         break;
+      case 'setActiveSpace':
+        if (intent.openNewTab) await this.deps.createTab(intent.windowId, 'chrome://newtab/', true);
+        break;
     }
     return this.revisions();
   }
@@ -211,7 +258,35 @@ export class SidebarService {
       return;
     }
     if (this.bindIfRestoredPin(tab)) return;
-    this.updateOrder(tab.windowId, (order) => withTabOnTop(order, tab.id));
+    const restored =
+      this.deps.now() <= this.restoringUntil ? this.matchSnapshot(tab.url) : undefined;
+    const key = String(tab.windowId);
+    this.writeSession({
+      ...this.session,
+      orders: {
+        ...this.session.orders,
+        [key]: withTabOnTop(this.session.orders[key] ?? [], tab.id),
+      },
+      tabSpaces: {
+        ...this.session.tabSpaces,
+        [tab.id]: restored ?? this.activeSpaceOf(tab.windowId),
+      },
+    });
+  }
+
+  /** Chrome activated a tab, maybe from its own tab strip: the sidebar follows to its space. */
+  async onTabActivated(tabId: number, windowId: number) {
+    await this.ready;
+    const space = this.spaceOfTab(tabId);
+    if (!space) return;
+    const key = String(windowId);
+    if (this.session.activeSpaces[key] === space && this.session.lastActive[space] === tabId)
+      return;
+    this.writeSession({
+      ...this.session,
+      activeSpaces: { ...this.session.activeSpaces, [key]: space },
+      lastActive: { ...this.session.lastActive, [space]: tabId },
+    });
   }
 
   async onTabRemoved(tabId: number, windowId: number) {
@@ -219,11 +294,13 @@ export class SidebarService {
     const bindings = Object.fromEntries(
       Object.entries(this.session.bindings).filter(([, id]) => id !== tabId),
     );
+    const { [tabId]: _gone, ...tabSpaces } = this.session.tabSpaces;
     const key = String(windowId);
     const order = this.session.orders[key];
     this.writeSession({
       ...this.session,
       bindings,
+      tabSpaces,
       orders: order
         ? { ...this.session.orders, [key]: withoutTab(order, tabId) }
         : this.session.orders,
@@ -232,6 +309,8 @@ export class SidebarService {
 
   async onTabReplaced(addedTabId: number, removedTabId: number) {
     await this.ready;
+    const { [removedTabId]: space, ...tabSpaces } = this.session.tabSpaces;
+    if (space) tabSpaces[addedTabId] = space;
     const bindings = Object.fromEntries(
       Object.entries(this.session.bindings).map(([itemId, id]) => [
         itemId,
@@ -244,13 +323,21 @@ export class SidebarService {
         withTabReplaced(order, removedTabId, addedTabId),
       ]),
     );
-    this.writeSession({ ...this.session, bindings, orders });
+    this.writeSession({ ...this.session, bindings, orders, tabSpaces });
   }
 
   async onTabAttached(tabId: number, newWindowId: number) {
     await this.ready;
     if (Object.values(this.session.bindings).includes(tabId)) return;
-    this.updateOrder(newWindowId, (order) => withTabOnTop(order, tabId));
+    const key = String(newWindowId);
+    this.writeSession({
+      ...this.session,
+      orders: {
+        ...this.session.orders,
+        [key]: withTabOnTop(this.session.orders[key] ?? [], tabId),
+      },
+      tabSpaces: { ...this.session.tabSpaces, [tabId]: this.activeSpaceOf(newWindowId) },
+    });
   }
 
   async onTabDetached(tabId: number, oldWindowId: number) {
@@ -262,6 +349,33 @@ export class SidebarService {
     await this.ready;
     const { [String(windowId)]: _closed, ...orders } = this.session.orders;
     this.writeSession({ ...this.session, orders });
+  }
+
+  private hasSpace(spaceId: string) {
+    return this.model.spaces.some((space) => space.id === spaceId);
+  }
+
+  private activeSpaceOf(windowId: number): string {
+    const space = this.session.activeSpaces[String(windowId)];
+    return space && this.hasSpace(space) ? space : (this.model.spaces[0]?.id ?? DEFAULT_SPACE_ID);
+  }
+
+  private spaceOfTab(tabId: number): string | undefined {
+    const itemId = Object.entries(this.session.bindings).find(([, id]) => id === tabId)?.[0];
+    if (itemId) return this.model.items[itemId]?.spaceId;
+    return this.session.tabSpaces[tabId];
+  }
+
+  /** The space a restored tab was in before the restart, consuming the match. */
+  private matchSnapshot(url: string): string | undefined {
+    for (const [space, urls] of Object.entries(this.unmatched)) {
+      const index = urls.findIndex((known) => isSamePage(known, url));
+      if (index !== -1 && this.hasSpace(space)) {
+        urls.splice(index, 1);
+        return space;
+      }
+    }
+    return undefined;
   }
 
   private revisions(): IntentResult {
@@ -320,6 +434,10 @@ export class SidebarService {
   private writeSession(session: SessionState) {
     this.session = { ...session, rev: (this.session?.rev ?? session.rev) + 1 };
     void this.deps.saveSession(this.session);
+    if (!this.snapshotQueued) {
+      this.snapshotQueued = true;
+      this.deps.defer(() => void this.snapshotToday(), SNAPSHOT_DELAY_MS);
+    }
   }
 
   private writeArchive(archive: ArchiveState) {

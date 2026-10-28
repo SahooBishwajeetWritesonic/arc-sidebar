@@ -1,6 +1,6 @@
 import { generateNKeysBetween } from 'fractional-indexing';
 import { withTabBefore, withTabOnTop, withoutTab } from '@/platform/today-order';
-import { childrenOf, isWithin } from './tree';
+import { childrenOf, descendants, isWithin } from './tree';
 import {
   ARCHIVE_LIMIT,
   type ArchiveState,
@@ -8,7 +8,21 @@ import {
   type Item,
   type SessionState,
   type SidebarModel,
+  type Space,
 } from './types';
+
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+function updateSpace(model: SidebarModel, spaceId: string, change: (space: Space) => Space) {
+  let changed = false;
+  const spaces = model.spaces.map((space) => {
+    if (space.id !== spaceId) return space;
+    const next = change(space);
+    changed ||= next !== space;
+    return next;
+  });
+  return changed ? { ...model, spaces } : model;
+}
 
 /**
  * The saved part of an intent. Pure: panels apply it at once for instant feedback,
@@ -110,6 +124,75 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
       return missing.length ? put(...missing) : model;
     }
 
+    case 'createSpace': {
+      if (model.spaces.some((space) => space.id === intent.spaceId)) return model;
+      const space: Space = { id: intent.spaceId, name: intent.name };
+      if (intent.icon) space.icon = intent.icon;
+      const spaces = [...model.spaces];
+      spaces.splice(clamp(intent.index, 0, spaces.length), 0, space);
+      return { ...model, spaces };
+    }
+
+    case 'renameSpace': {
+      const name = intent.name.trim();
+      return updateSpace(model, intent.spaceId, (space) =>
+        name && name !== space.name ? { ...space, name } : space,
+      );
+    }
+
+    case 'setSpaceIcon':
+      return updateSpace(model, intent.spaceId, (space) => {
+        const { icon: _old, ...rest } = space;
+        if (intent.icon) return { ...rest, icon: intent.icon };
+        return space.icon ? rest : space;
+      });
+
+    case 'moveSpace': {
+      const from = model.spaces.findIndex((space) => space.id === intent.spaceId);
+      if (from === -1) return model;
+      const spaces = model.spaces.filter((space) => space.id !== intent.spaceId);
+      const to = clamp(intent.index, 0, spaces.length);
+      if (to === from) return model;
+      spaces.splice(to, 0, model.spaces[from]!);
+      return { ...model, spaces };
+    }
+
+    case 'deleteSpace': {
+      if (model.spaces.length <= 1) return model;
+      if (!model.spaces.some((space) => space.id === intent.spaceId)) return model;
+      return {
+        ...model,
+        spaces: model.spaces.filter((space) => space.id !== intent.spaceId),
+        items: Object.fromEntries(
+          Object.entries(items).filter(([, kept]) => kept.spaceId !== intent.spaceId),
+        ),
+      };
+    }
+
+    case 'restoreSpace': {
+      let next = model;
+      if (!model.spaces.some((space) => space.id === intent.space.id)) {
+        const spaces = [...model.spaces];
+        spaces.splice(clamp(intent.index, 0, spaces.length), 0, intent.space);
+        next = { ...model, spaces };
+      }
+      const missing = intent.items.filter((restored) => !next.items[restored.id]);
+      if (!missing.length) return next;
+      return {
+        ...next,
+        items: { ...next.items, ...Object.fromEntries(missing.map((i) => [i.id, i])) },
+      };
+    }
+
+    case 'moveToSpace': {
+      if (!item || !model.spaces.some((space) => space.id === intent.spaceId)) return model;
+      const inside = item.kind === 'folder' ? descendants(model, item.id) : [];
+      return put(
+        { ...item, spaceId: intent.spaceId, parentId: null, order: intent.order },
+        ...inside.map((child) => ({ ...child, spaceId: intent.spaceId })),
+      );
+    }
+
     case 'openPin':
     case 'closePin':
     case 'resetPin':
@@ -117,6 +200,8 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
     case 'archiveTabs':
     case 'restoreArchived':
     case 'forgetArchived':
+    case 'moveTabToSpace':
+    case 'setActiveSpace':
       return model;
   }
 }
@@ -128,9 +213,12 @@ export function applySessionIntent(session: SessionState, intent: Intent): Sessi
       const orders = Object.fromEntries(
         Object.entries(session.orders).map(([w, order]) => [w, withoutTab(order, intent.tabId)]),
       );
+      // A pinned tab belongs to its pin's space, not to a Today.
+      const { [intent.tabId]: _today, ...tabSpaces } = session.tabSpaces;
       return {
         ...session,
         orders,
+        tabSpaces,
         bindings: { ...session.bindings, [intent.itemId]: intent.tabId },
       };
     }
@@ -146,7 +234,10 @@ export function applySessionIntent(session: SessionState, intent: Intent): Sessi
         intent.todayBeforeTabId === undefined
           ? withTabOnTop(order, tabId)
           : withTabBefore(order, tabId, intent.todayBeforeTabId);
-      return { ...session, bindings, orders: { ...session.orders, [key]: placed } };
+      const tabSpaces = intent.spaceId
+        ? { ...session.tabSpaces, [tabId]: intent.spaceId }
+        : session.tabSpaces;
+      return { ...session, bindings, tabSpaces, orders: { ...session.orders, [key]: placed } };
     }
     case 'reorderToday': {
       const key = String(intent.windowId);
@@ -165,6 +256,55 @@ export function applySessionIntent(session: SessionState, intent: Intent): Sessi
         ]),
       );
       return { ...session, orders };
+    }
+    case 'moveTabToSpace': {
+      if (session.tabSpaces[intent.tabId] === intent.spaceId) return session;
+      // It arrives at the top of the other space's Today.
+      const orders = Object.fromEntries(
+        Object.entries(session.orders).map(([w, order]) => [
+          w,
+          order.includes(intent.tabId) ? withTabOnTop(order, intent.tabId) : order,
+        ]),
+      );
+      return {
+        ...session,
+        orders,
+        tabSpaces: { ...session.tabSpaces, [intent.tabId]: intent.spaceId },
+      };
+    }
+    case 'setActiveSpace': {
+      const key = String(intent.windowId);
+      if (session.activeSpaces[key] === intent.spaceId) return session;
+      return { ...session, activeSpaces: { ...session.activeSpaces, [key]: intent.spaceId } };
+    }
+    case 'deleteSpace': {
+      const move = (spaceId: string) =>
+        spaceId === intent.spaceId ? intent.fallbackSpaceId : spaceId;
+      const { [intent.spaceId]: _gone, ...lastActive } = session.lastActive;
+      const tabSpaces = Object.fromEntries(
+        Object.entries(session.tabSpaces).map(([tab, space]) => [tab, move(space)]),
+      );
+      // Tabs the deleted pins had open stay open, in the fallback space's Today.
+      const removed = new Set(intent.itemIds);
+      const bindings: Record<string, number> = {};
+      const released: number[] = [];
+      for (const [itemId, tabId] of Object.entries(session.bindings)) {
+        if (removed.has(itemId)) released.push(tabId);
+        else bindings[itemId] = tabId;
+      }
+      for (const tabId of released) tabSpaces[tabId] = intent.fallbackSpaceId;
+      const key = String(intent.windowId);
+      const order = released.reduceRight(withTabOnTop, session.orders[key] ?? []);
+      return {
+        ...session,
+        lastActive,
+        bindings,
+        tabSpaces,
+        orders: released.length ? { ...session.orders, [key]: order } : session.orders,
+        activeSpaces: Object.fromEntries(
+          Object.entries(session.activeSpaces).map(([w, space]) => [w, move(space)]),
+        ),
+      };
     }
     default:
       return session;
