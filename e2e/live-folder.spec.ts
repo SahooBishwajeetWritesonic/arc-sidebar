@@ -37,6 +37,14 @@ async function filter(page: Page, ...path: string[]) {
   await panel(page)
     .getByRole('menuitemcheckbox', { name: path.at(-1)!, exact: true })
     .click();
+  await closeMenus(page);
+}
+
+/** Escape out of the submenu and the menu, and let them finish closing. */
+async function closeMenus(page: Page) {
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await expect(panel(page).getByRole('menu')).toHaveCount(0);
 }
 
 test('opening a pull request makes the Pull Requests folder, newest first', async ({ page }) => {
@@ -55,10 +63,16 @@ test('opening a pull request makes the Pull Requests folder, newest first', asyn
 
 test('its filters: drafts, review requests and one repository', async ({ page }) => {
   await withFolder(page);
-  await filter(page, 'Pull Requests', 'Drafts');
+  // The submenu stays open, so several can be ticked in a row.
+  await folder(page).click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Pull Requests', exact: true }).hover();
+  const tick = (name: string) => panel(page).getByRole('menuitemcheckbox', { name, exact: true });
+  await tick('Drafts').click();
   await expect.poll(() => inFolder(page)).toHaveLength(3);
-  await filter(page, 'Pull Requests', 'Review Requests');
+  await expect(tick('Drafts')).toHaveAttribute('aria-checked', 'false');
+  await tick('Review Requests').click();
   await expect.poll(() => inFolder(page)).toEqual(['Keep the sidebar open across restarts']);
+  await closeMenus(page);
   await filter(page, 'Pull Requests', 'Review Requests');
   await expect.poll(() => inFolder(page)).toHaveLength(3);
   await filter(page, 'Pull Requests', 'acme/design');

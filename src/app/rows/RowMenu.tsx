@@ -51,8 +51,8 @@ function MenuItems({ items }: { items: MenuEntry[] }) {
           key={entry.label}
           className={styles.item}
           checked={entry.checked}
+          // Stays open, so several can be ticked in a row.
           onCheckedChange={() => entry.onSelect()}
-          closeOnClick
         >
           <ContextMenu.CheckboxItemIndicator className={styles.check} keepMounted>
             <Check size={12} strokeWidth={2.5} />
