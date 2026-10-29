@@ -38,7 +38,7 @@
 
 .item[data-highlighted] {
   background: var(--menu-highlight);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .item[data-danger]:not([data-highlighted]) {

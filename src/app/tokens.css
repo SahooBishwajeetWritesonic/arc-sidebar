@@ -47,6 +47,7 @@
   --menu-bg: light-dark(rgb(246 246 248 / 0.88), rgb(42 42 45 / 0.88));
   --menu-edge: light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.14));
   --menu-highlight: #3970c5;
+  --on-accent: #fff; /* text and marks on the highlight */
   --menu-size: 13px;
 
   /* Dialogs: an opaque sheet over a dimmed sidebar */
