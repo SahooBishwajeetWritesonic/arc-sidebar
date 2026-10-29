@@ -6,7 +6,8 @@ export type DragSource =
   | { kind: 'tab'; tabId: number }
   | { kind: 'pin'; itemId: string; bound: boolean }
   | { kind: 'favorite'; itemId: string; bound: boolean }
-  | { kind: 'folder'; itemId: string };
+  | { kind: 'folder'; itemId: string }
+  | { kind: 'split'; tabIds: [number, number] };
 
 /** The Favorites grid as measured when the drag starts, relative to the sidebar's content. */
 export interface FavoritesZone {
@@ -19,11 +20,15 @@ export interface FavoritesZone {
 
 /** A row as measured when the drag starts; the list doesn't move during a drag. */
 export interface Slot {
-  kind: 'tab' | 'pin' | 'folder' | 'newtab';
+  kind: 'tab' | 'split' | 'pin' | 'folder' | 'newtab';
+  /** A split row's is its first tab's. */
   id: string;
   /** Relative to the top of the sidebar. */
   top: number;
   bottom: number;
+  /** Relative to the sidebar's left edge. */
+  left: number;
+  right: number;
   depth: number;
   parentId: string | null;
   /** Folders: expanded, so a drop at their bottom edge goes inside. */
@@ -43,6 +48,8 @@ export type DropTarget =
       depth: number;
     }
   | { section: 'today'; beforeTabId: number | null; lineY: number }
+  /** Onto the middle of a Today tab: the two go side by side, the dragged one on `side`. */
+  | { section: 'split'; withTabId: number; side: 'left' | 'right' }
   /** Arc makes room in the grid instead of drawing a line. */
   | { section: 'favorites'; index: number; beforeId: string | null };
 
@@ -50,7 +57,7 @@ const HALF_GAP = 0.5;
 
 /**
  * Arc's drop zones: a row's top or bottom half; a folder's top quarter, middle half
- * (into it) or bottom quarter.
+ * (into it) or bottom quarter; a Today tab's middle half splits it, left or right.
  */
 export function findTarget(
   slots: readonly Slot[],
@@ -61,8 +68,15 @@ export function findTarget(
 ): DropTarget | null {
   if (favorites && point.y < favorites.bottom) return favoritesTarget(favorites, point, source);
 
-  const target = locate(slots, point.y);
-  if (!target || target.section === 'favorites') return target;
+  const target = locate(slots, point, source);
+  if (!target || target.section === 'favorites' || target.section === 'split') return target;
+
+  if (source.kind === 'split') {
+    if (target.section !== 'today') return null;
+    return target.beforeTabId !== null && source.tabIds.includes(target.beforeTabId)
+      ? null
+      : target;
+  }
 
   if (target.section === 'today') {
     if (source.kind === 'folder') return null;
@@ -84,7 +98,7 @@ function favoritesTarget(
   point: { x: number; y: number },
   source: DragSource,
 ): DropTarget | null {
-  if (source.kind === 'folder') return null;
+  if (source.kind === 'folder' || source.kind === 'split') return null;
   if (source.kind !== 'favorite' && zone.full) return null;
   const cells = zone.cells.filter(
     (cell) => source.kind !== 'favorite' || cell.id !== source.itemId,
@@ -106,10 +120,14 @@ function favoritesTarget(
   return { section: 'favorites', index, beforeId: cells[index]?.id ?? null };
 }
 
-function locate(slots: readonly Slot[], y: number): DropTarget | null {
+function locate(
+  slots: readonly Slot[],
+  { x, y }: { x: number; y: number },
+  source: DragSource,
+): DropTarget | null {
   const newTab = slots.find((slot) => slot.kind === 'newtab');
   const pinned = slots.filter((slot) => slot.kind === 'pin' || slot.kind === 'folder');
-  const today = slots.filter((slot) => slot.kind === 'tab');
+  const today = slots.filter((slot) => slot.kind === 'tab' || slot.kind === 'split');
 
   // Today: the New Tab row and everything below it.
   if (newTab && y >= newTab.top) {
@@ -122,6 +140,13 @@ function locate(slots: readonly Slot[], y: number): DropTarget | null {
       return { section: 'today', beforeTabId: null, lineY: last.bottom + HALF_GAP };
     }
     const slot = today[index]!;
+    const ratio = (y - slot.top) / (slot.bottom - slot.top);
+    const splittable =
+      source.kind === 'tab' && slot.kind === 'tab' && slot.id !== String(source.tabId);
+    if (splittable && ratio >= 0.25 && ratio < 0.75) {
+      const side = x < (slot.left + slot.right) / 2 ? 'left' : 'right';
+      return { section: 'split', withTabId: Number(slot.id), side };
+    }
     if (y < (slot.top + slot.bottom) / 2) {
       return { section: 'today', beforeTabId: Number(slot.id), lineY: slot.top - HALF_GAP };
     }

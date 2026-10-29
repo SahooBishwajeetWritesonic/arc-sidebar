@@ -18,7 +18,7 @@ import { LayoutKey } from './layout-key';
 import { RowMenu, type MenuEntry } from './RowMenu';
 import styles from './rows.module.css';
 
-export type RowKind = 'tab' | 'pin' | 'folder';
+export type RowKind = 'tab' | 'split' | 'pin' | 'folder';
 
 interface RowProps {
   kind: RowKind;
@@ -64,6 +64,12 @@ export function Row({
   const dropInto = useDrag(
     (state) => state.target?.section === 'pinned' && state.target.into === String(id),
   );
+  // Which half lights up when a tab dropped here would split it.
+  const splitSide = useDrag((state) =>
+    kind === 'tab' && state.target?.section === 'split' && state.target.withTabId === id
+      ? state.target.side
+      : undefined,
+  );
   const plateStyle = { '--depth': depth } as CSSProperties;
 
   const onPointerDown = (event: PointerEvent<HTMLLIElement>) => {
@@ -91,6 +97,7 @@ export function Row({
       data-selected={selected || undefined}
       data-previous={(previous && !selected) || undefined}
       data-drop-into={dropInto || undefined}
+      data-split-drop={splitSide}
       role="option"
       aria-selected={!!selected}
       tabIndex={selected ? 0 : -1}

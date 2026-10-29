@@ -7,7 +7,7 @@ import styles from './drag.module.css';
 export function DragLayer() {
   const ghost = useDrag((state) => state.ghost);
   const target = useDrag((state) => state.target);
-  const line = target && target.section !== 'favorites' && target.lineY !== null ? target : null;
+  const line = target && 'lineY' in target && target.lineY !== null ? target : null;
   const asTile = target?.section === 'favorites';
   const depth = line?.section === 'pinned' ? line.depth : 0;
 

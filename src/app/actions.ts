@@ -21,6 +21,7 @@ import {
   leaveTab,
   openNewTab,
   selectTodayIds,
+  splitTabs,
   useTabs,
 } from '@/state/tabs';
 import { startEditing } from '@/state/ui';
@@ -134,6 +135,18 @@ export function deleteFolder(itemId: string) {
 export function dropOn(source: DragSource, target: DropTarget) {
   const { model, spaceId, windowId } = useSidebar.getState();
   if (windowId === null) return;
+
+  if (target.section === 'split') {
+    if (source.kind === 'tab') splitTodayTabs(source.tabId, target.withTabId, target.side);
+    return;
+  }
+  if (source.kind === 'split') {
+    if (target.section !== 'today') return;
+    for (const tabId of source.tabIds) {
+      dispatch({ type: 'reorderToday', windowId, tabId, beforeTabId: target.beforeTabId });
+    }
+    return;
+  }
   const sourceId = source.kind === 'tab' ? null : source.itemId;
 
   if (target.section === 'favorites') {
@@ -503,4 +516,16 @@ export function favoriteItem(itemId: string) {
 
 export function unfavoriteToPinned(itemId: string) {
   moveItemToSpace(itemId, useSidebar.getState().spaceId);
+}
+
+/** Puts a tab on `side` of another in Chrome's split view, and next to it in Today. */
+export function splitTodayTabs(tabId: number, withTabId: number, side: 'left' | 'right') {
+  const { windowId } = useSidebar.getState();
+  if (windowId === null || tabId === withTabId) return;
+  const ids = selectTodayIds(useTabs.getState()).filter((id) => id !== tabId);
+  const beforeTabId = side === 'left' ? withTabId : (ids[ids.indexOf(withTabId) + 1] ?? null);
+  dispatch({ type: 'reorderToday', windowId, tabId, beforeTabId });
+  const [left, right] = side === 'left' ? [tabId, withTabId] : [withTabId, tabId];
+  splitTabs(left, right);
+  activateTab(tabId);
 }

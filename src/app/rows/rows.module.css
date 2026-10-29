@@ -28,6 +28,7 @@
 
 /* The pill. Hover and selection change in a single frame, as in Arc. */
 .plate {
+  position: relative;
   display: flex;
   align-items: center;
   height: 100%;
@@ -60,6 +61,22 @@
 
 .row[data-drop-into] .plate {
   background: var(--drag-hint);
+}
+
+/* A tab dropped on a Today tab's middle splits it: the half it would take lights up. */
+.row[data-split-drop] .plate::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline: 0 50%;
+  border-radius: var(--row-radius) 0 0 var(--row-radius);
+  background: var(--drag-hint);
+  pointer-events: none;
+}
+
+.row[data-split-drop='right'] .plate::after {
+  inset-inline: 50% 0;
+  border-radius: 0 var(--row-radius) var(--row-radius) 0;
 }
 
 .row[data-selected] .plate {

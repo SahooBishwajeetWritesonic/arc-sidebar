@@ -10,6 +10,8 @@ const row = (kind: Slot['kind'], id: string, index: number, extra: Partial<Slot>
   id,
   top: index * 41,
   bottom: index * 41 + 40,
+  left: 8,
+  right: 352,
   depth: 0,
   parentId: null,
   open: false,
@@ -103,6 +105,38 @@ describe('findTarget', () => {
   it('refuses to drop a folder inside itself', () => {
     const folder: DragSource = { kind: 'folder', itemId: 'f1' };
     expect(findTarget(slots, { x: 100, y: 61 }, folder, (id) => id === 'f1')).toBeNull();
+  });
+
+  it('splits a Today tab from its middle half, its left or right half choosing the side', () => {
+    const other: DragSource = { kind: 'tab', tabId: 99 };
+    expect(findTarget(slots, { x: 100, y: 205 }, other, nothingInside)).toEqual({
+      section: 'split',
+      withTabId: 11,
+      side: 'left',
+    });
+    expect(findTarget(slots, { x: 300, y: 205 }, other, nothingInside)).toMatchObject({
+      side: 'right',
+    });
+    // Its top and bottom quarters still reorder.
+    expect(findTarget(slots, { x: 100, y: 193 }, other, nothingInside)).toMatchObject({
+      section: 'today',
+      beforeTabId: 11,
+    });
+    // Not with itself, and not from a pinned tab.
+    expect(findTarget(slots, { x: 100, y: 246 }, tab, nothingInside)?.section).not.toBe('split');
+    const pin: DragSource = { kind: 'pin', itemId: 'p1', bound: true };
+    expect(findTarget(slots, { x: 100, y: 205 }, pin, nothingInside)?.section).toBe('today');
+  });
+
+  it('moves a split row within Today only, and never onto another tab', () => {
+    const split: DragSource = { kind: 'split', tabIds: [12, 13] };
+    // Tab 11's middle reorders by half instead of splitting.
+    expect(findTarget(slots, { x: 100, y: 205 }, split, nothingInside)).toMatchObject({
+      section: 'today',
+      beforeTabId: 11,
+    });
+    expect(findTarget(slots, { x: 100, y: 225 }, split, nothingInside)).toBeNull(); // next to itself
+    expect(findTarget(slots, { x: 100, y: 5 }, split, nothingInside)).toBeNull();
   });
 
   it('treats a drop next to the dragged item as no move', () => {

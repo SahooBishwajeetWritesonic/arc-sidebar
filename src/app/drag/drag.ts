@@ -123,6 +123,7 @@ const contentTop = (sidebar: HTMLElement) =>
 /** Rows in display order, relative to the top of the sidebar's content. */
 function measure(sidebar: HTMLElement): Slot[] {
   const top = contentTop(sidebar);
+  const left = sidebar.getBoundingClientRect().left;
   const page = sidebar.querySelector('[data-active-page]') ?? sidebar;
   return [...page.querySelectorAll<HTMLElement>('[data-nav-row]')].map((element) => {
     const rect = element.getBoundingClientRect();
@@ -131,6 +132,8 @@ function measure(sidebar: HTMLElement): Slot[] {
       id: element.dataset.rowId ?? 'newtab',
       top: rect.top - top,
       bottom: rect.bottom - top,
+      left: rect.left - left,
+      right: rect.right - left,
       depth: Number(element.dataset.depth ?? 0),
       parentId: element.dataset.parentId || null,
       open: element.dataset.open !== undefined,
