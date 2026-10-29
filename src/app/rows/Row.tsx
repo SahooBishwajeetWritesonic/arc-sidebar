@@ -11,7 +11,7 @@ import {
   type Ref,
 } from 'react';
 import { dropOn } from '@/app/actions';
-import { beginPress, useDrag, type Ghost } from '@/app/drag/drag';
+import { beginPress, isPress, useDrag, type Ghost } from '@/app/drag/drag';
 import type { DragSource } from '@/app/drag/targets';
 import { fade, spring } from '@/app/motion';
 import { LayoutKey } from './layout-key';
@@ -74,7 +74,7 @@ export function Row({
   const plateStyle = { '--depth': depth } as CSSProperties;
 
   const onPointerDown = (event: PointerEvent<HTMLLIElement>) => {
-    if (event.button !== 0 || fromMenu(event)) return;
+    if (!isPress(event) || fromMenu(event)) return;
     onPress?.();
     if (drag) beginPress(event, { ...drag, onTap, onDrop: dropOn });
     else onTap?.();

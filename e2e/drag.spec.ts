@@ -124,6 +124,11 @@ test('choosing from a row’s menu doesn’t also press the row', async ({ page 
   await expect(folder).toHaveAttribute('data-open');
   await page.keyboard.press('Escape');
 
+  // Control-click is a right-click on a Mac: it opens the menu, nothing else.
+  await row(page, 'Dev').click({ modifiers: ['Control'] });
+  await expect(folder).toHaveAttribute('data-open');
+  await page.keyboard.press('Escape');
+
   // Closing another pinned tab from its menu doesn't select it first.
   await row(page, 'Google Calendar').click({ button: 'right' });
   await panel(page).getByRole('menuitem', { name: 'Close Tab' }).click();

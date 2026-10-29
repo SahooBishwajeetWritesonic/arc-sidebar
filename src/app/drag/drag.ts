@@ -60,6 +60,10 @@ export function setGhostElement(element: HTMLElement | null) {
   placeGhost();
 }
 
+/** A plain left press. Control-click is a right-click on a Mac and must only open the menu. */
+export const isPress = (event: { button: number; ctrlKey: boolean }) =>
+  event.button === 0 && !event.ctrlKey;
+
 /** A press becomes a drag after THRESHOLD of movement; otherwise releasing it is a tap. */
 export function beginPress(
   event: ReactPointerEvent<HTMLElement>,
@@ -71,7 +75,7 @@ export function beginPress(
   },
 ) {
   const sidebar = event.currentTarget.closest<HTMLElement>('[data-sidebar]');
-  if (event.button !== 0 || !sidebar || tracking) return;
+  if (!isPress(event) || !sidebar || tracking) return;
   const rect = event.currentTarget.getBoundingClientRect();
   tracking = {
     ...options,

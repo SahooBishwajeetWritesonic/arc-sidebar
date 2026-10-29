@@ -13,6 +13,7 @@ import {
 } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
 import { InlineEdit } from '@/app/rows/InlineEdit';
+import { isPress } from '@/app/drag/drag';
 import type { MenuEntry } from '@/app/rows/RowMenu';
 import { Row } from '@/app/rows/Row';
 import { Title } from '@/app/rows/Title';
@@ -115,7 +116,7 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
         onPointerDown={
           awayFromPin
             ? (event) => {
-                if (event.button !== 0) return;
+                if (!isPress(event)) return;
                 event.stopPropagation();
                 resetPin(itemId);
               }

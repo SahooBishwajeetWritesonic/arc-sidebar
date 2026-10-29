@@ -10,7 +10,7 @@ import {
   unfavoriteToPinned,
   unpinWithUndo,
 } from '@/app/actions';
-import { beginPress, useDrag } from '@/app/drag/drag';
+import { beginPress, isPress, useDrag } from '@/app/drag/drag';
 import { fade, spring } from '@/app/motion';
 import { Favicon } from '@/app/rows/Favicon';
 import { RowMenu, type MenuEntry } from '@/app/rows/RowMenu';
@@ -123,7 +123,7 @@ function Tile({ favorite, ref }: { favorite: PinItem; ref?: React.Ref<HTMLLIElem
           title={title}
           // Open tabs select on press; an unloaded one opens on a tap, so a drag never opens it.
           onPointerDown={(event) => {
-            if (event.button !== 0) return;
+            if (!isPress(event)) return;
             if (tab) pressPin(favorite.id);
             beginPress(event, {
               source: { kind: 'favorite', itemId: favorite.id, bound: tab !== undefined },
