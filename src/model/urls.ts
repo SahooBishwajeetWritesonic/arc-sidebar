@@ -21,3 +21,7 @@ export function isSamePath(a: string, b: string): boolean {
   if (!x || !y) return a === b;
   return x.origin === y.origin && x.pathname === y.pathname;
 }
+
+export function hostname(url: string): string {
+  return parse(url)?.hostname.replace(/^www\./, '') ?? '';
+}

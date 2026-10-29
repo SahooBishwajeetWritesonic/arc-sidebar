@@ -65,6 +65,15 @@ describe('selectTodayIds', () => {
 });
 
 describe('applyTabEvents', () => {
+  it('shows a tab with no title yet by its hostname', () => {
+    const { tabs } = applyTabEvents(state(), [
+      { type: 'upsert', tab: tab(4, { title: '', url: 'https://www.example.org/a' }) },
+      { type: 'upsert', tab: tab(5, { title: ' ', url: 'about:blank' }) },
+    ]);
+    expect(tabs!.get(4)!.title).toBe('example.org');
+    expect(tabs!.get(5)!.title).toBe('about:blank');
+  });
+
   it('adds and updates tabs in this window only', () => {
     const next = applyTabEvents(state(), [
       { type: 'upsert', tab: tab(4) },

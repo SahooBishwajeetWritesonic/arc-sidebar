@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { isSamePage } from '@/model/urls';
+import { hostname, isSamePage } from '@/model/urls';
 import type { Platform, TabEvent, TabInfo } from '@/platform/types';
 
 /** The window's live Chrome tabs, plus what the sidebar store tells us about them. */
@@ -53,6 +53,13 @@ export function selectTodayIds(state: TabsState, spaceId: string = state.spaceId
   return [...pending, ...ordered];
 }
 
+/**
+ * A tab with no title yet (still loading, or no <title>) shows its hostname, so no row is
+ * blank and nothing pinned or archived from it is untitled.
+ */
+export const titled = (tab: TabInfo): TabInfo =>
+  tab.title.trim() ? tab : { ...tab, title: hostname(tab.url) || tab.url };
+
 /** Tabs closed from the panel that Chrome hasn't reported removed yet. */
 const closing = new Set<number>();
 
@@ -84,7 +91,7 @@ export function applyTabEvents(state: TabsState, events: readonly TabEvent[]): P
         }
         // Activation comes only from 'activate' events: a late update can
         // still say active: true for a tab the user has already left.
-        edit().set(tab.id, tab);
+        edit().set(tab.id, titled(tab));
         break;
       }
       case 'remove':
@@ -138,7 +145,7 @@ export async function connectTabs(source: Platform, windowId: number): Promise<(
   useTabs.setState({
     ready: true,
     windowId,
-    tabs: new Map(tabs.map((tab) => [tab.id, tab])),
+    tabs: new Map(tabs.map((tab) => [tab.id, titled(tab)])),
     activeId: tabs.find((tab) => tab.active)?.id ?? null,
     previousId: null,
   });
