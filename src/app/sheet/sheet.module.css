@@ -1,4 +1,4 @@
-/* A sheet near the panel's top; it grows downwards between steps, top edge fixed. */
+/* The dialog sheet: near the top of the panel; it grows downwards so its top edge stays put. */
 
 .backdrop {
   position: fixed;

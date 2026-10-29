@@ -8,7 +8,7 @@ import { NotArcSidebarError, parseArcSidebar, type ArcSidebar } from '@/import/a
 import { planImport, type ImportChoice } from '@/import/plan';
 import { useSidebar } from '@/state/sidebar';
 import { setImporting, useUi } from '@/state/ui';
-import styles from './import.module.css';
+import styles from '@/app/sheet/sheet.module.css';
 
 const ARC_FILE = '~/Library/Application Support/Arc/StorableSidebar.json';
 
