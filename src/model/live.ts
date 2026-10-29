@@ -27,6 +27,17 @@ export type PullRequestResult =
 export type LiveFolderItem = FolderItem & { live: LiveFolder };
 export type LivePinItem = PinItem & { live: LivePin };
 
+const PULL_REQUEST = /^https:\/\/github\.com\/([^/?#]+)\/([^/?#]+)\/pull\/(\d+)(?=[/?#]|$)/i;
+
+/**
+ * Which pull request a GitHub page is part of (its Files and Commits tabs
+ * too), for comparing with the folder's: GitHub ignores case in names.
+ */
+export function pullRequestKey(url: string): string | undefined {
+  const match = PULL_REQUEST.exec(url);
+  return match ? `${match[1]}/${match[2]}#${match[3]}`.toLowerCase() : undefined;
+}
+
 /** The GitHub Live Folder; Arc has at most one. */
 export function githubFolderOf(model: SidebarModel): LiveFolderItem | undefined {
   return Object.values(model.items).find(

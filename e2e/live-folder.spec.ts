@@ -59,6 +59,12 @@ test('opening a pull request makes the Pull Requests folder, newest first', asyn
       'Draft: try a denser tab row',
       'New space icons',
     ]);
+  // The tab it was opened in moves into the folder as that pull request's row.
+  await expect(pinned(page).filter({ hasText: 'Keep the sidebar open' })).toHaveAttribute(
+    'data-selected',
+  );
+  expect(await todayTitles(page)).not.toContain(expect.stringContaining('Keep the sidebar open'));
+  await expect(panel(page).locator('[data-nav-row="tab"]')).toHaveCount(4);
 });
 
 test('its filters: drafts, review requests and one repository', async ({ page }) => {
@@ -87,6 +93,7 @@ test('its filters: drafts, review requests and one repository', async ({ page })
 
 test('a new pull request peeks out of the closed folder until it’s opened', async ({ page }) => {
   await withFolder(page);
+  await panel(page).locator('[data-nav-row="tab"]', { hasText: 'Engineering Wiki' }).click();
   await folder(page).click();
   await expect.poll(() => inFolder(page)).toEqual([]);
   await page.getByRole('button', { name: 'Someone asks for a review' }).click();

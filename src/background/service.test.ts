@@ -646,6 +646,47 @@ describe('SidebarService', () => {
       expect(github.asked).toBe(1);
     });
 
+    it('the tab a pull request was made in moves into the folder as its row', async () => {
+      const { service, saved, github } = setup({ tabs: [tab(1, 'https://a.com')] });
+      github.answer = { signedIn: true, pullRequests: [pullRequest(12), pullRequest(11)] };
+      await service.onTabUpdated(1, { url: PR });
+      await service.refreshLiveFolder();
+      const twelve = pinsIn(saved.model).find((pin) => pin.kind === 'pin' && pin.url === PR)!;
+      expect(saved.session.bindings[twelve.id]).toBe(1);
+      expect(saved.session.orders['1']).toEqual([]);
+    });
+
+    it('a tab that goes to one of its pull requests later moves in too, from its space only', async () => {
+      const model: SidebarModel = {
+        ...emptyModel(),
+        spaces: [
+          { id: 'default', name: 'Work' },
+          { id: 'home', name: 'Home' },
+        ],
+      };
+      const { service, saved, github } = setup({
+        tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com'), tab(3, 'https://c.com')],
+        model,
+      });
+      github.answer = { signedIn: true, pullRequests: [pullRequest(13), pullRequest(14)] };
+      await service.handleIntent({
+        type: 'createLiveFolder',
+        itemId: 'live',
+        spaceId: 'default',
+        order: 'a0',
+      });
+      await service.refreshLiveFolder();
+      await service.handleIntent({ type: 'moveTabToSpace', tabId: 3, spaceId: 'home' });
+      // Its Files tab counts, whatever the case of the names.
+      await service.onTabUpdated(2, { url: 'https://github.com/ACME/app/pull/13/files' });
+      await service.onTabUpdated(3, { url: 'https://github.com/acme/app/pull/14' });
+      const byNumber = (n: number) =>
+        pinsIn(saved.model).find((pin) => pin.kind === 'pin' && pin.url.endsWith(`/${n}`))!;
+      expect(saved.session.bindings[byNumber(13).id]).toBe(2);
+      expect(saved.session.bindings[byNumber(14).id]).toBeUndefined();
+      expect(saved.session.orders['1']).toEqual(expect.arrayContaining([1, 3]));
+    });
+
     it('isn’t made again once deleted, until made by hand', async () => {
       const { service, saved } = setup({ tabs: [tab(1, 'https://a.com')] });
       await service.onTabUpdated(1, { url: PR });

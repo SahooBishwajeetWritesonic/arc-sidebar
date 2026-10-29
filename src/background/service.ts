@@ -1,6 +1,13 @@
 import { applyArchiveIntent, applyIntent, applySessionIntent } from '@/model/reducer';
 import { repairModel } from '@/model/backup';
-import { filtersKey, githubFolderOf, syncIntent, type PullRequestResult } from '@/model/live';
+import {
+  filtersKey,
+  githubFolderOf,
+  livePins,
+  pullRequestKey,
+  syncIntent,
+  type PullRequestResult,
+} from '@/model/live';
 import { canPlace, orderAtEnd } from '@/model/tree';
 import {
   ARCHIVE_AFTER_MS,
@@ -83,7 +90,6 @@ const LIVE_MIN_INTERVAL_MS = 30_000;
 /** A pull request just opened takes GitHub's search a moment to show. */
 const LIVE_AFTER_PAGE_MS = 4_000;
 const GITHUB_PAGE = /^https:\/\/github\.com\//;
-const PULL_REQUEST_PAGE = /^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+/;
 
 /**
  * The only writer of saved state. Public methods wait for the initial load; after that their
@@ -320,7 +326,33 @@ export class SidebarService {
     if (folder?.id !== folderId || filtersKey(folder.live.filters) !== filtersKey(filters)) return;
     const windowId = Number(Object.keys(this.session.orders)[0] ?? -1);
     const intent = syncIntent(this.model, folder, result, this.deps.newId, windowId);
-    if (intent) await this.handleIntent(intent);
+    if (!intent) return;
+    await this.handleIntent(intent);
+    this.adoptPullRequestTabs();
+  }
+
+  /**
+   * Today tabs showing a pull request the Live Folder holds become its row. Only tabs in the
+   * folder's own space, so nothing leaves the space on screen.
+   */
+  private adoptPullRequestTabs() {
+    const folder = githubFolderOf(this.model);
+    if (!folder) return;
+    const bound = new Set(Object.keys(this.session.bindings));
+    const waiting = new Map(
+      livePins(this.model, folder)
+        .filter((pin) => !bound.has(pin.id))
+        .map((pin) => [pullRequestKey(pin.url), pin.id]),
+    );
+    if (!waiting.size) return;
+    for (const tabId of Object.values(this.session.orders).flat()) {
+      if (this.session.tabSpaces[tabId] !== folder.spaceId) continue;
+      const key = pullRequestKey(this.details[tabId]?.url ?? '');
+      const itemId = key && waiting.get(key);
+      if (!itemId) continue;
+      waiting.delete(key);
+      this.bind(itemId, tabId);
+    }
   }
 
   /**
@@ -329,7 +361,7 @@ export class SidebarService {
    */
   private onGitHubPage(tabId: number, windowId: number, url: string) {
     const folder = githubFolderOf(this.model);
-    const pullRequest = PULL_REQUEST_PAGE.test(url);
+    const pullRequest = pullRequestKey(url) !== undefined;
     if (!folder) {
       if (!pullRequest || !this.model.settings.githubFolder) return;
       const spaceId = this.spaceOfTab(tabId) ?? this.activeSpaceOf(windowId);
@@ -416,6 +448,7 @@ export class SidebarService {
         [tab.id]: restored ?? this.activeSpaceOf(tab.windowId),
       },
     });
+    if (pullRequestKey(tab.url)) this.adoptPullRequestTabs();
   }
 
   /** Chrome activated a tab, maybe from its own tab strip: the sidebar follows to its space. */
@@ -442,7 +475,9 @@ export class SidebarService {
     if (known.url === url && known.title === title) return;
     this.details = { ...this.details, [tabId]: { ...known, url, title } };
     this.queueDetails();
-    if (url !== known.url && GITHUB_PAGE.test(url)) this.onGitHubPage(tabId, known.windowId, url);
+    if (url === known.url || !GITHUB_PAGE.test(url)) return;
+    this.onGitHubPage(tabId, known.windowId, url);
+    if (pullRequestKey(url)) this.adoptPullRequestTabs();
   }
 
   /**

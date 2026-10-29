@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { githubFolderOf, knownRepos, livePins, syncIntent, type PullRequest } from './live';
+import {
+  githubFolderOf,
+  knownRepos,
+  livePins,
+  pullRequestKey,
+  syncIntent,
+  type PullRequest,
+} from './live';
 import { applyIntent, applySessionIntent } from './reducer';
 import { flattenSpace } from './tree';
 import { emptyModel, emptySession, type Intent, type SidebarModel } from './types';
@@ -195,5 +202,17 @@ describe('the GitHub Live Folder', () => {
     ({ model } = sync(model, all));
     expect(titles(model)).toEqual(['Change 1']);
     expect(knownRepos(githubFolderOf(model)!)).toEqual(['acme/app', 'acme/web', 'zeta/api']);
+  });
+});
+
+describe('pullRequestKey', () => {
+  it('names the pull request a page is part of, ignoring case', () => {
+    const key = pullRequestKey('https://github.com/acme/app/pull/7');
+    expect(key).toBe('acme/app#7');
+    expect(pullRequestKey('https://github.com/Acme/App/pull/7/files?w=1')).toBe(key);
+    expect(pullRequestKey('https://github.com/acme/app/pull/7#discussion')).toBe(key);
+    expect(pullRequestKey('https://github.com/acme/app/pull/70')).not.toBe(key);
+    expect(pullRequestKey('https://github.com/acme/app/pulls')).toBeUndefined();
+    expect(pullRequestKey('https://github.com/acme/app/issues/7')).toBeUndefined();
   });
 });
