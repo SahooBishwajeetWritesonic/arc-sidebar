@@ -12,8 +12,8 @@ const host: CommandHost = {
 };
 
 /**
- * The command bar inside the sidebar: from "+ New Tab", from the shortcut while the
- * sidebar has focus, and on pages Chrome won't let it cover.
+ * The bar inside the sidebar: from "+ New Tab", the URL bar, the shortcut while the sidebar
+ * has focus, and on pages Chrome won't let it cover.
  */
 export function SidebarCommandBar() {
   const open = useUi((state) => state.commandBar);
@@ -21,6 +21,7 @@ export function SidebarCommandBar() {
 }
 
 function OpenBar() {
+  const address = useUi((state) => state.commandBarAddress);
   // Focus goes back to where it was when the bar closes. Read while
   // rendering: the bar's own effect moves focus before this one's would run.
   const [previous] = useState(() => document.activeElement);
@@ -31,5 +32,5 @@ function OpenBar() {
       }
     };
   }, [previous]);
-  return <CommandBar host={host} sidebarOpen placement="sidebar" />;
+  return <CommandBar host={host} sidebarOpen placement="sidebar" address={address ?? undefined} />;
 }

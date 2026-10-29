@@ -50,7 +50,13 @@ import { completeAddress, searchCommands } from '@/command/search';
 import type { ActionId, Command, Result } from '@/command/types';
 import type { HistoryEntry } from '@/platform/types';
 import { useSidebar } from '@/state/sidebar';
-import { searchHistory, selectTodayIds, useTabs } from '@/state/tabs';
+import {
+  navigateActive,
+  searchHistory,
+  searchInActive,
+  selectTodayIds,
+  useTabs,
+} from '@/state/tabs';
 import { runCommand } from './run';
 import styles from './command.module.css';
 
@@ -67,6 +73,11 @@ interface CommandBarProps {
   sidebarOpen: boolean;
   /** Centred over the page (in its own frame), or at the top of the sidebar. */
   placement: 'page' | 'sidebar';
+  /**
+   * Editing the selected tab's address (from the URL bar): the bar starts
+   * with it selected, and an address or search loads in that tab.
+   */
+  address?: string;
 }
 
 const EMPTY: HistoryEntry[] = [];
@@ -75,7 +86,7 @@ const EMPTY: HistoryEntry[] = [];
  * Arc's command bar: an address, search, tab, space or action. It opens and closes in one
  * frame (Arc dropped its entrance animation as it felt slow, research/08).
  */
-export function CommandBar({ host, sidebarOpen, placement }: CommandBarProps) {
+export function CommandBar({ host, sidebarOpen, placement, address }: CommandBarProps) {
   const ctx = useCommandContext(sidebarOpen);
   const scheme = usePreferredScheme();
   const theme = useSidebar(
@@ -85,7 +96,7 @@ export function CommandBar({ host, sidebarOpen, placement }: CommandBarProps) {
   const list = useRef<HTMLUListElement>(null);
   const done = useRef(false);
 
-  const [typed, setTyped] = useState('');
+  const [typed, setTyped] = useState(address ?? '');
   // Inline completion only follows typing at the end, as in Chrome: after a
   // Backspace it waits for the next letter.
   const [completing, setCompleting] = useState(false);
@@ -135,6 +146,8 @@ export function CommandBar({ host, sidebarOpen, placement }: CommandBarProps) {
   useLayoutEffect(() => {
     const focus = () => input.current?.focus({ preventScroll: true });
     focus();
+    // An address being edited starts selected, so typing replaces it.
+    if (address) input.current?.select();
     addEventListener('focus', focus);
     return () => removeEventListener('focus', focus);
   }, []);
@@ -157,6 +170,12 @@ export function CommandBar({ host, sidebarOpen, placement }: CommandBarProps) {
   async function run(command: Command) {
     if (done.current) return;
     done.current = true;
+    if (address !== undefined && (command.type === 'openUrl' || command.type === 'search')) {
+      if (command.type === 'openUrl') navigateActive(command.url);
+      else searchInActive(command.text);
+      host.close();
+      return;
+    }
     const copy =
       command.type === 'action' &&
       (command.action === 'copyUrl' || command.action === 'copyMarkdown');
