@@ -1,6 +1,7 @@
 import { applyArchiveIntent, applyIntent, applySessionIntent } from '@/model/reducer';
 import { repairModel } from '@/model/backup';
-import { canPlace } from '@/model/tree';
+import { filtersKey, githubFolderOf, syncIntent, type PullRequestResult } from '@/model/live';
+import { canPlace, orderAtEnd } from '@/model/tree';
 import {
   ARCHIVE_AFTER_MS,
   DEFAULT_SPACE_ID,
@@ -11,6 +12,7 @@ import {
   type ArchiveEntry,
   type ArchiveState,
   type Backup,
+  type GitHubFilters,
   type Intent,
   type IntentResult,
   type PinItem,
@@ -54,6 +56,8 @@ export interface ServiceDeps {
   saveSnapshot(snapshot: RestoreSnapshot): Promise<void>;
   loadTabDetails(): Promise<TabDetails>;
   saveTabDetails(details: TabDetails): Promise<void>;
+  /** For the GitHub Live Folder. Throws when GitHub can't say. */
+  fetchPullRequests(filters: GitHubFilters): Promise<PullRequestResult>;
   /** Runs `run` later (setTimeout in Chrome; tests can run it at once or not at all). */
   defer(run: () => void, ms: number): void;
   now(): number;
@@ -74,6 +78,12 @@ const BACKED_UP: Partial<Record<Intent['type'], Backup['reason']>> = {
 const SNAPSHOT_DELAY_MS = 2_000;
 /** Tab details are saved this long after the last change (the worker lives 30 s past an event). */
 const DETAILS_DELAY_MS = 1_000;
+/** The Live Folder asks GitHub at most this often, unless something it shows just changed. */
+const LIVE_MIN_INTERVAL_MS = 30_000;
+/** A pull request just opened takes GitHub's search a moment to show. */
+const LIVE_AFTER_PAGE_MS = 4_000;
+const GITHUB_PAGE = /^https:\/\/github\.com\//;
+const PULL_REQUEST_PAGE = /^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+/;
 
 /**
  * The only writer of saved state. Public methods wait for the initial load; after that their
@@ -93,6 +103,11 @@ export class SidebarService {
   /** Today tabs closed while the worker was stopped, with their spaces; onRemoved is coming. */
   private vanished = new Map<number, string | undefined>();
   private opening: { itemId: string; url: string; expires: number }[] = [];
+  private liveRefresh: Promise<void> | null = null;
+  private liveRefreshedAt = -Infinity;
+  /** The filters changed while GitHub was being asked: ask again after. */
+  private liveAgain = false;
+  private liveQueued = false;
   readonly ready: Promise<void>;
 
   constructor(private readonly deps: ServiceDeps) {
@@ -253,8 +268,85 @@ export class SidebarService {
       case 'setActiveSpace':
         if (intent.openNewTab) await this.deps.createTab(intent.windowId, 'chrome://newtab/', true);
         break;
+      case 'createLiveFolder':
+      case 'setLiveFilters':
+        void this.refreshLiveFolder(true);
+        break;
+      case 'refreshLiveFolder':
+        await this.refreshLiveFolder(true);
+        break;
+      case 'setFolderCollapsed':
+        if (!intent.collapsed && item?.kind === 'folder' && item.live)
+          void this.refreshLiveFolder();
+        break;
     }
     return this.revisions();
+  }
+
+  /** Unless `force`d, skips if it asked a moment ago. On failure the folder keeps what it has. */
+  async refreshLiveFolder(force = false): Promise<void> {
+    await this.ready;
+    if (this.liveRefresh) {
+      this.liveAgain ||= force;
+      return this.liveRefresh;
+    }
+    const folder = githubFolderOf(this.model);
+    if (!folder) return;
+    if (!force && this.deps.now() - this.liveRefreshedAt < LIVE_MIN_INTERVAL_MS) return;
+    this.liveRefreshedAt = this.deps.now();
+    const { filters } = folder.live;
+    this.liveRefresh = this.deps
+      .fetchPullRequests(filters)
+      .then(
+        (result) => this.applyPullRequests(folder.id, filters, result),
+        () => {},
+      )
+      .finally(() => {
+        this.liveRefresh = null;
+        if (!this.liveAgain) return;
+        this.liveAgain = false;
+        void this.refreshLiveFolder(true);
+      });
+    return this.liveRefresh;
+  }
+
+  private async applyPullRequests(
+    folderId: string,
+    filters: GitHubFilters,
+    result: PullRequestResult,
+  ) {
+    const folder = githubFolderOf(this.model);
+    // Asked for other filters, or the folder went: this answer is out of date.
+    if (folder?.id !== folderId || filtersKey(folder.live.filters) !== filtersKey(filters)) return;
+    const windowId = Number(Object.keys(this.session.orders)[0] ?? -1);
+    const intent = syncIntent(this.model, folder, result, this.deps.newId, windowId);
+    if (intent) await this.handleIntent(intent);
+  }
+
+  /**
+   * The first pull request page makes Arc's Live Folder. Later, the folder looks again after a
+   * pull request page loads (maybe just opened), or any GitHub page while signed out (sign-in).
+   */
+  private onGitHubPage(tabId: number, windowId: number, url: string) {
+    const folder = githubFolderOf(this.model);
+    const pullRequest = PULL_REQUEST_PAGE.test(url);
+    if (!folder) {
+      if (!pullRequest || !this.model.settings.githubFolder) return;
+      const spaceId = this.spaceOfTab(tabId) ?? this.activeSpaceOf(windowId);
+      void this.handleIntent({
+        type: 'createLiveFolder',
+        itemId: this.deps.newId(),
+        spaceId,
+        order: orderAtEnd(this.model, spaceId, null),
+      });
+      return;
+    }
+    if ((!pullRequest && !folder.live.signedOut) || this.liveQueued) return;
+    this.liveQueued = true;
+    this.deps.defer(() => {
+      this.liveQueued = false;
+      void this.refreshLiveFolder();
+    }, LIVE_AFTER_PAGE_MS);
   }
 
   async archiveStale(): Promise<number> {
@@ -300,6 +392,7 @@ export class SidebarService {
       [tab.id]: { url: tab.url, title: tab.title, windowId: tab.windowId },
     };
     this.queueDetails();
+    if (GITHUB_PAGE.test(tab.url)) this.onGitHubPage(tab.id, tab.windowId, tab.url);
     const now = this.deps.now();
     this.opening = this.opening.filter((o) => o.expires > now);
     const opened = this.opening.findIndex((o) => isSamePage(o.url, tab.url));
@@ -349,6 +442,7 @@ export class SidebarService {
     if (known.url === url && known.title === title) return;
     this.details = { ...this.details, [tabId]: { ...known, url, title } };
     this.queueDetails();
+    if (url !== known.url && GITHUB_PAGE.test(url)) this.onGitHubPage(tabId, known.windowId, url);
   }
 
   /**
@@ -509,6 +603,7 @@ export class SidebarService {
       }
       case 'moveTabToSpace':
       case 'setActiveSpace':
+      case 'createLiveFolder':
         return this.hasSpace(intent.spaceId) ? intent : undefined;
       case 'deleteSpace':
         return this.hasSpace(intent.fallbackSpaceId) && intent.fallbackSpaceId !== intent.spaceId

@@ -1,5 +1,6 @@
 import { generateNKeysBetween } from 'fractional-indexing';
 import { SidebarService, type LiveTab } from '@/background/service';
+import type { PullRequest } from '@/model/live';
 import {
   DEFAULT_SPACE_ID,
   defaultSettings,
@@ -84,9 +85,17 @@ export class FakePlatform implements Platform {
   private nextSplit = 1;
   /** Tracks playing in tabs that make sound (the YouTube fixture's playlist). */
   private tracks = new Map<number, number>();
+  /** github.com as the Live Folder sees it. */
+  private github: { signedIn: boolean; open: (PullRequest & { mine: boolean })[] };
+  private nextPullRequest = 2000;
 
-  constructor(fixtures: Fixture[], history: HistoryEntry[] = []) {
+  constructor(
+    fixtures: Fixture[],
+    history: HistoryEntry[] = [],
+    pullRequests: (PullRequest & { mine: boolean })[] = [],
+  ) {
     this.history = [...history];
+    this.github = { signedIn: true, open: [...pullRequests] };
     this.tabs = fixtures.map((fixture, i) => this.makeTab(fixture, i === 0));
     for (const tab of this.tabs) if (tab.audible) this.tracks.set(tab.id, 0);
     this.service = new SidebarService({
@@ -126,6 +135,16 @@ export class FakePlatform implements Platform {
       loadTabDetails: async () => read(sessionStorage, DETAILS_KEY, {}),
       saveTabDetails: async (details) =>
         sessionStorage.setItem(DETAILS_KEY, JSON.stringify(details)),
+      // A search takes GitHub a moment.
+      fetchPullRequests: async (filters) => {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        if (!this.github.signedIn) return { signedIn: false };
+        const pullRequests = this.github.open
+          .filter((pr) => (pr.mine ? filters.createdByMe : filters.reviewRequests))
+          .filter((pr) => filters.drafts || !pr.draft)
+          .map(({ mine: _mine, ...pr }) => pr);
+        return { signedIn: true, pullRequests };
+      },
       defer: (run, ms) => void setTimeout(run, ms),
       newId: () => crypto.randomUUID(),
     });
@@ -358,6 +377,42 @@ export class FakePlatform implements Platform {
 
   activeTabId() {
     return this.tabs.find((tab) => tab.active)?.id;
+  }
+
+  /** Opens one of the open pull requests, the way the Live Folder first appears. */
+  openPullRequestPage() {
+    const pr = this.github.open[0];
+    if (!pr) return;
+    this.openTab({ title: `${pr.title} · Pull Request #${pr.number} · ${pr.repo}`, url: pr.url });
+  }
+
+  /**
+   * Someone asks for your review. The folder looks at once, unless `look` is
+   * false: then it shows at the next look (the alarm, or Refresh).
+   */
+  requestReview(look = true) {
+    const number = this.nextPullRequest++;
+    this.github.open.push({
+      url: `https://github.com/acme/api/pull/${number}`,
+      title: `Review me: change ${number}`,
+      repo: 'acme/api',
+      number,
+      draft: false,
+      created: new Date().toISOString(),
+      mine: false,
+    });
+    return look ? this.service.refreshLiveFolder(true) : Promise.resolve();
+  }
+
+  mergePullRequest() {
+    const newest = [...this.github.open].sort((a, b) => b.created.localeCompare(a.created))[0];
+    this.github.open = this.github.open.filter((pr) => pr !== newest);
+    return this.service.refreshLiveFolder(true);
+  }
+
+  setGitHubSignedIn(signedIn: boolean) {
+    this.github.signedIn = signedIn;
+    return this.service.refreshLiveFolder(true);
   }
 
   /** Forgets the session, as a Chrome restart does, and reloads. */

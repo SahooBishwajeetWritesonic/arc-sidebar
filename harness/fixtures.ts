@@ -1,3 +1,4 @@
+import type { PullRequest } from '@/model/live';
 import type { HistoryEntry } from '@/platform/types';
 import type { Fixture } from './fake-platform';
 
@@ -117,3 +118,26 @@ export const historyPages: HistoryEntry[] = [
     typedCount: 0,
   },
 ].map((entry, i) => ({ ...entry, lastVisitTime: Date.UTC(2026, 9, 28) - i * day }));
+
+/** Open pull requests on the fake github.com: yours, and ones waiting for your review. */
+export const pullRequests: (PullRequest & { mine: boolean })[] = [
+  ['acme/web', 482, 'Keep the sidebar open across restarts', true, false, '2026-10-28T09:12:00Z'],
+  ['acme/web', 479, 'Draft: try a denser tab row', true, true, '2026-10-26T15:40:00Z'],
+  [
+    'acme/api',
+    1311,
+    'Rate-limit the search endpoint per workspace',
+    false,
+    false,
+    '2026-10-27T11:05:00Z',
+  ],
+  ['acme/design', 88, 'New space icons', false, false, '2026-10-21T08:30:00Z'],
+].map(([repo, number, title, mine, draft, created]) => ({
+  url: `https://github.com/${repo}/pull/${number}`,
+  title: title as string,
+  repo: repo as string,
+  number: number as number,
+  draft: draft as boolean,
+  created: created as string,
+  mine: mine as boolean,
+}));

@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { FakePlatform } from './fake-platform';
-import { edgeTabs, historyPages, manyTabs, startingTabs } from './fixtures';
+import { edgeTabs, historyPages, manyTabs, pullRequests, startingTabs } from './fixtures';
 import { Harness } from './Harness';
 import '@/app/global.css';
 
@@ -10,7 +10,11 @@ import '@/app/global.css';
 const params = new URLSearchParams(location.search);
 const extra = Number(params.get('tabs')) || 0;
 const edge = params.get('fixture') === 'edge' ? edgeTabs : [];
-const platform = new FakePlatform([...startingTabs, ...edge, ...manyTabs(extra)], historyPages);
+const platform = new FakePlatform(
+  [...startingTabs, ...edge, ...manyTabs(extra)],
+  historyPages,
+  pullRequests,
+);
 window.harnessPlatform = platform;
 
 declare global {

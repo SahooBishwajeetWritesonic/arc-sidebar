@@ -15,6 +15,7 @@ import {
   type SidebarModel,
   type TabDetails,
 } from '@/model/types';
+import type { PullRequestResult } from '@/model/live';
 import { SidebarService, type LiveTab } from './service';
 
 /** A tiny in-memory Chrome for the service. */
@@ -25,6 +26,11 @@ function setup(options: {
   snapshot?: RestoreSnapshot;
   details?: TabDetails;
 }) {
+  /** What GitHub answers; tests change it between refreshes. */
+  const github: { answer: PullRequestResult | Error; asked: number } = {
+    answer: { signedIn: true, pullRequests: [] },
+    asked: 0,
+  };
   const tabs = [...options.tabs];
   let nextId = 100;
   let nextUuid = 0;
@@ -68,6 +74,11 @@ function setup(options: {
     saveSnapshot: async (snapshot) => void (saved.snapshot = snapshot),
     loadTabDetails: async () => saved.details,
     saveTabDetails: async (details) => void (saved.details = details),
+    fetchPullRequests: async () => {
+      github.asked++;
+      if (github.answer instanceof Error) throw github.answer;
+      return github.answer;
+    },
     // Deferred work waits for flush(); tests call takeSnapshot() themselves.
     defer: (run) => void deferred.push(run),
     now: () => now,
@@ -78,6 +89,7 @@ function setup(options: {
     saved,
     calls,
     tabs,
+    github,
     advance: (ms: number) => (now += ms),
     flush: () => deferred.splice(0).forEach((run) => run()),
   };
@@ -605,5 +617,139 @@ describe('SidebarService', () => {
     } as Intent);
     await service.onTabActivated(1, 1);
     expect(saved.session.activeSpaces['1']).toBe('work');
+  });
+
+  describe('GitHub Live Folder', () => {
+    const PR = 'https://github.com/acme/app/pull/12';
+    const pullRequest = (number: number, created = `2026-10-${number}`) => ({
+      url: `https://github.com/acme/app/pull/${number}`,
+      title: `Change ${number}`,
+      repo: 'acme/app',
+      number,
+      draft: false,
+      created,
+    });
+    const folderOf = (model: SidebarModel) =>
+      Object.values(model.items).find((item) => item.kind === 'folder');
+    const pinsIn = (model: SidebarModel) =>
+      Object.values(model.items).filter((item) => item.kind === 'pin' && item.live);
+
+    it('is made in the tab’s space the first time a pull request opens, and fills', async () => {
+      const { service, saved, github } = setup({ tabs: [tab(1, 'https://a.com')] });
+      github.answer = { signedIn: true, pullRequests: [pullRequest(12), pullRequest(11)] };
+      await service.onTabUpdated(1, { url: PR });
+      await service.refreshLiveFolder();
+      expect(folderOf(saved.model)).toMatchObject({ name: 'Pull Requests', spaceId: 'default' });
+      expect(pinsIn(saved.model).map((pin) => pin.kind === 'pin' && pin.title)).toEqual(
+        expect.arrayContaining(['Change 12', 'Change 11']),
+      );
+      expect(github.asked).toBe(1);
+    });
+
+    it('isn’t made again once deleted, until made by hand', async () => {
+      const { service, saved } = setup({ tabs: [tab(1, 'https://a.com')] });
+      await service.onTabUpdated(1, { url: PR });
+      const folder = folderOf(saved.model)!;
+      await service.handleIntent({
+        type: 'deleteLiveFolder',
+        itemId: folder.id,
+        itemIds: [],
+        spaceId: 'default',
+        windowId: 1,
+      });
+      await service.onTabUpdated(1, { url: 'https://github.com/acme/app/pull/13' });
+      expect(folderOf(saved.model)).toBeUndefined();
+    });
+
+    it('asks again soon after a pull request page loads, then at most every 30 s', async () => {
+      const { service, saved, github, flush, advance } = setup({ tabs: [tab(1, 'https://a.com')] });
+      await service.onTabUpdated(1, { url: PR });
+      await service.refreshLiveFolder();
+      expect(github.asked).toBe(1);
+      github.answer = { signedIn: true, pullRequests: [pullRequest(13)] };
+      advance(30_000);
+      await service.onTabUpdated(1, { url: 'https://github.com/acme/app/pull/13' });
+      flush();
+      await service.refreshLiveFolder();
+      expect(github.asked).toBe(2);
+      expect(pinsIn(saved.model)).toHaveLength(1);
+      // Other pages, or the alarm a moment later, don't ask again.
+      await service.onTabUpdated(1, { url: 'https://github.com/acme/app' });
+      flush();
+      await service.refreshLiveFolder();
+      expect(github.asked).toBe(2);
+      advance(30_000);
+      await service.refreshLiveFolder();
+      expect(github.asked).toBe(3);
+    });
+
+    it('signed out, looks again after any GitHub page, in case it was the sign-in', async () => {
+      const { service, saved, github, flush, advance } = setup({ tabs: [tab(1, 'https://a.com')] });
+      github.answer = { signedIn: false };
+      await service.onTabUpdated(1, { url: PR });
+      await service.refreshLiveFolder();
+      expect(folderOf(saved.model)).toMatchObject({ live: { signedOut: true } });
+      github.answer = { signedIn: true, pullRequests: [pullRequest(12)] };
+      advance(30_000);
+      await service.onTabUpdated(1, { url: 'https://github.com/' });
+      flush();
+      await service.refreshLiveFolder();
+      expect(pinsIn(saved.model)).toHaveLength(1);
+      expect(folderOf(saved.model)).not.toMatchObject({ live: { signedOut: true } });
+    });
+
+    it('Refresh asks at once and answers when the folder is up to date', async () => {
+      const { service, saved, github } = setup({ tabs: [tab(1, 'https://a.com')] });
+      await service.onTabUpdated(1, { url: PR });
+      await service.refreshLiveFolder();
+      const folder = folderOf(saved.model)!;
+      github.answer = { signedIn: true, pullRequests: [pullRequest(14)] };
+      await service.handleIntent({ type: 'refreshLiveFolder', itemId: folder.id });
+      expect(github.asked).toBe(2);
+      expect(pinsIn(saved.model)).toHaveLength(1);
+    });
+
+    it('asks again when the filters change, even mid-answer', async () => {
+      const { service, saved, github } = setup({ tabs: [tab(1, 'https://a.com')] });
+      await service.onTabUpdated(1, { url: PR });
+      const folder = folderOf(saved.model)!;
+      if (folder.kind !== 'folder' || !folder.live) throw new Error('no live folder');
+      await service.handleIntent({
+        type: 'setLiveFilters',
+        itemId: folder.id,
+        filters: { ...folder.live.filters, drafts: false },
+      });
+      await service.refreshLiveFolder();
+      await service.refreshLiveFolder();
+      expect(github.asked).toBe(2);
+    });
+
+    it('keeps its pull requests when GitHub can’t be reached', async () => {
+      const { service, saved, github, advance } = setup({ tabs: [tab(1, 'https://a.com')] });
+      github.answer = { signedIn: true, pullRequests: [pullRequest(12)] };
+      await service.onTabUpdated(1, { url: PR });
+      await service.refreshLiveFolder();
+      github.answer = new Error('offline');
+      advance(60_000);
+      await service.refreshLiveFolder();
+      expect(pinsIn(saved.model)).toHaveLength(1);
+    });
+
+    it('gives a merged pull request’s tab back to Today', async () => {
+      const { service, saved, github, advance } = setup({ tabs: [tab(1, 'https://a.com')] });
+      github.answer = { signedIn: true, pullRequests: [pullRequest(12)] };
+      await service.onTabUpdated(1, { url: PR });
+      await service.refreshLiveFolder();
+      const [pin] = pinsIn(saved.model);
+      await service.handleIntent({ type: 'openPin', itemId: pin!.id, windowId: 1 });
+      const tabId = saved.session.bindings[pin!.id]!;
+      expect(saved.session.orders['1']).not.toContain(tabId);
+      github.answer = { signedIn: true, pullRequests: [] };
+      advance(60_000);
+      await service.refreshLiveFolder();
+      expect(pinsIn(saved.model)).toHaveLength(0);
+      expect(saved.session.bindings[pin!.id]).toBeUndefined();
+      expect(saved.session.orders['1']![0]).toBe(tabId);
+    });
   });
 });

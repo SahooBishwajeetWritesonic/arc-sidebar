@@ -1,5 +1,6 @@
 import { browser, type Browser } from 'wxt/browser';
 import { onCommandBarHello, onCommandBarShortcut } from '@/background/command-bar';
+import { fetchGitHubJson, fetchPullRequests } from '@/background/github';
 import { SidebarService, type LiveTab } from '@/background/service';
 import type { Intent } from '@/model/types';
 import type { CommandBarMessage } from '@/platform/command-bar';
@@ -53,6 +54,7 @@ export default defineBackground(() => {
     saveSnapshot: (snapshot) => restoreSnapshotItem.setValue(snapshot),
     loadTabDetails: () => tabDetailsItem.getValue(),
     saveTabDetails: (details) => tabDetailsItem.setValue(details),
+    fetchPullRequests: (filters) => fetchPullRequests(filters, fetchGitHubJson),
     defer: (run, ms) => void setTimeout(run, ms),
     now: () => Date.now(),
     newId: () => crypto.randomUUID(),
@@ -93,6 +95,7 @@ export default defineBackground(() => {
     if (alarm.name !== AUTO_ARCHIVE_ALARM) return;
     void service.archiveStale();
     void service.takeSnapshot(); // also catches pages navigated since the last change
+    void service.refreshLiveFolder();
   });
   void browser.alarms.get(AUTO_ARCHIVE_ALARM).then((alarm) => {
     if (!alarm) void browser.alarms.create(AUTO_ARCHIVE_ALARM, { periodInMinutes: 5 });

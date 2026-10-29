@@ -111,6 +111,7 @@ class FakeChrome {
       saveSnapshot: async (snapshot) => void (saved.snapshot = snapshot),
       loadTabDetails: async () => saved.details,
       saveTabDetails: async (details) => void (saved.details = details),
+      fetchPullRequests: async () => ({ signedIn: false }),
       defer: (run) => void this.deferred.push(run),
       now: () => this.now,
       newId: () => `u${this.nextUuid++}`,
