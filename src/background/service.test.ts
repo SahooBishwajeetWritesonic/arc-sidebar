@@ -9,6 +9,7 @@ import {
   type Intent,
   type SessionState,
   type SidebarModel,
+  type TabDetails,
   type TodaySnapshot,
 } from '@/model/types';
 import { SidebarService, type LiveTab } from './service';
@@ -19,6 +20,7 @@ function setup(options: {
   model?: SidebarModel;
   session?: SessionState;
   snapshot?: TodaySnapshot;
+  details?: TabDetails;
 }) {
   const tabs = [...options.tabs];
   let nextId = 100;
@@ -30,8 +32,10 @@ function setup(options: {
     archive: emptyArchive() as ArchiveState,
     backups: [] as Backup[],
     snapshot: options.snapshot ?? ({} as TodaySnapshot),
+    details: options.details ?? ({} as TabDetails),
   };
   const calls: string[] = [];
+  const deferred: (() => void)[] = [];
   let service!: SidebarService;
   service = new SidebarService({
     queryTabs: async () => tabs,
@@ -59,11 +63,21 @@ function setup(options: {
     saveBackups: async (backups) => void (saved.backups = backups),
     loadTodaySnapshot: async () => saved.snapshot,
     saveTodaySnapshot: async (snapshot) => void (saved.snapshot = snapshot),
-    defer: () => {}, // tests call snapshotToday() themselves
+    loadTabDetails: async () => saved.details,
+    saveTabDetails: async (details) => void (saved.details = details),
+    // Deferred work waits for flush(); tests call snapshotToday() themselves.
+    defer: (run) => void deferred.push(run),
     now: () => now,
     newId: () => `id${nextUuid++}`,
   });
-  return { service, saved, calls, tabs, advance: (ms: number) => (now += ms) };
+  return {
+    service,
+    saved,
+    calls,
+    tabs,
+    advance: (ms: number) => (now += ms),
+    flush: () => deferred.splice(0).forEach((run) => run()),
+  };
 }
 
 const tab = (id: number, url: string, index = id, extra: Partial<LiveTab> = {}): LiveTab => ({
@@ -286,6 +300,73 @@ describe('SidebarService', () => {
     });
     expect(saved.backups).toHaveLength(2); // within the hour, but kept anyway
     expect(saved.backups[0]!.model.spaces).toHaveLength(1);
+  });
+
+  it('archives a Today tab closed in Chrome, with the page it was on', async () => {
+    const { service, saved } = setup({ tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')] });
+    await service.onTabUpdated(1, { url: 'https://a.com/next' });
+    await service.onTabUpdated(1, { title: 'Next' });
+    await service.onTabRemoved(1, 1);
+    expect(saved.archive.entries).toEqual([
+      expect.objectContaining({
+        url: 'https://a.com/next',
+        title: 'Next',
+        spaceId: 'default',
+        reason: 'closed',
+      }),
+    ]);
+    expect(saved.session.orders['1']).toEqual([2]);
+  });
+
+  it("doesn't archive pinned tabs, new tab pages, closing windows or tabs the sidebar closed", async () => {
+    const { service, saved } = setup({
+      tabs: [
+        tab(1, 'https://a.com'),
+        tab(2, 'chrome://newtab/'),
+        tab(3, 'https://c.com'),
+        tab(4, 'https://d.com'),
+      ],
+    });
+    await service.handleIntent(pinIntent('p1', 1, 'https://a.com'));
+    await service.onTabRemoved(1, 1);
+    await service.onTabRemoved(2, 1);
+    await service.onTabRemoved(3, 1, true);
+    const entry = {
+      id: 'e4',
+      url: 'https://d.com',
+      title: 'D',
+      spaceId: 'default',
+      archivedAt: 1,
+      reason: 'closed' as const,
+      batchId: 'b4',
+    };
+    // The panel's ✕: archived once, by the panel's entry.
+    await service.handleIntent({ type: 'archiveTabs', windowId: 1, tabs: [{ tabId: 4, entry }] });
+    expect(saved.archive.entries).toEqual([entry]);
+  });
+
+  it('archives a tab whose closing woke the worker', async () => {
+    const before = setup({ tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')] });
+    await before.service.handleIntent({
+      type: 'createSpace',
+      spaceId: 's2',
+      name: 'Two',
+      index: 1,
+    });
+    await before.service.handleIntent({ type: 'moveTabToSpace', tabId: 2, spaceId: 's2' });
+    await before.service.onTabUpdated(2, { title: 'B' });
+    before.flush();
+    // Chrome stopped the worker; closing tab 2 starts a new one that no longer sees the tab.
+    const after = setup({
+      tabs: [tab(1, 'https://a.com')],
+      model: before.saved.model,
+      session: before.saved.session,
+      details: before.saved.details,
+    });
+    await after.service.onTabRemoved(2, 1);
+    expect(after.saved.archive.entries).toEqual([
+      expect.objectContaining({ url: 'https://b.com', title: 'B', spaceId: 's2' }),
+    ]);
   });
 
   it('fills in settings for models saved before settings existed', async () => {

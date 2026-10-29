@@ -51,6 +51,18 @@ test('a closed Today tab goes to the Archive and reopens from it', async ({ page
   await expect.poll(async () => (await today(page))[0]).toBe('Sidebar explorat');
 });
 
+test('a Today tab closed in Chrome (⌘W) goes to the Archive too', async ({ page }) => {
+  await ready(page);
+  await panel(page).locator('[data-nav-row="tab"]', { hasText: 'Sidebar explorations' }).click();
+  await page.getByRole('button', { name: 'Close active tab' }).click();
+  await expect.poll(() => today(page)).not.toContain('Sidebar explorat');
+
+  await panel(page).getByRole('button', { name: 'Archive', exact: true }).click();
+  await expect(
+    panel(page).locator('[data-archive-entry]', { hasText: 'Sidebar explorations' }),
+  ).toBeVisible();
+});
+
 test('auto-archive skips the active tab and tabs playing audio', async ({ page }) => {
   await ready(page);
   await page.getByRole('button', { name: 'Make inactive tabs 13 hours old' }).click();

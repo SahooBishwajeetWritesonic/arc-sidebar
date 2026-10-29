@@ -25,6 +25,7 @@ const SESSION_KEY = 'harness:session';
 const ARCHIVE_KEY = 'harness:archive';
 const BACKUPS_KEY = 'harness:backups';
 const SNAPSHOT_KEY = 'harness:todaySnapshot';
+const DETAILS_KEY = 'harness:tabDetails';
 
 function read<T>(storage: Storage, key: string, fallback: T): T {
   try {
@@ -91,6 +92,9 @@ export class FakePlatform implements Platform {
       loadTodaySnapshot: async () => read(localStorage, SNAPSHOT_KEY, {}),
       saveTodaySnapshot: async (snapshot) =>
         localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot)),
+      loadTabDetails: async () => read(sessionStorage, DETAILS_KEY, {}),
+      saveTabDetails: async (details) =>
+        sessionStorage.setItem(DETAILS_KEY, JSON.stringify(details)),
       defer: (run, ms) => void setTimeout(run, ms),
       newId: () => crypto.randomUUID(),
     });
@@ -232,6 +236,7 @@ export class FakePlatform implements Platform {
   /** Forgets the session, as a Chrome restart does, and reloads. */
   restartChrome() {
     sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(DETAILS_KEY);
     location.reload();
   }
 
@@ -241,6 +246,7 @@ export class FakePlatform implements Platform {
     localStorage.removeItem(BACKUPS_KEY);
     localStorage.removeItem(SNAPSHOT_KEY);
     sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(DETAILS_KEY);
     location.reload();
   }
 
@@ -324,6 +330,9 @@ export class FakePlatform implements Platform {
     if (!tab) return;
     Object.assign(tab, change);
     this.emit({ type: 'upsert', tab: { ...tab } });
+    if ('url' in change || 'title' in change) {
+      void this.service.onTabUpdated(tabId, { url: tab.url, title: tab.title });
+    }
   }
 
   private randomTab() {

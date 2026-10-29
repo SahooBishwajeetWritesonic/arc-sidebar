@@ -8,6 +8,7 @@ import {
   type Backup,
   type SessionState,
   type SidebarModel,
+  type TabDetails,
   type TodaySnapshot,
 } from '@/model/types';
 
@@ -40,5 +41,10 @@ export const backupsItem = storage.defineItem<Backup[]>('local:backups', {
 });
 
 export const todaySnapshotItem = storage.defineItem<TodaySnapshot>('local:todaySnapshot', {
+  fallback: {},
+});
+
+/** Each tab's latest URL and title, for archiving tabs closed in Chrome. */
+export const tabDetailsItem = storage.defineItem<TabDetails>('session:tabDetails', {
   fallback: {},
 });

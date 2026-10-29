@@ -6,6 +6,7 @@ import {
   backupsItem,
   modelItem,
   sessionItem,
+  tabDetailsItem,
   todaySnapshotItem,
 } from '@/platform/storage-items';
 
@@ -46,6 +47,8 @@ export default defineBackground(() => {
     saveBackups: (backups) => backupsItem.setValue(backups),
     loadTodaySnapshot: () => todaySnapshotItem.getValue(),
     saveTodaySnapshot: (snapshot) => todaySnapshotItem.setValue(snapshot),
+    loadTabDetails: () => tabDetailsItem.getValue(),
+    saveTabDetails: (details) => tabDetailsItem.setValue(details),
     defer: (run, ms) => void setTimeout(run, ms),
     now: () => Date.now(),
     newId: () => crypto.randomUUID(),
@@ -59,8 +62,13 @@ export default defineBackground(() => {
   browser.tabs.onActivated.addListener(
     ({ tabId, windowId }) => void service.onTabActivated(tabId, windowId),
   );
+  browser.tabs.onUpdated.addListener((tabId, change) => {
+    if (change.url === undefined && change.title === undefined) return;
+    void service.onTabUpdated(tabId, { url: change.url, title: change.title });
+  });
   browser.tabs.onRemoved.addListener(
-    (tabId, { windowId }) => void service.onTabRemoved(tabId, windowId),
+    (tabId, { windowId, isWindowClosing }) =>
+      void service.onTabRemoved(tabId, windowId, isWindowClosing),
   );
   browser.tabs.onReplaced.addListener(
     (added, removed) => void service.onTabReplaced(added, removed),

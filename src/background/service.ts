@@ -13,6 +13,7 @@ import {
   type PinItem,
   type SessionState,
   type SidebarModel,
+  type TabDetails,
   type TodaySnapshot,
 } from '@/model/types';
 import { isSamePage, isSamePath } from '@/model/urls';
@@ -47,6 +48,8 @@ export interface ServiceDeps {
   saveBackups(backups: Backup[]): Promise<void>;
   loadTodaySnapshot(): Promise<TodaySnapshot>;
   saveTodaySnapshot(snapshot: TodaySnapshot): Promise<void>;
+  loadTabDetails(): Promise<TabDetails>;
+  saveTabDetails(details: TabDetails): Promise<void>;
   /** Runs `run` later (setTimeout in Chrome; tests can run it at once or not at all). */
   defer(run: () => void, ms: number): void;
   now(): number;
@@ -60,6 +63,8 @@ const OPEN_TIMEOUT_MS = 5_000;
 const BACKUP_EVERY_MS = 3600_000;
 const BACKUPS_KEPT = 20;
 const SNAPSHOT_DELAY_MS = 2_000;
+/** Tab details are saved this long after the last change (the worker lives 30 s past an event). */
+const DETAILS_DELAY_MS = 1_000;
 
 /**
  * The only writer of saved state. Public methods wait for the initial load; after that their
@@ -74,6 +79,10 @@ export class SidebarService {
   /** Today URLs per space from before a restart, not yet matched to a tab. */
   private unmatched: TodaySnapshot = {};
   private snapshotQueued = false;
+  private details: TabDetails = {};
+  private detailsQueued = false;
+  /** Today tabs closed while the worker was stopped, with their spaces; onRemoved is coming. */
+  private vanished = new Map<number, string | undefined>();
   private opening: { itemId: string; url: string; expires: number }[] = [];
   readonly ready: Promise<void>;
 
@@ -82,12 +91,13 @@ export class SidebarService {
   }
 
   private async load() {
-    const [model, stored, archive, backups, snapshot, tabs] = await Promise.all([
+    const [model, stored, archive, backups, snapshot, details, tabs] = await Promise.all([
       this.deps.loadModel(),
       this.deps.loadSession(),
       this.deps.loadArchive(),
       this.deps.loadBackups(),
       this.deps.loadTodaySnapshot(),
+      this.deps.loadTabDetails(),
       this.deps.queryTabs(),
     ]);
     const session = normalizeSession(stored);
@@ -132,6 +142,19 @@ export class SidebarService {
           : (this.matchSnapshot(tab.url) ?? this.activeSpaceOf(tab.windowId));
     }
     this.writeSession({ ...this.session, orders, tabSpaces });
+
+    // A Today tab already gone closed while the worker was stopped (maybe what woke it):
+    // keep its saved details until its onRemoved arrives.
+    for (const id of Object.values(session.orders).flat()) {
+      if (!live.has(id)) this.vanished.set(id, session.tabSpaces[id]);
+    }
+    this.details = Object.fromEntries([
+      ...Object.entries(details).filter(([id]) => this.vanished.has(Number(id))),
+      ...tabs.map(
+        (tab) =>
+          [String(tab.id), { url: tab.url, title: tab.title, windowId: tab.windowId }] as const,
+      ),
+    ]);
   }
 
   /** Saves each space's Today URLs, top first, for matching after a restart. */
@@ -251,6 +274,11 @@ export class SidebarService {
 
   async onTabCreated(tab: LiveTab) {
     await this.ready;
+    this.details = {
+      ...this.details,
+      [tab.id]: { url: tab.url, title: tab.title, windowId: tab.windowId },
+    };
+    this.queueDetails();
     const now = this.deps.now();
     this.opening = this.opening.filter((o) => o.expires > now);
     const opened = this.opening.findIndex((o) => isSamePage(o.url, tab.url));
@@ -291,8 +319,53 @@ export class SidebarService {
     });
   }
 
-  async onTabRemoved(tabId: number, windowId: number) {
+  async onTabUpdated(tabId: number, change: { url?: string; title?: string }) {
     await this.ready;
+    const known = this.details[tabId];
+    if (!known) return; // a tab that has closed since
+    const url = change.url ?? known.url;
+    const title = change.title ?? known.title;
+    if (known.url === url && known.title === title) return;
+    this.details = { ...this.details, [tabId]: { ...known, url, title } };
+    this.queueDetails();
+  }
+
+  /**
+   * A tab still in Today was closed in Chrome (⌘W or tab strip): it's archived, as in Arc.
+   * Tabs the sidebar closes have left Today already; a closing window's come back on restart.
+   */
+  async onTabRemoved(tabId: number, windowId: number, windowClosing = false) {
+    await this.ready;
+    const details = this.details[tabId];
+    if (details) {
+      const { [tabId]: _closed, ...rest } = this.details;
+      this.details = rest;
+      this.queueDetails();
+    }
+    const vanished = this.vanished.has(tabId);
+    const spaceId = vanished ? this.vanished.get(tabId) : this.session.tabSpaces[tabId];
+    this.vanished.delete(tabId);
+    const inToday =
+      vanished || Object.values(this.session.orders).some((order) => order.includes(tabId));
+    if (inToday && !windowClosing && details && /^(https?|file):/.test(details.url)) {
+      const entry: ArchiveEntry = {
+        id: this.deps.newId(),
+        url: details.url,
+        title: details.title || details.url,
+        spaceId: spaceId && this.hasSpace(spaceId) ? spaceId : this.activeSpaceOf(windowId),
+        archivedAt: this.deps.now(),
+        reason: 'closed',
+        batchId: this.deps.newId(),
+      };
+      this.writeArchive(
+        applyArchiveIntent(this.archive, {
+          type: 'archiveTabs',
+          windowId,
+          tabs: [{ tabId, entry }],
+        }),
+      );
+    }
+
     const bindings = Object.fromEntries(
       Object.entries(this.session.bindings).filter(([, id]) => id !== tabId),
     );
@@ -311,6 +384,11 @@ export class SidebarService {
 
   async onTabReplaced(addedTabId: number, removedTabId: number) {
     await this.ready;
+    const { [removedTabId]: details, ...rest } = this.details;
+    if (details) {
+      this.details = { ...rest, [addedTabId]: details };
+      this.queueDetails();
+    }
     const { [removedTabId]: space, ...tabSpaces } = this.session.tabSpaces;
     if (space) tabSpaces[addedTabId] = space;
     const bindings = Object.fromEntries(
@@ -330,6 +408,11 @@ export class SidebarService {
 
   async onTabAttached(tabId: number, newWindowId: number) {
     await this.ready;
+    const known = this.details[tabId];
+    if (known) {
+      this.details = { ...this.details, [tabId]: { ...known, windowId: newWindowId } };
+      this.queueDetails();
+    }
     if (Object.values(this.session.bindings).includes(tabId)) return;
     const key = String(newWindowId);
     this.writeSession({
@@ -444,6 +527,15 @@ export class SidebarService {
       this.snapshotQueued = true;
       this.deps.defer(() => void this.snapshotToday(), SNAPSHOT_DELAY_MS);
     }
+  }
+
+  private queueDetails() {
+    if (this.detailsQueued) return;
+    this.detailsQueued = true;
+    this.deps.defer(() => {
+      this.detailsQueued = false;
+      void this.deps.saveTabDetails(this.details);
+    }, DETAILS_DELAY_MS);
   }
 
   private writeArchive(archive: ArchiveState) {

@@ -164,6 +164,12 @@ export const normalizeSession = (session: Partial<SessionState>): SessionState =
 /** Per space, its Today tabs' URLs, top first, to re-match after a Chrome restart. */
 export type TodaySnapshot = Record<string, string[]>;
 
+/**
+ * Each open tab's window, latest URL and title. Chrome's onRemoved gives only an id, so a
+ * closed tab is archived from this; the window picks which Today an unpinned tab goes to.
+ */
+export type TabDetails = Record<string, { url: string; title: string; windowId: number }>;
+
 /** Every change to the sidebar, sent from a panel to the service. */
 export type Intent =
   | {
