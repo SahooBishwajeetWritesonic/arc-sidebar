@@ -5,9 +5,9 @@ import {
   archiveItem,
   backupsItem,
   modelItem,
+  restoreSnapshotItem,
   sessionItem,
   tabDetailsItem,
-  todaySnapshotItem,
 } from '@/platform/storage-items';
 
 const AUTO_ARCHIVE_ALARM = 'auto-archive';
@@ -45,8 +45,8 @@ export default defineBackground(() => {
     saveArchive: (archive) => archiveItem.setValue(archive),
     loadBackups: () => backupsItem.getValue(),
     saveBackups: (backups) => backupsItem.setValue(backups),
-    loadTodaySnapshot: () => todaySnapshotItem.getValue(),
-    saveTodaySnapshot: (snapshot) => todaySnapshotItem.setValue(snapshot),
+    loadSnapshot: () => restoreSnapshotItem.getValue(),
+    saveSnapshot: (snapshot) => restoreSnapshotItem.setValue(snapshot),
     loadTabDetails: () => tabDetailsItem.getValue(),
     saveTabDetails: (details) => tabDetailsItem.setValue(details),
     defer: (run, ms) => void setTimeout(run, ms),
@@ -85,7 +85,7 @@ export default defineBackground(() => {
   browser.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name !== AUTO_ARCHIVE_ALARM) return;
     void service.archiveStale();
-    void service.snapshotToday(); // also catches pages navigated since the last change
+    void service.takeSnapshot(); // also catches pages navigated since the last change
   });
   void browser.alarms.get(AUTO_ARCHIVE_ALARM).then((alarm) => {
     if (!alarm) void browser.alarms.create(AUTO_ARCHIVE_ALARM, { periodInMinutes: 5 });

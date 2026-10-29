@@ -5,6 +5,7 @@ import {
   emptyArchive,
   emptyModel,
   emptySession,
+  emptySnapshot,
   type ArchiveState,
   type Backup,
   type Intent,
@@ -24,7 +25,7 @@ const MODEL_KEY = 'harness:model';
 const SESSION_KEY = 'harness:session';
 const ARCHIVE_KEY = 'harness:archive';
 const BACKUPS_KEY = 'harness:backups';
-const SNAPSHOT_KEY = 'harness:todaySnapshot';
+const SNAPSHOT_KEY = 'harness:restoreSnapshot';
 const DETAILS_KEY = 'harness:tabDetails';
 
 function read<T>(storage: Storage, key: string, fallback: T): T {
@@ -89,8 +90,8 @@ export class FakePlatform implements Platform {
         localStorage.setItem(BACKUPS_KEY, JSON.stringify(backups));
       },
       now: () => Date.now(),
-      loadTodaySnapshot: async () => read(localStorage, SNAPSHOT_KEY, {}),
-      saveTodaySnapshot: async (snapshot) =>
+      loadSnapshot: async () => read(localStorage, SNAPSHOT_KEY, emptySnapshot()),
+      saveSnapshot: async (snapshot) =>
         localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot)),
       loadTabDetails: async () => read(sessionStorage, DETAILS_KEY, {}),
       saveTabDetails: async (details) =>

@@ -161,8 +161,18 @@ export const normalizeSession = (session: Partial<SessionState>): SessionState =
   ...session,
 });
 
-/** Per space, its Today tabs' URLs, top first, to re-match after a Chrome restart. */
-export type TodaySnapshot = Record<string, string[]>;
+/**
+ * What was open before Chrome quit, re-matched to restored tabs after a restart: each
+ * space's Today URLs, top first, and the page each open pin was on.
+ */
+export interface RestoreSnapshot {
+  today: Record<string, string[]>;
+  pins: Record<string, string>;
+  /** 0 when there is no snapshot yet (first run, or one saved before pins were kept). */
+  takenAt: number;
+}
+
+export const emptySnapshot = (): RestoreSnapshot => ({ today: {}, pins: {}, takenAt: 0 });
 
 /**
  * Each open tab's window, latest URL and title. Chrome's onRemoved gives only an id, so a

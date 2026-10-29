@@ -3,14 +3,16 @@ import {
   emptyArchive,
   emptyModel,
   emptySession,
+  emptySnapshot,
   type ArchiveEntry,
   type ArchiveState,
   type Backup,
   type Intent,
+  type PinItem,
+  type RestoreSnapshot,
   type SessionState,
   type SidebarModel,
   type TabDetails,
-  type TodaySnapshot,
 } from '@/model/types';
 import { SidebarService, type LiveTab } from './service';
 
@@ -19,7 +21,7 @@ function setup(options: {
   tabs: LiveTab[];
   model?: SidebarModel;
   session?: SessionState;
-  snapshot?: TodaySnapshot;
+  snapshot?: RestoreSnapshot;
   details?: TabDetails;
 }) {
   const tabs = [...options.tabs];
@@ -31,7 +33,7 @@ function setup(options: {
     session: options.session ?? emptySession(),
     archive: emptyArchive() as ArchiveState,
     backups: [] as Backup[],
-    snapshot: options.snapshot ?? ({} as TodaySnapshot),
+    snapshot: options.snapshot ?? emptySnapshot(),
     details: options.details ?? ({} as TabDetails),
   };
   const calls: string[] = [];
@@ -61,11 +63,11 @@ function setup(options: {
     saveArchive: async (archive) => void (saved.archive = archive),
     loadBackups: async () => saved.backups,
     saveBackups: async (backups) => void (saved.backups = backups),
-    loadTodaySnapshot: async () => saved.snapshot,
-    saveTodaySnapshot: async (snapshot) => void (saved.snapshot = snapshot),
+    loadSnapshot: async () => saved.snapshot,
+    saveSnapshot: async (snapshot) => void (saved.snapshot = snapshot),
     loadTabDetails: async () => saved.details,
     saveTabDetails: async (details) => void (saved.details = details),
-    // Deferred work waits for flush(); tests call snapshotToday() themselves.
+    // Deferred work waits for flush(); tests call takeSnapshot() themselves.
     defer: (run) => void deferred.push(run),
     now: () => now,
     newId: () => `id${nextUuid++}`,
@@ -463,7 +465,11 @@ describe('SidebarService', () => {
     it('puts restored tabs back in their spaces after a restart', async () => {
       const { service, saved } = setup({
         model: twoSpaces(),
-        snapshot: { home: ['https://a.com/'], work: ['https://b.com/', 'https://c.com/'] },
+        snapshot: {
+          ...emptySnapshot(),
+          today: { home: ['https://a.com/'], work: ['https://b.com/', 'https://c.com/'] },
+          takenAt: 1,
+        },
         // Fresh session: Chrome has restarted and restored the tabs with new ids.
         tabs: [tab(7, 'https://c.com/'), tab(8, 'https://a.com/'), tab(9, 'https://new.com/')],
       });
@@ -476,13 +482,55 @@ describe('SidebarService', () => {
     });
 
     it('snapshots each space\u2019s Today URLs, top first', async () => {
-      const { service, saved } = setup({
+      const { service, saved, tabs } = setup({
         model: twoSpaces(),
         tabs: [tab(1, 'https://a.com/'), tab(2, 'https://b.com/')],
       });
       await service.handleIntent({ type: 'moveTabToSpace', tabId: 2, spaceId: 'work' });
-      await service.snapshotToday();
-      expect(saved.snapshot).toEqual({ work: ['https://b.com/'], home: ['https://a.com/'] });
+      await service.handleIntent({
+        ...pinIntent('p1', 1, 'https://a.com/'),
+        spaceId: 'home',
+      } as Intent);
+      tabs.push(tab(3, 'https://c.com/'));
+      await service.onTabCreated(tabs[2]!);
+      await service.takeSnapshot();
+      expect(saved.snapshot).toEqual({
+        today: { work: ['https://b.com/'], home: ['https://c.com/'] },
+        pins: { p1: 'https://a.com/' },
+        takenAt: 1_000,
+      });
+    });
+
+    it('gives restored tabs back to the pins that were open, not closed ones for the same page', async () => {
+      const pin = (id: string, spaceId: string, order: string): PinItem => ({
+        kind: 'pin',
+        id,
+        spaceId,
+        parentId: null,
+        order,
+        url: 'https://mail.com/',
+        title: id,
+      });
+      const model: SidebarModel = {
+        ...twoSpaces(),
+        // The same page pinned in both spaces; only Work's was open.
+        items: { home: pin('home', 'home', 'a0'), work: pin('work', 'work', 'a0') },
+      };
+      const { service, saved } = setup({
+        model,
+        snapshot: {
+          today: { home: ['https://mail.com/'] },
+          pins: { work: 'https://mail.com/inbox/42' },
+          takenAt: 1,
+        },
+        tabs: [tab(7, 'https://mail.com/'), tab(8, 'https://mail.com/inbox/42')],
+      });
+      await service.ready;
+      // Work's pin gets its tab back, even though it had moved off the pinned
+      // page; the other mail tab was a Today tab and stays one.
+      expect(saved.session.bindings).toEqual({ work: 8 });
+      expect(saved.session.orders['1']).toEqual([7]);
+      expect(saved.session.tabSpaces[7]).toBe('home');
     });
   });
 

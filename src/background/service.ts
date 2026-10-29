@@ -3,6 +3,7 @@ import {
   ARCHIVE_AFTER_MS,
   DEFAULT_SPACE_ID,
   defaultSettings,
+  emptySnapshot,
   FAVORITES_ID,
   normalizeSession,
   type ArchiveEntry,
@@ -11,10 +12,10 @@ import {
   type Intent,
   type IntentResult,
   type PinItem,
+  type RestoreSnapshot,
   type SessionState,
   type SidebarModel,
   type TabDetails,
-  type TodaySnapshot,
 } from '@/model/types';
 import { isSamePage, isSamePath } from '@/model/urls';
 import { reconcileOrder, withTabOnTop, withTabReplaced, withoutTab } from '@/platform/today-order';
@@ -46,8 +47,8 @@ export interface ServiceDeps {
   saveArchive(archive: ArchiveState): Promise<void>;
   loadBackups(): Promise<Backup[]>;
   saveBackups(backups: Backup[]): Promise<void>;
-  loadTodaySnapshot(): Promise<TodaySnapshot>;
-  saveTodaySnapshot(snapshot: TodaySnapshot): Promise<void>;
+  loadSnapshot(): Promise<RestoreSnapshot>;
+  saveSnapshot(snapshot: RestoreSnapshot): Promise<void>;
   loadTabDetails(): Promise<TabDetails>;
   saveTabDetails(details: TabDetails): Promise<void>;
   /** Runs `run` later (setTimeout in Chrome; tests can run it at once or not at all). */
@@ -76,8 +77,8 @@ export class SidebarService {
   private archive!: ArchiveState;
   private backups: Backup[] = [];
   private restoringUntil = 0;
-  /** Today URLs per space from before a restart, not yet matched to a tab. */
-  private unmatched: TodaySnapshot = {};
+  /** What was open before a restart and isn't matched to a tab yet. */
+  private unmatched: RestoreSnapshot = emptySnapshot();
   private snapshotQueued = false;
   private details: TabDetails = {};
   private detailsQueued = false;
@@ -96,7 +97,7 @@ export class SidebarService {
       this.deps.loadSession(),
       this.deps.loadArchive(),
       this.deps.loadBackups(),
-      this.deps.loadTodaySnapshot(),
+      this.deps.loadSnapshot(),
       this.deps.loadTabDetails(),
       this.deps.queryTabs(),
     ]);
@@ -108,9 +109,13 @@ export class SidebarService {
     // Session storage is empty at the start of every browser session.
     if (session.rev === 0) {
       this.restoringUntil = this.deps.now() + RESTORE_WINDOW_MS;
-      this.unmatched = Object.fromEntries(
-        Object.entries(snapshot).map(([s, urls]) => [s, [...urls]]),
-      );
+      this.unmatched = {
+        today: Object.fromEntries(
+          Object.entries(snapshot.today).map(([s, urls]) => [s, [...urls]]),
+        ),
+        pins: { ...snapshot.pins },
+        takenAt: snapshot.takenAt,
+      };
     }
 
     const live = new Set(tabs.map((tab) => tab.id));
@@ -119,6 +124,8 @@ export class SidebarService {
       if (live.has(tabId) && model.items[itemId]?.kind === 'pin') bindings[itemId] = tabId;
     }
     this.session = { ...session, bindings };
+    // Exact matches first, so a looser one can't take a pin from its own tab.
+    for (const tab of tabs) this.bindIfRestoredPin(tab, true);
     for (const tab of tabs) this.bindIfRestoredPin(tab);
 
     const bound = new Set(Object.values(this.session.bindings));
@@ -157,20 +164,24 @@ export class SidebarService {
     ]);
   }
 
-  /** Saves each space's Today URLs, top first, for matching after a restart. */
-  async snapshotToday() {
+  /** Saves what is open, for matching restored tabs after a restart. */
+  async takeSnapshot() {
     await this.ready;
     this.snapshotQueued = false;
     const urls = new Map((await this.deps.queryTabs()).map((tab) => [tab.id, tab.url]));
-    const snapshot: TodaySnapshot = {};
+    const snapshot: RestoreSnapshot = { today: {}, pins: {}, takenAt: this.deps.now() };
     for (const order of Object.values(this.session.orders)) {
       for (const tabId of order) {
         const space = this.session.tabSpaces[tabId];
         const url = urls.get(tabId);
-        if (space && url) (snapshot[space] ??= []).push(url);
+        if (space && url) (snapshot.today[space] ??= []).push(url);
       }
     }
-    await this.deps.saveTodaySnapshot(snapshot);
+    for (const [itemId, tabId] of Object.entries(this.session.bindings)) {
+      const url = urls.get(tabId);
+      if (url) snapshot.pins[itemId] = url;
+    }
+    await this.deps.saveSnapshot(snapshot);
   }
 
   snapshot() {
@@ -457,7 +468,7 @@ export class SidebarService {
 
   /** The space a restored tab was in before the restart, consuming the match. */
   private matchSnapshot(url: string): string | undefined {
-    for (const [space, urls] of Object.entries(this.unmatched)) {
+    for (const [space, urls] of Object.entries(this.unmatched.today)) {
       const index = urls.findIndex((known) => isSamePage(known, url));
       if (index !== -1 && this.hasSpace(space)) {
         urls.splice(index, 1);
@@ -471,15 +482,27 @@ export class SidebarService {
     return { modelRev: this.model.rev, sessionRev: this.session.rev, archiveRev: this.archive.rev };
   }
 
-  private bindIfRestoredPin(tab: LiveTab): boolean {
+  /**
+   * Prefers the pin last open on this page. Loose matches skip former Today pages, and only
+   * without a snapshot (first run) may any pin match: else Today tabs could take over pins.
+   */
+  private bindIfRestoredPin(tab: LiveTab, exactOnly = false): boolean {
     if (this.deps.now() > this.restoringUntil) return false;
+    if (Object.values(this.session.bindings).includes(tab.id)) return false;
     const bound = new Set(Object.keys(this.session.bindings));
-    const pins = Object.values(this.model.items).filter(
+    const free = Object.values(this.model.items).filter(
       (item): item is PinItem => item.kind === 'pin' && !bound.has(item.id),
     );
+    const { pins: open, today, takenAt } = this.unmatched;
+    const wasOpen = free.filter((pin) => open[pin.id] !== undefined);
+    const wasToday = Object.values(today).some((urls) => urls.some((u) => isSamePage(u, tab.url)));
+    const candidates = exactOnly || wasToday ? [] : takenAt ? wasOpen : free;
     const pin =
-      pins.find((p) => isSamePage(p.url, tab.url)) ?? pins.find((p) => isSamePath(p.url, tab.url));
+      wasOpen.find((p) => isSamePage(open[p.id]!, tab.url)) ??
+      candidates.find((p) => isSamePage(p.url, tab.url)) ??
+      candidates.find((p) => isSamePath(p.url, tab.url));
     if (!pin) return false;
+    delete open[pin.id];
     this.bind(pin.id, tab.id);
     return true;
   }
@@ -525,7 +548,7 @@ export class SidebarService {
     void this.deps.saveSession(this.session);
     if (!this.snapshotQueued) {
       this.snapshotQueued = true;
-      this.deps.defer(() => void this.snapshotToday(), SNAPSHOT_DELAY_MS);
+      this.deps.defer(() => void this.takeSnapshot(), SNAPSHOT_DELAY_MS);
     }
   }
 

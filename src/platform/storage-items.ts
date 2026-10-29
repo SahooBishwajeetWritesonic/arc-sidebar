@@ -4,12 +4,13 @@ import {
   emptyArchive,
   emptyModel,
   emptySession,
+  emptySnapshot,
   type ArchiveState,
   type Backup,
+  type RestoreSnapshot,
   type SessionState,
   type SidebarModel,
   type TabDetails,
-  type TodaySnapshot,
 } from '@/model/types';
 
 /** Pins, folders, spaces and settings. Versioned so schema changes can migrate. */
@@ -40,8 +41,14 @@ export const backupsItem = storage.defineItem<Backup[]>('local:backups', {
   fallback: [],
 });
 
-export const todaySnapshotItem = storage.defineItem<TodaySnapshot>('local:todaySnapshot', {
-  fallback: {},
+/** What was open before Chrome quit, for putting restored tabs back. */
+export const restoreSnapshotItem = storage.defineItem<RestoreSnapshot>('local:todaySnapshot', {
+  fallback: emptySnapshot(),
+  version: 2,
+  migrations: {
+    // v2 added open pins; v1 was the Today URLs alone.
+    2: (today: Record<string, string[]>): RestoreSnapshot => ({ ...emptySnapshot(), today }),
+  },
 });
 
 /** Each tab's latest URL and title, for archiving tabs closed in Chrome. */
