@@ -17,6 +17,6 @@ export default defineConfig({
   build: {
     outDir: here('../.output/harness'),
     emptyOutDir: true,
-    rollupOptions: { input: [here('index.html'), here('panel.html')] },
+    rollupOptions: { input: [here('index.html'), here('panel.html'), here('command.html')] },
   },
 });

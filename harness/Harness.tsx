@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
+import { CLOSE_MESSAGE } from '@/platform/command-bar';
 import { startingAppearance, type FakePlatform } from './fake-platform';
 import { morePages } from './fixtures';
 import styles from './harness.module.css';
@@ -12,6 +13,27 @@ export function Harness({ platform }: { platform: FakePlatform }) {
     return appearance === 'auto' ? 'light dark' : appearance;
   });
   const [page, setPage] = useState(0);
+  const [commandBar, setCommandBar] = useState(false);
+
+  // ⌥T over the "page" opens the command bar over it, as the extension's shortcut does.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.altKey && event.code === 'KeyT') {
+        event.preventDefault();
+        setCommandBar((open) => !open);
+      }
+    };
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as Partial<typeof CLOSE_MESSAGE> | null;
+      if (data?.arcCommandBar === CLOSE_MESSAGE.arcCommandBar) setCommandBar(false);
+    };
+    addEventListener('keydown', onKey);
+    addEventListener('message', onMessage);
+    return () => {
+      removeEventListener('keydown', onKey);
+      removeEventListener('message', onMessage);
+    };
+  }, []);
 
   // The controls follow the chosen scheme; the panel follows the Appearance
   // setting, which this sets through the real service.
@@ -35,10 +57,13 @@ export function Harness({ platform }: { platform: FakePlatform }) {
   };
 
   return (
-    <div className={styles.harness}>
+    <div className={styles.harness} style={{ '--panel-width': `${width}px` } as CSSProperties}>
       <aside className={styles.controls}>
         <h1>Arc Sidebar harness</h1>
         <p>The real app with a fake Chrome. Events arrive with Chrome-like latency.</p>
+
+        <h2>Command bar</h2>
+        <button onClick={() => setCommandBar(true)}>Open over the page (⌥T)</button>
 
         <h2>Tabs (as if from Chrome)</h2>
         <button onClick={openTab}>Open tab</button>
@@ -80,6 +105,10 @@ export function Harness({ platform }: { platform: FakePlatform }) {
           </select>
         </label>
       </aside>
+
+      {commandBar && (
+        <iframe title="Command bar" className={styles.commandFrame} src="/command.html" />
+      )}
 
       {/* Mimics Chrome's panel header; the frame gives the panel its own viewport. */}
       <div className={styles.panel} style={{ width }}>
