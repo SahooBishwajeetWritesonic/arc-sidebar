@@ -1,7 +1,8 @@
 import { browser, type Browser } from 'wxt/browser';
 import type { IntentResult } from '@/model/types';
+import { readMedia, runMedia } from './media-page';
 import { archiveItem, backupsItem, modelItem, sessionItem } from './storage-items';
-import type { Platform, TabEvent, TabInfo } from './types';
+import type { MediaState, Platform, TabEvent, TabInfo } from './types';
 
 function toTabInfo(tab: Browser.tabs.Tab): TabInfo | undefined {
   if (tab.id === undefined || tab.id === browser.tabs.TAB_ID_NONE) return undefined;
@@ -141,6 +142,19 @@ export const chromePlatform: Platform = {
 
   openInSplit(tabId, url) {
     void browser.tabs.create({ url, splitWithTabId: tabId, active: true });
+  },
+
+  async mediaState(tabId) {
+    const [frame] = await browser.scripting
+      .executeScript({ target: { tabId }, world: 'MAIN', func: readMedia })
+      .catch(() => []);
+    return (frame?.result as MediaState | undefined) ?? null;
+  },
+
+  async mediaCommand(tabId, action) {
+    await browser.scripting
+      .executeScript({ target: { tabId }, world: 'MAIN', func: runMedia, args: [action] })
+      .catch(() => {});
   },
 
   faviconUrl(pageUrl) {

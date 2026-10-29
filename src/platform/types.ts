@@ -33,6 +33,19 @@ export interface HistoryEntry {
   lastVisitTime: number;
 }
 
+/** What a page playing sound reports, for the sidebar's media player. */
+export interface MediaState {
+  playing: boolean;
+  /** From the page's Media Session, when it sets one. */
+  title?: string;
+  artist?: string;
+  artwork?: string;
+  /** Media Session actions the page handles ('nexttrack', 'previoustrack', …). */
+  actions: string[];
+}
+
+export type MediaAction = 'play' | 'pause' | 'nexttrack' | 'previoustrack';
+
 /** Chrome's tab events, normalised to the few shapes the panel cares about. */
 export type TabEvent =
   | { type: 'upsert'; tab: TabInfo }
@@ -79,4 +92,8 @@ export interface Platform {
   unsplit(splitViewId: number): void;
   /** Opens `url` in a new tab split with `tabId`, on its right. */
   openInSplit(tabId: number, url: string): void;
+
+  /** What the page in `tabId` is playing; null when it can't be asked. */
+  mediaState(tabId: number): Promise<MediaState | null>;
+  mediaCommand(tabId: number, action: MediaAction): Promise<void>;
 }

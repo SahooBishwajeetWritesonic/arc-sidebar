@@ -17,7 +17,14 @@ import {
   type SidebarModel,
 } from '@/model/types';
 import { hostname } from '@/model/urls';
-import type { HistoryEntry, Platform, TabEvent, TabInfo } from '@/platform/types';
+import type {
+  HistoryEntry,
+  MediaAction,
+  MediaState,
+  Platform,
+  TabEvent,
+  TabInfo,
+} from '@/platform/types';
 
 export interface Fixture {
   title: string;
@@ -27,6 +34,7 @@ export interface Fixture {
 }
 
 const WINDOW_ID = 1;
+const TRACKS = ['Lo-fi beats to code to', 'Rainy day in Tokyo', 'Late night coffee'];
 const MODEL_KEY = 'harness:model';
 const SESSION_KEY = 'harness:session';
 const ARCHIVE_KEY = 'harness:archive';
@@ -74,10 +82,13 @@ export class FakePlatform implements Platform {
   readonly service: SidebarService;
   private history: HistoryEntry[];
   private nextSplit = 1;
+  /** Tracks playing in tabs that make sound (the YouTube fixture's playlist). */
+  private tracks = new Map<number, number>();
 
   constructor(fixtures: Fixture[], history: HistoryEntry[] = []) {
     this.history = [...history];
     this.tabs = fixtures.map((fixture, i) => this.makeTab(fixture, i === 0));
+    for (const tab of this.tabs) if (tab.audible) this.tracks.set(tab.id, 0);
     this.service = new SidebarService({
       queryTabs: async () => this.tabs.map((tab, index) => this.live(tab, index)),
       createTab: async (_windowId, url, active) =>
@@ -259,6 +270,35 @@ export class FakePlatform implements Platform {
     const index = this.tabs.findIndex((tab) => tab.active);
     const next = this.tabs[index + 1];
     if (index !== -1 && next) this.splitTabs(this.tabs[index]!.id, next.id);
+  }
+
+  async mediaState(tabId: number): Promise<MediaState | null> {
+    await new Promise((resolve) => setTimeout(resolve, 6)); // a script run in the tab
+    const tab = this.tabs.find((t) => t.id === tabId);
+    if (!tab) return null;
+    const track = this.tracks.get(tabId);
+    if (track === undefined) return { playing: tab.audible, actions: [] };
+    return {
+      playing: tab.audible,
+      title: TRACKS[track % TRACKS.length],
+      artist: 'Lofi Girl',
+      actions: ['play', 'pause', 'previoustrack', 'nexttrack'],
+    };
+  }
+
+  /** As a page would: pausing goes quiet, skipping changes the title. */
+  async mediaCommand(tabId: number, action: MediaAction) {
+    await new Promise((resolve) => setTimeout(resolve, 6));
+    const tab = this.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+    if (action === 'play' || action === 'pause') {
+      this.tracks.set(tabId, this.tracks.get(tabId) ?? 0);
+      this.patch(tabId, { audible: action === 'play' });
+      return;
+    }
+    const track = (this.tracks.get(tabId) ?? 0) + (action === 'nexttrack' ? 1 : -1 + TRACKS.length);
+    this.tracks.set(tabId, track);
+    this.patch(tabId, { title: `${TRACKS[track % TRACKS.length]} - YouTube`, audible: true });
   }
 
   faviconUrl(pageUrl: string) {
