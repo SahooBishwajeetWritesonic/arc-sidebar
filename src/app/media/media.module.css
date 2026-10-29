@@ -1,0 +1,124 @@
+/* Arc's mini players: a pill per tab playing sound, on the Favorites tiles' fill. */
+.tray {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px var(--pad-side) 0;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: var(--row-height);
+  padding: 0 6px 0 4px;
+  border-radius: var(--row-radius);
+  background: var(--tile);
+  color: var(--ink);
+}
+
+/* The site and title: goes to the tab. */
+.source {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--favicon-gap);
+  height: 32px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--accessory-radius);
+  outline: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--label-size);
+  text-align: start;
+}
+
+.marquee {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+}
+
+.text {
+  display: inline-block;
+}
+
+.marquee[data-scrolls] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 12px,
+    #000 calc(100% - 12px),
+    transparent
+  );
+}
+
+.marquee[data-scrolls] .text {
+  animation: marquee var(--marquee-time) linear 0.4s infinite alternate;
+}
+
+@keyframes marquee {
+  0%,
+  10% {
+    translate: 0;
+  }
+  90%,
+  100% {
+    translate: var(--marquee-shift);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee[data-scrolls] .text {
+    animation: none;
+  }
+}
+
+.control {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--accessory-size);
+  height: var(--accessory-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--accessory-radius);
+  outline: none;
+  background: none;
+  color: var(--ink-secondary);
+}
+
+.source:focus-visible,
+.control:focus-visible {
+  outline: 2px dashed var(--focus-ring);
+  outline-offset: -2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .source:hover {
+    background: var(--accessory-hover);
+  }
+
+  .control:hover {
+    background: var(--accessory-hover);
+    color: var(--ink);
+  }
+}
+
+/* Its place is kept, so the controls don't shift when it shows. */
+.close {
+  opacity: 0;
+}
+
+.player:hover .close,
+.close:focus-visible {
+  opacity: 1;
+}

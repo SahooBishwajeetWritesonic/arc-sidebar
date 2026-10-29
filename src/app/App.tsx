@@ -22,6 +22,7 @@ import { SidebarCommandBar } from './command/SidebarCommandBar';
 import { DragLayer } from './drag/DragLayer';
 import { Favorites } from './favorites/Favorites';
 import { ImportDialog } from './import/ImportDialog';
+import { MediaTray } from './media/MediaTray';
 import { RestoreDialog } from './restore/RestoreDialog';
 import { fade } from './motion';
 import styles from './app.module.css';
@@ -174,6 +175,11 @@ export function App() {
             <DragLayer />
           </Boundary>
         </main>
+        {ready && (
+          <Boundary region="media players">
+            <MediaTray />
+          </Boundary>
+        )}
         <Boundary region="bottom bar">
           <BottomBar />
         </Boundary>
