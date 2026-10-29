@@ -50,6 +50,38 @@ function peekBounds(source: Browser.windows.Window) {
   };
 }
 
+/** A small window near the top of the one it came from; more step down from it, as in Arc. */
+function littleBounds(source: Browser.windows.Window, others: number) {
+  const { left = 0, top = 0, width = 1280, height = 800 } = source;
+  const w = Math.min(600, width - 80);
+  const h = Math.min(760, height - 120);
+  const step = (others % 5) * 24;
+  return {
+    left: Math.round(left + (width - w) / 2 + step),
+    top: Math.round(top + 64 + step),
+    width: Math.round(w),
+    height: Math.round(h),
+  };
+}
+
+/** Arc's Little Arc, for a tab or a page; with neither, it starts on the command bar. */
+export async function openLittleArc(windowId: number, what: { tabId?: number; url?: string } = {}) {
+  const from = await browser.windows.get(windowId);
+  const others = Object.values(await all()).filter((window) => window.kind === 'little').length;
+  const created = await browser.windows.create({
+    type: 'popup',
+    focused: true,
+    ...littleBounds(from, others),
+    ...(what.tabId !== undefined
+      ? { tabId: what.tabId }
+      : { url: what.url ?? browser.runtime.getURL('/little.html') }),
+  });
+  const tabId = created?.tabs?.[0]?.id;
+  if (created?.id === undefined || tabId === undefined) return;
+  await remember(created.id, { kind: 'little', tabId, from: windowId, openedAt: Date.now() });
+  tell(tabId, { pinned: false, floating: 'little' });
+}
+
 async function openPeek(url: string, source: Browser.tabs.Tab) {
   const from = await browser.windows.get(source.windowId);
   const created = await browser.windows.create({

@@ -1,0 +1,7 @@
+/*
+ * A new Little Arc's page is the bar's own window: nothing behind it to dim.
+ * (Doubled selector: outranks tokens.css whatever the order.)
+ */
+html:root {
+  --command-scrim: transparent;
+}

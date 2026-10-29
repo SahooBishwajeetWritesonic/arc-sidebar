@@ -78,6 +78,11 @@ interface CommandBarProps {
    * with it selected, and an address or search loads in that tab.
    */
   address?: string;
+  /**
+   * Only addresses, searches and history: on a Little Arc's first page,
+   * where tabs, spaces and actions have nothing to act on.
+   */
+  pagesOnly?: boolean;
 }
 
 const EMPTY: HistoryEntry[] = [];
@@ -86,7 +91,13 @@ const EMPTY: HistoryEntry[] = [];
  * Arc's command bar: an address, search, tab, space or action. It opens and closes in one
  * frame (Arc dropped its entrance animation as it felt slow, research/08).
  */
-export function CommandBar({ host, sidebarOpen, placement, address }: CommandBarProps) {
+export function CommandBar({
+  host,
+  sidebarOpen,
+  placement,
+  address,
+  pagesOnly = false,
+}: CommandBarProps) {
   const ctx = useCommandContext(sidebarOpen);
   const scheme = usePreferredScheme();
   const theme = useSidebar(
@@ -105,8 +116,8 @@ export function CommandBar({ host, sidebarOpen, placement, address }: CommandBar
   // An action waiting for a tab or address ("Add Split View…").
   const [picking, setPicking] = useState<Result | null>(null);
 
-  const slash = typed.startsWith('/') && !picking;
-  const actionsMode = (actionsOnly || slash) && !picking;
+  const slash = typed.startsWith('/') && !picking && !pagesOnly;
+  const actionsMode = (actionsOnly || slash) && !picking && !pagesOnly;
   const query = slash ? typed.slice(1) : typed;
   const history = useHistory(actionsMode ? '' : query);
   const typedAddresses = useTypedAddresses();
@@ -117,17 +128,17 @@ export function CommandBar({ host, sidebarOpen, placement, address }: CommandBar
         : null,
     [completing, actionsMode, prompt, picking, query, typedAddresses, history],
   );
-  const results = useMemo(
-    () =>
-      prompt
-        ? []
-        : searchCommands(query, ctx, history, {
-            actionsOnly: actionsMode,
-            pickSplit: picking !== null,
-            completion,
-          }),
-    [prompt, picking, query, ctx, history, actionsMode, completion],
-  );
+  const results = useMemo(() => {
+    if (prompt) return [];
+    const found = searchCommands(query, ctx, history, {
+      actionsOnly: actionsMode,
+      pickSplit: picking !== null,
+      completion,
+    });
+    return pagesOnly
+      ? found.filter(({ command }) => command.type === 'openUrl' || command.type === 'search')
+      : found;
+  }, [prompt, picking, query, ctx, history, actionsMode, completion, pagesOnly]);
 
   // The selection goes back to the top whenever what's typed changes.
   const listKey = `${actionsMode}:${picking?.key}:${query}`;

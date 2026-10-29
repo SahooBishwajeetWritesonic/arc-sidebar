@@ -47,6 +47,7 @@ export default defineConfig({
       },
       'edit-url': { description: 'Edit the current URL' },
       'copy-url-markdown': { description: 'Copy URL as Markdown' },
+      'little-arc': { description: 'New Little Arc' },
       'next-tab': { description: 'Next tab in the sidebar' },
       'previous-tab': { description: 'Previous tab in the sidebar' },
       'pin-tab': { description: 'Pin or unpin the current tab' },
