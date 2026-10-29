@@ -1,6 +1,7 @@
 import { generateNKeysBetween } from 'fractional-indexing';
 import { SidebarService, type LiveTab } from '@/background/service';
 import type { PullRequest } from '@/model/live';
+import { startCaptureTool } from '@/platform/capture-tool';
 import {
   DEFAULT_SPACE_ID,
   defaultSettings,
@@ -23,6 +24,8 @@ import type {
   MediaAction,
   MediaState,
   Platform,
+  SitePermission,
+  SitePermissionKind,
   TabEvent,
   TabInfo,
 } from '@/platform/types';
@@ -85,6 +88,10 @@ export class FakePlatform implements Platform {
   private nextSplit = 1;
   /** Tracks playing in tabs that make sound (the YouTube fixture's playlist). */
   private tracks = new Map<number, number>();
+  /** Permissions sites were given, by origin (Chrome's content settings). */
+  private permissions = new Map<string, SitePermission[]>([
+    ['https://mail.google.com', [{ kind: 'notifications', setting: 'allow' }]],
+  ]);
   /** github.com as the Live Folder sees it. */
   private github: { signedIn: boolean; open: (PullRequest & { mine: boolean })[] };
   private nextPullRequest = 2000;
@@ -249,9 +256,38 @@ export class FakePlatform implements Platform {
     this.openTab({ title: this.titles.get(url) ?? hostname(url), url });
   }
 
-  searchWeb(text: string) {
+  navigateTab(tabId: number, url: string) {
+    this.navigate(tabId, url, this.titles.get(url));
+  }
+
+  searchWeb(text: string, tabId?: number) {
     const url = `https://www.google.com/search?q=${encodeURIComponent(text)}`;
-    this.openTab({ title: `${text} - Google Search`, url });
+    const title = `${text} - Google Search`;
+    if (tabId === undefined) this.openTab({ title, url });
+    else this.navigate(tabId, url, title);
+  }
+
+  /** The real capture tool, over the harness page, which stands in for the tab's page. */
+  async startCapture(tabId: number) {
+    const tab = this.tabs.find((t) => t.id === tabId);
+    if (!tab || !/^https?:/.test(tab.url)) return false;
+    startCaptureTool({ shoot: (area) => picture(tab.title, area.width, area.height) });
+    return true;
+  }
+
+  async captureFullPage(tabId: number) {
+    const tab = this.tabs.find((t) => t.id === tabId);
+    return tab && /^https?:/.test(tab.url) ? picture(tab.title, 640, 1600) : null;
+  }
+
+  async sitePermissions(url: string) {
+    return /^https?:/.test(url) ? [...(this.permissions.get(new URL(url).origin) ?? [])] : [];
+  }
+
+  async setSitePermission(url: string, kind: SitePermissionKind, setting: 'allow' | 'block') {
+    const origin = new URL(url).origin;
+    const others = (this.permissions.get(origin) ?? []).filter((p) => p.kind !== kind);
+    this.permissions.set(origin, [...others, { kind, setting }]);
   }
 
   duplicateTab(tabId: number) {
@@ -553,4 +589,19 @@ export class FakePlatform implements Platform {
   private later(ms: number, run: () => void) {
     setTimeout(run, ms);
   }
+}
+
+/** A stand-in picture: a light card with the page's title. */
+function picture(title: string, width: number, height: number) {
+  const canvas = new OffscreenCanvas(
+    Math.max(1, Math.round(width)),
+    Math.max(1, Math.round(height)),
+  );
+  const context = canvas.getContext('2d')!;
+  context.fillStyle = '#f4f4f6';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = '#222';
+  context.font = '24px system-ui';
+  context.fillText(title, 24, 48);
+  return canvas.convertToBlob({ type: 'image/png' });
 }

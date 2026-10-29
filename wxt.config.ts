@@ -19,6 +19,9 @@ export default defineConfig({
       'contextMenus',
       'offscreen',
       'clipboardWrite',
+      // The URL bar's site menu: full-page capture and site permissions.
+      'debugger',
+      'contentSettings',
     ],
     // The command bar covers any page, as Arc's does.
     host_permissions: ['<all_urls>'],

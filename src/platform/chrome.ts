@@ -2,7 +2,16 @@ import { browser, type Browser } from 'wxt/browser';
 import type { IntentResult } from '@/model/types';
 import { readMedia, runMedia } from './media-page';
 import { archiveItem, backupsItem, modelItem, sessionItem } from './storage-items';
-import type { MediaState, Platform, TabEvent, TabInfo } from './types';
+import { fullPage, SITE_PERMISSION_DEFAULTS } from './capture';
+import type {
+  MediaState,
+  Platform,
+  SitePermission,
+  SitePermissionKind,
+  SitePermissionSetting,
+  TabEvent,
+  TabInfo,
+} from './types';
 
 function toTabInfo(tab: Browser.tabs.Tab): TabInfo | undefined {
   if (tab.id === undefined || tab.id === browser.tabs.TAB_ID_NONE) return undefined;
@@ -118,9 +127,45 @@ export const chromePlatform: Platform = {
     void browser.tabs.create({ windowId, url, active: true });
   },
 
-  searchWeb(text) {
+  navigateTab(tabId, url) {
+    void browser.tabs.update(tabId, { url });
+  },
+
+  searchWeb(text, tabId) {
     // NEW_TAB opens in the focused window: the one the bar was opened in.
-    void browser.search.query({ text, disposition: 'NEW_TAB' });
+    void browser.search.query(
+      tabId === undefined ? { text, disposition: 'NEW_TAB' } : { text, tabId },
+    );
+  },
+
+  async startCapture(tabId) {
+    try {
+      await browser.scripting.executeScript({ target: { tabId }, files: ['/capture-tool.js'] });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  async captureFullPage(tabId) {
+    return fullPage(tabId).catch(() => null);
+  },
+
+  async sitePermissions(url) {
+    if (!/^https?:/.test(url)) return [];
+    const kinds = Object.keys(SITE_PERMISSION_DEFAULTS) as SitePermissionKind[];
+    const read = async (kind: SitePermissionKind): Promise<SitePermission | null> => {
+      const { setting } = await browser.contentSettings[kind].get({ primaryUrl: url });
+      const value = setting as SitePermissionSetting;
+      return value === SITE_PERMISSION_DEFAULTS[kind] ? null : { kind, setting: value };
+    };
+    const all = await Promise.all(kinds.map((kind) => read(kind).catch(() => null)));
+    return all.filter((permission) => permission !== null);
+  },
+
+  async setSitePermission(url, kind, setting) {
+    const primaryPattern = `${new URL(url).origin}/*`;
+    await browser.contentSettings[kind].set({ primaryPattern, setting } as never);
   },
 
   duplicateTab(tabId) {

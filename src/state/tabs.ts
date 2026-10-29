@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { hostname, isSamePage } from '@/model/urls';
-import type { Platform, TabEvent, TabInfo } from '@/platform/types';
+import type { Platform, SitePermissionKind, TabEvent, TabInfo } from '@/platform/types';
 
 /** The window's live Chrome tabs, plus what the sidebar store tells us about them. */
 export interface TabsState {
@@ -259,6 +259,37 @@ export function openUrl(url: string) {
 
 export function searchWeb(text: string) {
   platform?.searchWeb(text);
+}
+
+/** Loads an address in the selected tab instead (the URL bar's ⌘L). */
+export function navigateActive(url: string) {
+  const { activeId } = useTabs.getState();
+  if (activeId !== null) platform?.navigateTab(activeId, url);
+}
+
+export function searchInActive(text: string) {
+  const { activeId } = useTabs.getState();
+  if (activeId !== null) platform?.searchWeb(text, activeId);
+}
+
+export function startCapture(tabId: number) {
+  return platform?.startCapture(tabId) ?? Promise.resolve(false);
+}
+
+export function captureFullPage(tabId: number) {
+  return platform?.captureFullPage(tabId) ?? Promise.resolve(null);
+}
+
+export function sitePermissions(url: string) {
+  return platform?.sitePermissions(url) ?? Promise.resolve([]);
+}
+
+export function setSitePermission(
+  url: string,
+  kind: SitePermissionKind,
+  setting: 'allow' | 'block',
+) {
+  return platform?.setSitePermission(url, kind, setting) ?? Promise.resolve();
 }
 
 export function duplicateTab(id: number) {

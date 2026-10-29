@@ -46,6 +46,25 @@ export interface MediaState {
 
 export type MediaAction = 'play' | 'pause' | 'nexttrack' | 'previoustrack';
 
+/** Site permissions the URL bar's site menu can show and change (Chrome's content settings). */
+export type SitePermissionKind =
+  | 'javascript'
+  | 'images'
+  | 'popups'
+  | 'notifications'
+  | 'location'
+  | 'camera'
+  | 'microphone'
+  | 'automaticDownloads'
+  | 'cookies';
+
+export type SitePermissionSetting = 'allow' | 'block' | 'ask' | 'session_only';
+
+export interface SitePermission {
+  kind: SitePermissionKind;
+  setting: SitePermissionSetting;
+}
+
 /** Chrome's tab events, normalised to the few shapes the panel cares about. */
 export type TabEvent =
   | { type: 'upsert'; tab: TabInfo }
@@ -83,8 +102,10 @@ export interface Platform {
   searchHistory(text: string): Promise<HistoryEntry[]>;
   /** Opens `url` in a new tab, which lands at the top of Today. */
   openUrl(windowId: number, url: string): void;
-  /** Searches with Chrome's default search engine, in a new tab. */
-  searchWeb(text: string): void;
+  /** Loads `url` in the tab, in place (the URL bar's ⌘L). */
+  navigateTab(tabId: number, url: string): void;
+  /** Searches with Chrome's default search engine, in a new tab or in `tabId`. */
+  searchWeb(text: string, tabId?: number): void;
   duplicateTab(tabId: number): void;
 
   /** Shows two tabs side by side in Chrome's split view, `left` on the left. */
@@ -92,6 +113,24 @@ export interface Platform {
   unsplit(splitViewId: number): void;
   /** Opens `url` in a new tab split with `tabId`, on its right. */
   openInSplit(tabId: number, url: string): void;
+
+  /**
+   * Opens Arc's capture tool over the tab's page (it copies what you pick);
+   * false when Chrome keeps extensions out of the page.
+   */
+  startCapture(tabId: number): Promise<boolean>;
+  /**
+   * A PNG of the whole page, through Chrome's debugger (which shows its
+   * banner meanwhile); null when Chrome won't let it be captured.
+   */
+  captureFullPage(tabId: number): Promise<Blob | null>;
+  /** The page's site's permissions that differ from Chrome's defaults. */
+  sitePermissions(url: string): Promise<SitePermission[]>;
+  setSitePermission(
+    url: string,
+    kind: SitePermissionKind,
+    setting: 'allow' | 'block',
+  ): Promise<void>;
 
   /** What the page in `tabId` is playing; null when it can't be asked. */
   mediaState(tabId: number): Promise<MediaState | null>;
