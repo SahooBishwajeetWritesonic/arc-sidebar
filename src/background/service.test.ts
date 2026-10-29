@@ -793,4 +793,52 @@ describe('SidebarService', () => {
       expect(saved.session.orders['1']![0]).toBe(tabId);
     });
   });
+
+  describe('Chrome’s tab menu', () => {
+    const twoSpaces = (): SidebarModel => ({
+      ...emptyModel(),
+      spaces: [
+        { id: 'default', name: 'Work' },
+        { id: 'home', name: 'Home' },
+      ],
+    });
+
+    it('pins Today tabs at the end of their space, once', async () => {
+      const { service, saved } = setup({
+        tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')],
+      });
+      await service.pinTabs([1, 2]);
+      await service.pinTabs([1]);
+      const pins = Object.values(saved.model.items).sort((a, b) => (a.order < b.order ? -1 : 1));
+      expect(pins.map((pin) => pin.kind === 'pin' && pin.url)).toEqual([
+        'https://a.com',
+        'https://b.com',
+      ]);
+      expect(saved.session.orders['1']).toEqual([]);
+    });
+
+    it('adds Today and pinned tabs to Favorites', async () => {
+      const { service, saved } = setup({
+        tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')],
+      });
+      await service.pinTabs([2]);
+      await service.favoriteTabs([1, 2]);
+      const favorites = Object.values(saved.model.items).filter(
+        (item) => item.spaceId === 'favorites',
+      );
+      expect(favorites).toHaveLength(2);
+    });
+
+    it('moves Today tabs to the other space’s Today, and pins to its Pinned', async () => {
+      const { service, saved } = setup({
+        tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')],
+        model: twoSpaces(),
+      });
+      await service.pinTabs([2]);
+      await service.moveTabsToSpace([1, 2], 'home');
+      expect(saved.session.tabSpaces[1]).toBe('home');
+      const pin = Object.values(saved.model.items)[0]!;
+      expect(pin).toMatchObject({ spaceId: 'home', parentId: null });
+    });
+  });
 });

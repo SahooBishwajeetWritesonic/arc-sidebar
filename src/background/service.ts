@@ -381,6 +381,65 @@ export class SidebarService {
     }, LIVE_AFTER_PAGE_MS);
   }
 
+  /** Chrome's tab menu: pins Today tabs at the end of their space's Pinned section. */
+  async pinTabs(tabIds: readonly number[]) {
+    await this.ready;
+    for (const tabId of tabIds) {
+      const details = this.details[tabId];
+      if (!details || this.itemOfTab(tabId)) continue;
+      const spaceId = this.spaceOfTab(tabId) ?? this.activeSpaceOf(details.windowId);
+      await this.handleIntent({
+        type: 'pinTab',
+        itemId: this.deps.newId(),
+        tabId,
+        spaceId,
+        parentId: null,
+        order: orderAtEnd(this.model, spaceId, null),
+        url: details.url,
+        title: details.title,
+      });
+    }
+  }
+
+  /** Chrome's tab menu: adds tabs to the end of Favorites, while there's room. */
+  async favoriteTabs(tabIds: readonly number[]) {
+    await this.ready;
+    for (const tabId of tabIds) {
+      const details = this.details[tabId];
+      const itemId = this.itemOfTab(tabId);
+      const order = orderAtEnd(this.model, FAVORITES_ID, null);
+      if (itemId) {
+        if (this.model.items[itemId]?.spaceId === FAVORITES_ID) continue;
+        await this.handleIntent({ type: 'moveToSpace', itemId, spaceId: FAVORITES_ID, order });
+      } else if (details) {
+        await this.handleIntent({
+          type: 'pinTab',
+          itemId: this.deps.newId(),
+          tabId,
+          spaceId: FAVORITES_ID,
+          parentId: null,
+          order,
+          url: details.url,
+          title: details.title,
+        });
+      }
+    }
+  }
+
+  /** Chrome's tab menu: Today tabs go to the space's Today, pinned ones to its Pinned. */
+  async moveTabsToSpace(tabIds: readonly number[], spaceId: string) {
+    await this.ready;
+    for (const tabId of tabIds) {
+      const itemId = this.itemOfTab(tabId);
+      if (itemId) {
+        const order = orderAtEnd(this.model, spaceId, null);
+        await this.handleIntent({ type: 'moveToSpace', itemId, spaceId, order });
+      } else if (this.details[tabId]) {
+        await this.handleIntent({ type: 'moveTabToSpace', tabId, spaceId });
+      }
+    }
+  }
+
   async archiveStale(): Promise<number> {
     await this.ready;
     const now = this.deps.now();
@@ -663,8 +722,12 @@ export class SidebarService {
     return space && this.hasSpace(space) ? space : (this.model.spaces[0]?.id ?? DEFAULT_SPACE_ID);
   }
 
+  private itemOfTab(tabId: number): string | undefined {
+    return Object.entries(this.session.bindings).find(([, id]) => id === tabId)?.[0];
+  }
+
   private spaceOfTab(tabId: number): string | undefined {
-    const itemId = Object.entries(this.session.bindings).find(([, id]) => id === tabId)?.[0];
+    const itemId = this.itemOfTab(tabId);
     if (itemId) {
       const spaceId = this.model.items[itemId]?.spaceId;
       // Favorites belong to every space: opening one doesn't switch.

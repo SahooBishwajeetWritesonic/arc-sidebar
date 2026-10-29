@@ -3,6 +3,7 @@ import { onCommandBarHello, onCommandBarShortcut } from '@/background/command-ba
 import { copyLinks } from '@/background/copy';
 import { fetchGitHubJson, fetchPullRequests } from '@/background/github';
 import { SidebarService, type LiveTab } from '@/background/service';
+import { buildTabMenu, onTabMenuClick } from '@/background/tab-menu';
 import type { Intent } from '@/model/types';
 import type { CommandBarMessage } from '@/platform/command-bar';
 import {
@@ -44,7 +45,10 @@ export default defineBackground(() => {
     navigateTab: async (tabId, url) => void (await browser.tabs.update(tabId, { url })),
     closeTab: async (tabId) => void (await browser.tabs.remove(tabId).catch(() => {})),
     loadModel: () => modelItem.getValue(),
-    saveModel: (model) => modelItem.setValue(model),
+    saveModel: (model) => {
+      void buildTabMenu(model.spaces);
+      return modelItem.setValue(model);
+    },
     loadSession: () => sessionItem.getValue(),
     saveSession: (session) => sessionItem.setValue(session),
     loadArchive: () => archiveItem.getValue(),
@@ -108,6 +112,11 @@ export default defineBackground(() => {
       void copyLinks(tab, command === 'copy-url-markdown');
     }
   });
+
+  void service.ready.then(() => buildTabMenu(service.snapshot().model.spaces));
+  browser.contextMenus.onClicked.addListener(
+    (info, tab) => void onTabMenuClick(info, tab, service),
+  );
 
   browser.runtime.onMessage.addListener(
     (message: { kind?: string; intent?: Intent } | CommandBarMessage, sender, sendResponse) => {

@@ -16,6 +16,7 @@ export default defineConfig({
       'history',
       'search',
       'scripting',
+      'contextMenus',
       'offscreen',
       'clipboardWrite',
     ],
