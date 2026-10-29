@@ -39,7 +39,8 @@ interface RowProps {
   onMiddleClick?: () => void;
   onDoubleClick?: () => void;
   drag?: { source: DragSource; ghost: () => Omit<Ghost, 'width'> };
-  menu?: MenuEntry[];
+  /** Or worked out as the menu opens. */
+  menu?: MenuEntry[] | (() => MenuEntry[]);
   children: ReactNode;
   ref?: Ref<HTMLLIElement>;
 }

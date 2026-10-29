@@ -75,3 +75,32 @@ test('Duplicate puts a copy of the folder and what’s in it just below it', asy
   // The copies aren't open: only the originals have their tabs.
   await expect(panel(page).getByRole('button', { name: 'Close tab' })).toHaveCount(open);
 });
+
+test('Copy All Links copies the folder’s links; with Option, as Markdown', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await ready(page);
+  const clipboard = async () => {
+    await page.getByRole('heading', { name: 'Arc Sidebar harness' }).click();
+    return page.evaluate(() => navigator.clipboard.readText());
+  };
+
+  await dev(page).click({ button: 'right' });
+  await choose(page, 'Copy All Links');
+  await expect(panel(page).getByRole('status')).toContainText('Copied 2 URLs');
+  expect(await clipboard()).toBe('https://linear.app/\nhttps://github.com/pulls');
+
+  await dev(page).click({ button: 'right' });
+  await page.keyboard.down('Alt');
+  await expect(item(page, 'Copy All Links')).toHaveCount(0);
+  await choose(page, 'Copy All Links as Markdown');
+  await page.keyboard.up('Alt');
+  await expect(
+    panel(page).getByRole('status').filter({ hasText: 'Copied 2 URLs as Markdown' }),
+  ).toBeVisible();
+  expect(await clipboard()).toBe(
+    '- [My issues · Linear](https://linear.app/)\n- [Pull requests · GitHub](https://github.com/pulls)',
+  );
+});

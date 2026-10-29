@@ -11,6 +11,7 @@ import {
   setFolderIcon,
   setLiveFilters,
 } from '@/app/actions';
+import { copyText } from '@/app/command/run';
 import { Favicon } from '@/app/rows/Favicon';
 import { IconSwap } from '@/app/rows/IconSwap';
 import { InlineEdit } from '@/app/rows/InlineEdit';
@@ -21,7 +22,10 @@ import { Title } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { iconMenu, SpaceGlyph } from '@/app/spaces/icons';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
+import { showToast } from '@/app/toast/toast';
+import { copiedText, linksText, type Link } from '@/model/links';
 import { knownRepos, type LiveFolderItem } from '@/model/live';
+import { descendants } from '@/model/tree';
 import type { FolderItem, GitHubFilters } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
 import { startEditing, stopEditing, useUi } from '@/state/ui';
@@ -61,30 +65,50 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
         source: { kind: 'folder', itemId },
         ghost: () => ({ title: folder.name, folder: true, icon: folder.icon }),
       }}
-      menu={[
-        ...(folder.live
-          ? [
-              pullRequestsMenu({ ...folder, live: folder.live }),
-              { label: 'Refresh', onSelect: refresh },
-              'separator' as const,
-            ]
-          : []),
-        { label: 'Rename…', onSelect: () => startEditing(itemId) },
-        ...(folder.live
-          ? []
-          : [
-              {
-                label: 'Change Icon',
-                submenu: iconMenu(folder.icon, (icon) => setFolderIcon(itemId, icon)),
-              },
-              { label: 'Duplicate', onSelect: () => duplicateFolder(itemId) },
-            ]),
-        ...moveToSpaceMenu(spaces, folder.spaceId, (target) => moveItemToSpace(itemId, target)),
-        'separator',
-        folder.live
-          ? { label: 'Delete Live Folder', onSelect: () => deleteLiveFolder(itemId), danger: true }
-          : { label: 'Delete Folder', onSelect: () => deleteFolder(itemId), danger: true },
-      ]}
+      // Worked out as it opens: whether there are links to copy depends on what's inside.
+      menu={() => {
+        const links = linksIn(itemId);
+        return [
+          ...(folder.live
+            ? [
+                pullRequestsMenu({ ...folder, live: folder.live }),
+                { label: 'Refresh', onSelect: refresh },
+                'separator' as const,
+              ]
+            : []),
+          { label: 'Rename…', onSelect: () => startEditing(itemId) },
+          ...(folder.live
+            ? []
+            : [
+                {
+                  label: 'Change Icon',
+                  submenu: iconMenu(folder.icon, (icon) => setFolderIcon(itemId, icon)),
+                },
+                { label: 'Duplicate', onSelect: () => duplicateFolder(itemId) },
+              ]),
+          ...(links.length
+            ? [
+                {
+                  label: 'Copy All Links',
+                  onSelect: () => copyLinks(links),
+                  alternate: {
+                    label: 'Copy All Links as Markdown',
+                    onSelect: () => copyLinks(links, true),
+                  },
+                },
+              ]
+            : []),
+          ...moveToSpaceMenu(spaces, folder.spaceId, (target) => moveItemToSpace(itemId, target)),
+          'separator',
+          folder.live
+            ? {
+                label: 'Delete Live Folder',
+                onSelect: () => deleteLiveFolder(itemId),
+                danger: true,
+              }
+            : { label: 'Delete Folder', onSelect: () => deleteFolder(itemId), danger: true },
+        ];
+      }}
     >
       {refreshing ? (
         // The same spinner as a loading tab, while GitHub answers.
@@ -119,6 +143,18 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
     </Row>
   );
 });
+
+/** Arc's Copy All Links: every pin in the folder and its subfolders, at its pinned address. */
+function linksIn(folderId: string): Link[] {
+  return descendants(useSidebar.getState().model, folderId).flatMap((item) =>
+    item.kind === 'pin' ? [{ url: item.url, title: item.customTitle ?? item.title }] : [],
+  );
+}
+
+async function copyLinks(links: Link[], markdown = false) {
+  await copyText(linksText(links, markdown));
+  showToast(copiedText(links.length, markdown));
+}
 
 /** Arc's filters for the GitHub Live Folder, ticked when on. */
 function pullRequestsMenu(folder: LiveFolderItem): MenuEntry {

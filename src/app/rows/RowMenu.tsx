@@ -1,11 +1,18 @@
 import { ContextMenu } from '@base-ui/react/context-menu';
 import { Check, ChevronRight } from 'lucide-react';
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { useBesideMenu } from './beside';
 import styles from './menu.module.css';
 
 export type MenuEntry =
-  | { label: string; onSelect: () => void; danger?: boolean; icon?: ReactNode }
+  | {
+      label: string;
+      onSelect: () => void;
+      danger?: boolean;
+      icon?: ReactNode;
+      /** Takes the item's place while Option is held, as in a Mac menu. */
+      alternate?: { label: string; onSelect: () => void };
+    }
   /** A setting that's on or off, ticked like a Mac menu item. */
   | { label: string; checked: boolean; onSelect: () => void }
   | { label: string; submenu: MenuEntry[] }
@@ -22,15 +29,22 @@ export function RowMenu({
   style?: CSSProperties;
   children: ReactNode;
 }) {
+  // Option held: as the menu opened (an Option-right-click), then as it changes.
+  const [option, setOption] = useState(false);
   return (
     <ContextMenu.Root>
-      <ContextMenu.Trigger className={className} style={style}>
+      <ContextMenu.Trigger
+        className={className}
+        style={style}
+        onContextMenu={(event) => setOption(event.altKey)}
+      >
         {children}
       </ContextMenu.Trigger>
       <ContextMenu.Portal>
         <ContextMenu.Positioner className={styles.positioner}>
           <ContextMenu.Popup className={styles.popup}>
-            <MenuItems items={items} />
+            <OptionKey onChange={setOption} />
+            <MenuItems items={items} option={option} />
           </ContextMenu.Popup>
         </ContextMenu.Positioner>
       </ContextMenu.Portal>
@@ -38,13 +52,33 @@ export function RowMenu({
   );
 }
 
-function MenuItems({ items }: { items: MenuEntry[] | (() => MenuEntry[]) }) {
+function OptionKey({ onChange }: { onChange: (held: boolean) => void }) {
+  useEffect(() => {
+    const follow = (event: KeyboardEvent | PointerEvent) => onChange(event.altKey);
+    const types = ['keydown', 'keyup', 'pointermove', 'pointerdown'] as const;
+    for (const type of types) window.addEventListener(type, follow, true);
+    return () => {
+      for (const type of types) window.removeEventListener(type, follow, true);
+    };
+  }, [onChange]);
+  return null;
+}
+
+function MenuItems({
+  items,
+  option,
+}: {
+  items: MenuEntry[] | (() => MenuEntry[]);
+  option: boolean;
+}) {
   const entries = typeof items === 'function' ? items() : items;
   return entries.map((entry, i) => {
     if (entry === 'separator')
       return <ContextMenu.Separator key={i} className={styles.separator} />;
     if ('submenu' in entry)
-      return <Submenu key={entry.label} label={entry.label} items={entry.submenu} />;
+      return (
+        <Submenu key={entry.label} label={entry.label} items={entry.submenu} option={option} />
+      );
     if ('checked' in entry) {
       return (
         <ContextMenu.CheckboxItem
@@ -61,21 +95,30 @@ function MenuItems({ items }: { items: MenuEntry[] | (() => MenuEntry[]) }) {
         </ContextMenu.CheckboxItem>
       );
     }
+    const { alternate } = entry;
     return (
       <ContextMenu.Item
         key={entry.label}
         className={styles.item}
         data-danger={entry.danger || undefined}
-        onClick={entry.onSelect}
+        onClick={option && alternate ? alternate.onSelect : entry.onSelect}
       >
         {entry.icon && <span className={styles.icon}>{entry.icon}</span>}
-        {entry.label}
+        {alternate ? (
+          // Both take the same room, so the menu keeps its width as they swap.
+          <span className={styles.alternates}>
+            <span data-shown={!option || undefined}>{entry.label}</span>
+            <span data-shown={option || undefined}>{alternate.label}</span>
+          </span>
+        ) : (
+          entry.label
+        )}
       </ContextMenu.Item>
     );
   });
 }
 
-function Submenu({ label, items }: { label: string; items: MenuEntry[] }) {
+function Submenu({ label, items, option }: { label: string; items: MenuEntry[]; option: boolean }) {
   const beside = useBesideMenu();
   return (
     <ContextMenu.SubmenuRoot {...beside.root}>
@@ -91,7 +134,7 @@ function Submenu({ label, items }: { label: string; items: MenuEntry[] }) {
           sideOffset={2}
         >
           <ContextMenu.Popup ref={beside.popup} className={styles.popup}>
-            <MenuItems items={items} />
+            <MenuItems items={items} option={option} />
           </ContextMenu.Popup>
         </ContextMenu.Positioner>
       </ContextMenu.Portal>

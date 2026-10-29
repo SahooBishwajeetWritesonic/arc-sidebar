@@ -46,6 +46,19 @@
   color: light-dark(#d70015, #ff6961);
 }
 
+/* An item and its Option alternate, stacked; only the one in use shows. */
+.alternates {
+  display: inline-grid;
+}
+
+.alternates > span {
+  grid-area: 1 / 1;
+}
+
+.alternates > span:not([data-shown]) {
+  visibility: hidden;
+}
+
 .separator {
   height: 1px;
   margin: 5px 10px;
