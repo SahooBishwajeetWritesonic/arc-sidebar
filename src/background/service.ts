@@ -12,9 +12,9 @@ import { canPlace, orderAtEnd } from '@/model/tree';
 import {
   ARCHIVE_AFTER_MS,
   DEFAULT_SPACE_ID,
-  defaultSettings,
   emptySnapshot,
   FAVORITES_ID,
+  normalizeModel,
   normalizeSession,
   type ArchiveEntry,
   type ArchiveState,
@@ -131,8 +131,8 @@ export class SidebarService {
       this.deps.queryTabs(),
     ]);
     const session = normalizeSession(stored);
-    // Models saved before settings existed get the defaults.
-    this.model = { ...model, settings: { ...defaultSettings(), ...model.settings } };
+    // Models saved before a setting existed get its default.
+    this.model = normalizeModel(model);
     this.archive = archive;
     this.backups = backups;
     // Session storage is empty at the start of every browser session.

@@ -157,6 +157,15 @@ export const DEFAULT_SPACE_ID = 'default';
 export const FAVORITES_ID = 'favorites';
 export const FAVORITES_LIMIT = 12;
 
+/**
+ * Fills in settings added since the model was saved. The service writes them back only on
+ * its next change, so panels reading the saved copy fill them in too.
+ */
+export const normalizeModel = (model: SidebarModel): SidebarModel => ({
+  ...model,
+  settings: { ...defaultSettings(), ...model.settings },
+});
+
 export const emptyModel = (): SidebarModel => ({
   rev: 0,
   spaces: [{ id: DEFAULT_SPACE_ID, name: 'Space' }],

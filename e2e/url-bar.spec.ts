@@ -149,3 +149,24 @@ test('Capture copies an area dragged out; Escape leaves', async ({ page, context
   await page.mouse.click(400, 300, { button: 'right' });
   await expect(captureTool(page)).toHaveCount(0);
 });
+
+test('a sidebar saved before Developer Mode existed still loads, and can turn it on', async ({
+  page,
+}) => {
+  await ready(page);
+  // What an older version saved: settings without the newer fields.
+  await page.evaluate(() => {
+    const model = JSON.parse(localStorage.getItem('harness:model')!);
+    model.settings = { archiveAfter: '12h', appearance: 'dark' };
+    localStorage.setItem('harness:model', JSON.stringify(model));
+  });
+  await page.reload();
+  await expect(today(page)).toHaveCount(4);
+  await expect(panel(page).getByText(/region failed|couldn’t show/i)).toHaveCount(0);
+  await expect(address(page)).toHaveText('mail.google.com');
+  const menu = await siteMenu(page);
+  await menu.getByRole('button', { name: /Developer Mode/ }).click();
+  await expect(menu.getByRole('button', { name: /Developer Mode/ })).toContainText('On');
+  await page.keyboard.press('Escape');
+  await expect(address(page)).toHaveText('mail.google.com/mail/u/0/#inbox');
+});

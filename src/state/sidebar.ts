@@ -5,6 +5,7 @@ import {
   emptyArchive,
   emptyModel,
   emptySession,
+  normalizeModel,
   normalizeSession,
   type ArchiveState,
   type Intent,
@@ -87,7 +88,7 @@ export async function connectSidebar(source: Platform, windowId: number): Promis
   platform = source;
   useSidebar.setState({ windowId });
   const offModel = source.onModelChange((model) => {
-    saved = { ...saved, model };
+    saved = { ...saved, model: normalizeModel(model) };
     rebuild();
   });
   const offSession = source.onSessionChange((session) => {
@@ -105,7 +106,7 @@ export async function connectSidebar(source: Platform, windowId: number): Promis
   ]);
   // A change event may have beaten the initial load; keep the newer one.
   saved = {
-    model: model.rev >= saved.model.rev ? model : saved.model,
+    model: model.rev >= saved.model.rev ? normalizeModel(model) : saved.model,
     session: session.rev >= saved.session.rev ? normalizeSession(session) : saved.session,
     archive: archive.rev >= saved.archive.rev ? archive : saved.archive,
   };
