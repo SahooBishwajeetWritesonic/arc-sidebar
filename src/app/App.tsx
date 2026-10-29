@@ -11,11 +11,12 @@ import {
   switchSpaceBy,
 } from '@/app/actions';
 import { useSidebar } from '@/state/sidebar';
-import { activateTab, openNewTab, useTabs } from '@/state/tabs';
-import { useUi } from '@/state/ui';
+import { activateTab, useTabs } from '@/state/tabs';
+import { setCommandBar, useUi } from '@/state/ui';
 import { ArchiveView } from './archive/ArchiveView';
 import { Boundary } from './chrome/Boundary';
 import { BottomBar } from './chrome/BottomBar';
+import { SidebarCommandBar } from './command/SidebarCommandBar';
 import { DragLayer } from './drag/DragLayer';
 import { Favorites } from './favorites/Favorites';
 import { ImportDialog } from './import/ImportDialog';
@@ -32,7 +33,7 @@ import { ToastLayer } from './toast/ToastLayer';
 function press(kind: string, id: string) {
   if (kind === 'tab') activateTab(Number(id));
   if (kind === 'pin') pressPin(id);
-  if (kind === 'newtab') openNewTab();
+  if (kind === 'newtab') setCommandBar(true);
   if (kind === 'folder') {
     const folder = useSidebar.getState().model.items[id];
     if (folder?.kind === 'folder') setFolderCollapsed(id, !folder.collapsed);
@@ -183,6 +184,9 @@ export function App() {
       <Boundary region="dialogs">
         <ImportDialog />
         <RestoreDialog />
+      </Boundary>
+      <Boundary region="command bar">
+        <SidebarCommandBar />
       </Boundary>
     </MotionConfig>
   );

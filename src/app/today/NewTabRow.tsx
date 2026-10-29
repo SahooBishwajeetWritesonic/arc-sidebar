@@ -2,7 +2,7 @@ import { motion } from 'motion/react';
 import { Plus } from 'lucide-react';
 import { spring } from '@/app/motion';
 import styles from '@/app/rows/rows.module.css';
-import { openNewTab } from '@/state/tabs';
+import { setCommandBar } from '@/state/ui';
 
 export function NewTabRow() {
   return (
@@ -12,7 +12,8 @@ export function NewTabRow() {
       type="button"
       className={styles.newTab}
       data-nav-row="newtab"
-      onClick={openNewTab}
+      // As in Arc, "New Tab" opens the command bar.
+      onClick={() => setCommandBar(true)}
     >
       <span className={styles.plate}>
         <Plus className={styles.favicon} size={16} strokeWidth={2} aria-hidden />
