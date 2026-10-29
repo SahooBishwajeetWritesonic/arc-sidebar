@@ -136,6 +136,10 @@ export function deleteFolder(itemId: string) {
   dispatch({ type: 'deleteFolder', itemId });
 }
 
+export function setFolderIcon(itemId: string, icon: SpaceIcon | null) {
+  dispatch({ type: 'setFolderIcon', itemId, icon });
+}
+
 /** The one GitHub Live Folder, at the end of the shown space's Pinned section. */
 export function newLiveFolder() {
   const { model, spaceId } = useSidebar.getState();

@@ -7,6 +7,7 @@ import {
   refreshLiveFolder,
   renameItem,
   setFolderCollapsed,
+  setFolderIcon,
   setLiveFilters,
 } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
@@ -17,6 +18,7 @@ import type { MenuEntry } from '@/app/rows/RowMenu';
 import { Row } from '@/app/rows/Row';
 import { Title } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
+import { iconMenu, SpaceGlyph } from '@/app/spaces/icons';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
 import { knownRepos, type LiveFolderItem } from '@/model/live';
 import type { FolderItem, GitHubFilters } from '@/model/types';
@@ -56,7 +58,7 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
       onTap={() => setFolderCollapsed(itemId, !folder.collapsed)}
       drag={{
         source: { kind: 'folder', itemId },
-        ghost: () => ({ title: folder.name, folder: true }),
+        ghost: () => ({ title: folder.name, folder: true, icon: folder.icon }),
       }}
       menu={[
         ...(folder.live
@@ -67,6 +69,14 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
             ]
           : []),
         { label: 'Rename…', onSelect: () => startEditing(itemId) },
+        ...(folder.live
+          ? []
+          : [
+              {
+                label: 'Change Icon',
+                submenu: iconMenu(folder.icon, (icon) => setFolderIcon(itemId, icon)),
+              },
+            ]),
         ...moveToSpaceMenu(spaces, folder.spaceId, (target) => moveItemToSpace(itemId, target)),
         'separator',
         folder.live
@@ -79,6 +89,10 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
         <Favicon url="" loading />
       ) : folder.live ? (
         <GitHubFolderIcon open={!folder.collapsed} />
+      ) : folder.icon ? (
+        <span className={styles.folderIcon} aria-hidden>
+          <SpaceGlyph icon={folder.icon} />
+        </span>
       ) : (
         <span className={styles.folderIcon} aria-hidden>
           <IconSwap

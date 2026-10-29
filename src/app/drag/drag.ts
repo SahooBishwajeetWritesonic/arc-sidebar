@@ -1,7 +1,7 @@
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { create } from 'zustand';
 import { isWithin } from '@/model/tree';
-import { FAVORITES_LIMIT } from '@/model/types';
+import { FAVORITES_LIMIT, type SpaceIcon } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
 import {
   findTarget,
@@ -15,6 +15,7 @@ export interface Ghost {
   title: string;
   faviconUrl?: string;
   folder: boolean;
+  icon?: SpaceIcon;
   width: number;
   /** Rows moving together, when a selection is dragged. */
   count?: number;

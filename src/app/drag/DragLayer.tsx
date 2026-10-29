@@ -1,5 +1,6 @@
 import { Folder, Globe } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { SpaceGlyph } from '@/app/spaces/icons';
 import { GHOST_TILE, setGhostElement, useDrag } from './drag';
 import styles from './drag.module.css';
 
@@ -31,7 +32,11 @@ export function DragLayer() {
             style={{ width: asTile ? GHOST_TILE.width : ghost.width }}
             aria-hidden
           >
-            {ghost.folder ? (
+            {ghost.icon ? (
+              <span className={styles.icon}>
+                <SpaceGlyph icon={ghost.icon} />
+              </span>
+            ) : ghost.folder ? (
               <Folder className={styles.icon} size={16} strokeWidth={1.75} />
             ) : ghost.faviconUrl ? (
               <img className={styles.icon} src={ghost.faviconUrl} alt="" />

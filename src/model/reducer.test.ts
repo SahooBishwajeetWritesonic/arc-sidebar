@@ -88,6 +88,16 @@ describe('applyIntent', () => {
     expect(deleted.items.f1).toBeUndefined();
   });
 
+  it('sets and removes a folder’s icon', () => {
+    const model = build(folder('f1', 'a0'));
+    const star = { type: 'symbol', name: 'star' } as const;
+    const set = applyIntent(model, { type: 'setFolderIcon', itemId: 'f1', icon: star });
+    expect(set.items.f1).toMatchObject({ icon: star });
+    const removed = applyIntent(set, { type: 'setFolderIcon', itemId: 'f1', icon: null });
+    expect(removed.items.f1).not.toHaveProperty('icon');
+    expect(applyIntent(removed, { type: 'setFolderIcon', itemId: 'f1', icon: null })).toBe(removed);
+  });
+
   it('refuses to move a folder into itself', () => {
     const model = build(folder('f1', 'a0'), folder('f2', 'a1'));
     const nested = applyIntent(model, { type: 'move', itemId: 'f2', parentId: 'f1', order: 'a0' });

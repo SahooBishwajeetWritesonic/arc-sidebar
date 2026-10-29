@@ -32,6 +32,8 @@
 }
 
 .icon {
+  display: grid;
+  place-items: center;
   flex: none;
   width: var(--favicon-size);
   height: var(--favicon-size);

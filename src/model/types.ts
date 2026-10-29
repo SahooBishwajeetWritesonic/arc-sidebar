@@ -96,6 +96,8 @@ export interface FolderItem extends ItemBase {
   kind: 'folder';
   name: string;
   collapsed: boolean;
+  /** Arc's Change Icon: one of the icons spaces use, shown in place of the folder. */
+  icon?: SpaceIcon;
   /** A folder that fills itself. */
   live?: LiveFolder;
 }
@@ -340,6 +342,7 @@ export type Intent =
       childIds?: string[];
     }
   | { type: 'setFolderCollapsed'; itemId: string; collapsed: boolean }
+  | { type: 'setFolderIcon'; itemId: string; icon: SpaceIcon | null }
   | { type: 'move'; itemId: string; parentId: string | null; order: string; spaceId?: string }
   | { type: 'deleteFolder'; itemId: string }
   /** Makes the GitHub Live Folder, and lets Arc make it again after a delete. */

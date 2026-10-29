@@ -21,6 +21,7 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
+import type { MenuEntry } from '@/app/rows/RowMenu';
 import type { SpaceIcon } from '@/model/types';
 import styles from './spaces.module.css';
 
@@ -49,6 +50,32 @@ export const SYMBOLS: Record<string, LucideIcon> = {
 };
 
 export const EMOJIS = ['🏠', '💼', '🚀', '🎨', '📚', '🎵', '⭐️', '🔥', '🌱', '🧪', '☕️', '🎮'];
+
+const titleCase = (name: string) => name[0]!.toUpperCase() + name.slice(1);
+
+export function iconMenu(
+  current: SpaceIcon | undefined,
+  choose: (icon: SpaceIcon | null) => void,
+): MenuEntry[] {
+  return [
+    {
+      label: 'Symbol',
+      submenu: Object.entries(SYMBOLS).map(([name, Symbol]) => ({
+        label: titleCase(name),
+        icon: <Symbol size={14} strokeWidth={1.75} />,
+        onSelect: () => choose({ type: 'symbol', name }),
+      })),
+    },
+    {
+      label: 'Emoji',
+      submenu: EMOJIS.map((char) => ({
+        label: char,
+        onSelect: () => choose({ type: 'emoji', char }),
+      })),
+    },
+    ...(current ? [{ label: 'Remove Icon', onSelect: () => choose(null) }] : []),
+  ];
+}
 
 /** A space's icon: its emoji or symbol, or a small dot when it has none (as in Arc). */
 export function SpaceGlyph({ icon, size = 16 }: { icon?: SpaceIcon; size?: number }) {

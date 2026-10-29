@@ -155,6 +155,13 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
       return put({ ...item, collapsed: intent.collapsed }, ...seen.flatMap(withoutUnseen));
     }
 
+    case 'setFolderIcon': {
+      if (item?.kind !== 'folder') return model;
+      const { icon: _old, ...rest } = item;
+      if (intent.icon) return put({ ...rest, icon: intent.icon });
+      return item.icon ? put(rest) : model;
+    }
+
     case 'openPin':
       return item?.kind === 'pin' && item.live?.unseen ? put(...withoutUnseen(item)) : model;
 

@@ -151,12 +151,14 @@ function repairItem(id: string, raw: unknown): Item | undefined {
     };
   }
   if (raw.kind === 'folder' && isString(raw.name)) {
+    const icon = repairIcon(raw.icon);
     const live = repairLiveFolder(raw.live);
     return {
       ...base,
       kind: 'folder',
       name: raw.name,
       collapsed: raw.collapsed === true,
+      ...(icon && { icon }),
       ...(live && { live }),
     };
   }
