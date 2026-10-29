@@ -55,7 +55,9 @@
   --site-icon-ink: light-dark(rgb(0 0 0 / 0.75), rgb(0 0 0 / 0.85));
   --slash: light-dark(rgb(0 0 0 / 0.3), rgb(255 255 255 / 0.3));
 
-  /* Live Folder pull requests' checks, in GitHub's colours. */
+  /* The GitHub Live Folder: its folder, and its pull requests' checks (GitHub's colours). */
+  --github-folder: light-dark(#3d63dd, #5b7cf7);
+  --github-folder-back: light-dark(#2c4bb3, #3f5fd6);
   --ci-success: #1f883d;
   --ci-failure: #cf222e;
   --ci-ring: light-dark(rgb(255 255 255 / 0.9), rgb(0 0 0 / 0.45));

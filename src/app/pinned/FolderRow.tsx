@@ -12,6 +12,7 @@ import {
 import { Favicon } from '@/app/rows/Favicon';
 import { IconSwap } from '@/app/rows/IconSwap';
 import { InlineEdit } from '@/app/rows/InlineEdit';
+import { GitHubFolderIcon } from './LiveIcons';
 import type { MenuEntry } from '@/app/rows/RowMenu';
 import { Row } from '@/app/rows/Row';
 import { Title } from '@/app/rows/Title';
@@ -76,6 +77,8 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
       {refreshing ? (
         // The same spinner as a loading tab, while GitHub answers.
         <Favicon url="" loading />
+      ) : folder.live ? (
+        <GitHubFolderIcon open={!folder.collapsed} />
       ) : (
         <span className={styles.folderIcon} aria-hidden>
           <IconSwap

@@ -1,3 +1,26 @@
+.slot {
+  display: grid;
+  flex: none;
+  width: var(--favicon-size);
+  height: var(--favicon-size);
+}
+
+.folder {
+  overflow: visible;
+}
+
+.body {
+  fill: var(--github-folder);
+}
+
+.back {
+  fill: var(--github-folder-back);
+}
+
+.mark {
+  fill: #fff;
+}
+
 /* On the bottom-right corner of the pull request's favicon, as Arc shows CI. */
 .badge {
   position: absolute;
