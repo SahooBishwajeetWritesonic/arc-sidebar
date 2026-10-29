@@ -19,6 +19,7 @@ import { ArchiveView } from './archive/ArchiveView';
 import { Boundary } from './chrome/Boundary';
 import { BottomBar } from './chrome/BottomBar';
 import { SidebarCommandBar } from './command/SidebarCommandBar';
+import { UrlBar } from './chrome/UrlBar';
 import { DragLayer } from './drag/DragLayer';
 import { Favorites } from './favorites/Favorites';
 import { ImportDialog } from './import/ImportDialog';
@@ -139,6 +140,11 @@ export function App() {
         {ready && (
           <Boundary region="backdrop">
             <Backdrop looks={looks} />
+          </Boundary>
+        )}
+        {ready && view === 'sidebar' && (
+          <Boundary region="URL bar">
+            <UrlBar />
           </Boundary>
         )}
         <main data-sidebar className={styles.sidebar} onKeyDown={onKeyDown}>

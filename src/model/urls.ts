@@ -30,3 +30,15 @@ export function isDeveloperSite(developerSites: readonly string[], url: string):
 export function hostname(url: string): string {
   return parse(url)?.hostname.replace(/^www\./, '') ?? '';
 }
+
+/**
+ * The URL bar's text: the site, as Arc shows it, or with Developer Mode the
+ * whole address. Nothing for a new tab, which shows a prompt instead.
+ */
+export function addressLabel(url: string, full = false): string {
+  if (!url || /^chrome:\/\/(newtab|new-tab-page)\/?$/.test(url)) return '';
+  const parsed = parse(url);
+  const web = parsed !== undefined && /^https?:$/.test(parsed.protocol);
+  if (web && !full) return parsed.hostname.replace(/^www\./, '');
+  return web ? url.replace(/^https?:\/\/(www\.)?/, '').replace(/^([^/?#]+)\/$/, '$1') : url;
+}

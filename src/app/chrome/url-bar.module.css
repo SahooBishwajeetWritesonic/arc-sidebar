@@ -1,0 +1,285 @@
+/* Arc's URL bar: a pill across the top of the sidebar (research/07). */
+.bar {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  padding: 8px var(--pad-side) 0;
+  color: var(--ink);
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  height: var(--url-height);
+  border-radius: var(--url-radius);
+  background: var(--url-fill);
+}
+
+.address {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 0 0 12px;
+  border: 0;
+  border-radius: var(--url-radius);
+  outline: none;
+  background: none;
+  color: var(--url-ink);
+  font: inherit;
+  font-size: var(--label-size);
+  text-align: start;
+}
+
+.address,
+.accessory,
+.tile,
+.row,
+.more,
+.security {
+  transition: scale var(--press-time) linear;
+}
+
+.address:active {
+  scale: 0.99;
+}
+
+.accessory:active {
+  scale: var(--press-scale-icon);
+}
+
+.tile:active,
+.row:active,
+.more:active,
+.security:active {
+  scale: var(--press-scale);
+}
+
+.address:focus-visible,
+.accessory:focus-visible {
+  outline: 2px dashed var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.text,
+.prompt {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
+}
+
+.prompt {
+  color: var(--ink-secondary);
+}
+
+.accessories {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 0 6px 0 4px;
+}
+
+.accessory {
+  display: grid;
+  place-items: center;
+  width: var(--accessory-size);
+  height: var(--accessory-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--accessory-radius);
+  outline: none;
+  background: none;
+  color: var(--url-ink);
+}
+
+.accessory:hover,
+.accessory[data-popup-open] {
+  background: var(--accessory-hover);
+  color: var(--ink);
+}
+
+/* Shown while the pointer is over the bar, as in Arc; always on touch. */
+@media (hover: hover) and (pointer: fine) {
+  .accessories {
+    opacity: 0;
+    transition: opacity var(--popup-out) var(--ease-out);
+  }
+
+  .bar:hover .accessories,
+  .bar:focus-within .accessories,
+  .bar[data-menu-open] .accessories {
+    opacity: 1;
+  }
+}
+
+/* The site menu. */
+.positioner {
+  z-index: 30;
+  outline: none;
+}
+
+.menu {
+  width: var(--site-menu-width);
+  padding: 10px;
+  border-radius: var(--sheet-radius);
+  background: var(--menu-bg);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  backdrop-filter: blur(24px) saturate(1.8);
+  box-shadow:
+    0 0 0 0.5px var(--menu-edge),
+    0 10px 30px rgb(0 0 0 / 0.22);
+  color: var(--ink);
+  font-size: var(--menu-size);
+  outline: none;
+  transition: opacity var(--popup-in) var(--ease-out);
+}
+
+.menu[data-ending-style] {
+  opacity: 0;
+  transition-duration: var(--popup-out);
+}
+
+/* The point aimed at the button, as on Arc's menu, with the menu's edge. */
+.arrow {
+  display: flex;
+  width: 18px;
+  height: 9px;
+}
+
+.arrow[data-side='bottom'] {
+  top: -9px;
+}
+
+.arrowFill {
+  fill: var(--menu-bg);
+}
+
+.arrowEdge {
+  fill: none;
+  stroke: var(--menu-edge);
+  stroke-width: 1;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.tile {
+  display: grid;
+  place-items: center;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--row-radius);
+  outline: none;
+  background: var(--site-tile);
+  color: var(--ink);
+}
+
+.tile:hover {
+  background: var(--site-tile-hover);
+}
+
+.tile:focus-visible,
+.row:focus-visible,
+.more:focus-visible,
+.security:focus-visible {
+  outline: 2px dashed var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 14px 4px 6px;
+  font-weight: 600;
+}
+
+.more {
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--ink-secondary);
+  font: inherit;
+  font-weight: 600;
+}
+
+.more:hover {
+  color: var(--ink);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 44px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--row-radius);
+  outline: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+
+.row:hover {
+  background: var(--row-hover);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--site-icon);
+  color: var(--site-icon-ink);
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.label span:first-child {
+  font-weight: 600;
+}
+
+.value {
+  color: var(--ink-secondary);
+  font-size: 12px;
+}
+
+.footer {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--separator);
+}
+
+.security {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--accessory-radius);
+  outline: none;
+  background: var(--site-tile);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+}
+
+.security:hover {
+  background: var(--site-tile-hover);
+}
