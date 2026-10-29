@@ -137,6 +137,8 @@ export interface LivePin {
   draft: boolean;
   /** When the pull request was opened (ISO); the folder lists the newest first. */
   created: string;
+  /** Whether its checks passed or failed, shown on its icon as on Arc's. */
+  ci?: 'success' | 'failure';
   /**
    * Arrived while the folder was closed and not opened yet. A closed folder
    * still shows these under it: Arc "peeks out" new pull requests.

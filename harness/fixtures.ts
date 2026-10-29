@@ -120,24 +120,34 @@ export const historyPages: HistoryEntry[] = [
 ].map((entry, i) => ({ ...entry, lastVisitTime: Date.UTC(2026, 9, 28) - i * day }));
 
 /** Open pull requests on the fake github.com: yours, and ones waiting for your review. */
-export const pullRequests: (PullRequest & { mine: boolean })[] = [
-  ['acme/web', 482, 'Keep the sidebar open across restarts', true, false, '2026-10-28T09:12:00Z'],
-  ['acme/web', 479, 'Draft: try a denser tab row', true, true, '2026-10-26T15:40:00Z'],
-  [
-    'acme/api',
-    1311,
-    'Rate-limit the search endpoint per workspace',
-    false,
-    false,
-    '2026-10-27T11:05:00Z',
-  ],
-  ['acme/design', 88, 'New space icons', false, false, '2026-10-21T08:30:00Z'],
-].map(([repo, number, title, mine, draft, created]) => ({
+const pr = (
+  repo: string,
+  number: number,
+  title: string,
+  created: string,
+  extra: { mine?: boolean; draft?: boolean; ci?: 'success' | 'failure' } = {},
+): PullRequest & { mine: boolean } => ({
   url: `https://github.com/${repo}/pull/${number}`,
-  title: title as string,
-  repo: repo as string,
-  number: number as number,
-  draft: draft as boolean,
-  created: created as string,
-  mine: mine as boolean,
-}));
+  title,
+  repo,
+  number,
+  draft: extra.draft ?? false,
+  created,
+  mine: extra.mine ?? false,
+  ...(extra.ci && { ci: extra.ci }),
+});
+
+export const pullRequests = [
+  pr('acme/web', 482, 'Keep the sidebar open across restarts', '2026-10-28T09:12:00Z', {
+    mine: true,
+    ci: 'success',
+  }),
+  pr('acme/web', 479, 'Draft: try a denser tab row', '2026-10-26T15:40:00Z', {
+    mine: true,
+    draft: true,
+  }),
+  pr('acme/api', 1311, 'Rate-limit the search endpoint per workspace', '2026-10-27T11:05:00Z', {
+    ci: 'failure',
+  }),
+  pr('acme/design', 88, 'New space icons', '2026-10-21T08:30:00Z', { ci: 'success' }),
+];

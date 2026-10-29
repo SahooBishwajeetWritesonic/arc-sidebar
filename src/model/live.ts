@@ -19,7 +19,11 @@ export interface PullRequest {
   draft: boolean;
   /** When it was opened (ISO). */
   created: string;
+  /** Its checks passed or failed; unknown while they run, or without any. */
+  ci?: CiState;
 }
+
+export type CiState = 'success' | 'failure';
 
 export type PullRequestResult =
   { signedIn: false } | { signedIn: true; pullRequests: PullRequest[] };
@@ -102,13 +106,17 @@ export function syncIntent(
   const changed: PinItem[] = [];
   for (const pin of kept) {
     const pr = open.get(pin.url)!;
-    if (pin.title === pr.title && pin.live.draft === pr.draft && pin.live.created === pr.created) {
-      continue;
-    }
+    const same =
+      pin.title === pr.title &&
+      pin.live.draft === pr.draft &&
+      pin.live.created === pr.created &&
+      pin.live.ci === pr.ci;
+    if (same) continue;
+    const { ci: _old, ...live } = pin.live;
     changed.push({
       ...pin,
       title: pr.title,
-      live: { ...pin.live, draft: pr.draft, created: pr.created },
+      live: { ...live, draft: pr.draft, created: pr.created, ...(pr.ci && { ci: pr.ci }) },
     });
   }
 
@@ -137,6 +145,7 @@ export function syncIntent(
         number: pr.number,
         draft: pr.draft,
         created: pr.created,
+        ...(pr.ci && { ci: pr.ci }),
         ...(unseen && { unseen: true as const }),
       },
     });

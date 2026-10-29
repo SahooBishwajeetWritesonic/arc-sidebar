@@ -20,6 +20,7 @@ import { Row } from '@/app/rows/Row';
 import { Title, useDeveloperHost } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
+import { CiBadge } from './LiveIcons';
 import { FAVORITES_ID, FAVORITES_LIMIT, type PinItem } from '@/model/types';
 import { isSamePage } from '@/model/urls';
 import { useSidebar } from '@/state/sidebar';
@@ -126,6 +127,7 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
         }
       >
         <Favicon url={tab?.url ?? pin.url} loading={!!tab?.loading && !tab.favIconUrl} />
+        {pin.live?.ci && <CiBadge state={pin.live.ci} />}
       </span>
       {awayFromPin && <span className={styles.slash}>/</span>}
       {editing ? (

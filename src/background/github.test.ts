@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultGitHubFilters } from '@/model/types';
-import { fetchPullRequests, parseSearchPage, searchQueries, searchUrl } from './github';
+import { ciQueries, fetchPullRequests, parseSearchPage, searchQueries, searchUrl } from './github';
 
 /** A result as github.com/search returns it, trimmed to the fields that are read. */
 const result = (number: number, extra: Record<string, unknown> = {}) => ({
@@ -85,9 +85,10 @@ describe('GitHub search', () => {
   it('merges the searches and their pages, newest first, once each', async () => {
     const asked: string[] = [];
     const answer = await fetchPullRequests(defaultGitHubFilters(), async (url) => {
-      asked.push(url);
       const query = new URL(url).searchParams.get('q')!;
       const at = Number(new URL(url).searchParams.get('p') ?? 1);
+      if (query.includes('status:')) return page([]);
+      asked.push(url);
       if (query.includes('author')) {
         return at === 1 ? page([result(5), result(3)], { pageCount: 2 }) : page([result(1)]);
       }
@@ -99,6 +100,38 @@ describe('GitHub search', () => {
       signedIn: true,
       pullRequests: [5, 4, 3, 1].map((n) => expect.objectContaining({ number: n })),
     });
+  });
+
+  it('marks whose checks passed or failed, and shrugs off a failed checks search', async () => {
+    const filters = defaultGitHubFilters();
+    expect(ciQueries(filters).map(({ query }) => query)).toEqual([
+      'is:pr is:open archived:false status:success involves:@me',
+      'is:pr is:open archived:false status:success review-requested:@me',
+      'is:pr is:open archived:false status:failure involves:@me',
+      'is:pr is:open archived:false status:failure review-requested:@me',
+    ]);
+    const answer = (broken: boolean) =>
+      fetchPullRequests(filters, async (url) => {
+        const query = new URL(url).searchParams.get('q')!;
+        if (query.includes('status:') && broken) throw new Error('busy');
+        if (query.includes('status:success')) return page([result(1)]);
+        if (query.includes('status:failure')) return page([result(2)]);
+        return query.includes('author') ? page([result(1), result(2), result(3)]) : page([]);
+      });
+    const ci = async (broken: boolean) => {
+      const result = await answer(broken);
+      return result.signedIn ? result.pullRequests.map((pr) => [pr.number, pr.ci]) : [];
+    };
+    expect(await ci(false)).toEqual([
+      [3, undefined],
+      [2, 'failure'],
+      [1, 'success'],
+    ]);
+    expect(await ci(true)).toEqual([
+      [3, undefined],
+      [2, undefined],
+      [1, undefined],
+    ]);
   });
 
   it('stops at the first sign that nobody is signed in', async () => {

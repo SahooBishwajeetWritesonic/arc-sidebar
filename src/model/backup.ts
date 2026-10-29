@@ -185,7 +185,14 @@ function repairLiveFolder(raw: unknown): LiveFolder | undefined {
 function repairLivePin(raw: unknown): LivePin | undefined {
   if (!isRecord(raw) || !isString(raw.repo) || !isString(raw.created)) return;
   if (typeof raw.number !== 'number') return;
-  return { repo: raw.repo, number: raw.number, draft: raw.draft === true, created: raw.created };
+  const ci = raw.ci === 'success' || raw.ci === 'failure' ? raw.ci : undefined;
+  return {
+    repo: raw.repo,
+    number: raw.number,
+    draft: raw.draft === true,
+    created: raw.created,
+    ...(ci && { ci }),
+  };
 }
 
 function repairIcon(raw: unknown): SpaceIcon | undefined {

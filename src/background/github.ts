@@ -1,4 +1,4 @@
-import type { PullRequest, PullRequestResult } from '@/model/live';
+import type { CiState, PullRequest, PullRequestResult } from '@/model/live';
 import type { GitHubFilters } from '@/model/types';
 
 /**
@@ -22,6 +22,24 @@ export function searchQueries(filters: GitHubFilters): string[] {
     ...(filters.reviewRequests ? ['review-requested:@me'] : []),
   ];
   return who.map((qualifier) => [...common, qualifier].join(' '));
+}
+
+/**
+ * Search results don't carry checks, but search can filter by them, so one search per state.
+ * `involves` covers authored and assigned.
+ */
+export function ciQueries(filters: GitHubFilters): { query: string; state: CiState }[] {
+  const who = [
+    ...(filters.createdByMe ? ['involves:@me'] : []),
+    ...(filters.reviewRequests ? ['review-requested:@me'] : []),
+  ];
+  const states: CiState[] = ['success', 'failure'];
+  return states.flatMap((state) =>
+    who.map((qualifier) => ({
+      query: `is:pr is:open archived:false status:${state} ${qualifier}`,
+      state,
+    })),
+  );
 }
 
 export function searchUrl(query: string, page = 1): string {
@@ -83,8 +101,32 @@ export async function fetchPullRequests(
       if (page >= result.pageCount) break;
     }
   }
-  const pullRequests = [...found.values()].sort((a, b) => b.created.localeCompare(a.created));
+  const states = await ciStates(filters, fetchJson).catch(() => new Map<string, CiState>());
+  const pullRequests = [...found.values()]
+    .map((pr) => {
+      const ci = states.get(pr.url);
+      return ci ? { ...pr, ci } : pr;
+    })
+    .sort((a, b) => b.created.localeCompare(a.created));
   return { signedIn: true, pullRequests };
+}
+
+/** Pages read per checks search; a few more than the folder usually holds. */
+const CI_PAGES = 2;
+
+async function ciStates(
+  filters: GitHubFilters,
+  fetchJson: (url: string) => Promise<unknown>,
+): Promise<Map<string, CiState>> {
+  const states = new Map<string, CiState>();
+  for (const { query, state } of ciQueries(filters)) {
+    for (let page = 1; page <= CI_PAGES; page++) {
+      const result = parseSearchPage(await fetchJson(searchUrl(query, page)));
+      for (const pr of result.pullRequests) states.set(pr.url, state);
+      if (page >= result.pageCount) break;
+    }
+  }
+  return states;
 }
 
 export async function fetchGitHubJson(url: string): Promise<unknown> {

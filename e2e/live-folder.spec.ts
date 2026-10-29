@@ -67,6 +67,18 @@ test('opening a pull request makes the Pull Requests folder, newest first', asyn
   await expect(panel(page).locator('[data-nav-row="tab"]')).toHaveCount(4);
 });
 
+test('each pull request shows whether its checks passed or failed', async ({ page }) => {
+  await withFolder(page);
+  const row = (title: string) => pinned(page).filter({ hasText: title });
+  await expect(
+    row('Keep the sidebar open').getByRole('img', { name: 'Checks passed' }),
+  ).toBeVisible();
+  await expect(
+    row('Rate-limit the search').getByRole('img', { name: 'Checks failed' }),
+  ).toBeVisible();
+  await expect(row('Draft: try a denser').getByRole('img')).toHaveCount(0);
+});
+
 test('its filters: drafts, review requests and one repository', async ({ page }) => {
   await withFolder(page);
   // The submenu stays open, so several can be ticked in a row.

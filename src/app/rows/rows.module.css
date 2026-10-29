@@ -119,6 +119,7 @@
 
 /* A pinned tab's favicon resets it to its pinned URL when it has navigated away. */
 .faviconButton {
+  position: relative; /* a Live Folder pull request's checks badge sits on its corner */
   display: grid;
   flex: none;
 }

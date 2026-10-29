@@ -1,0 +1,28 @@
+/* On the bottom-right corner of the pull request's favicon, as Arc shows CI. */
+.badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  overflow: visible;
+}
+
+.badge circle {
+  stroke: var(--ci-ring);
+  stroke-width: 1;
+}
+
+.badge[data-state='success'] circle {
+  fill: var(--ci-success);
+}
+
+.badge[data-state='failure'] circle {
+  fill: var(--ci-failure);
+}
+
+.badge path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

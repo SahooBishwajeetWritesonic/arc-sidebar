@@ -75,6 +75,16 @@ describe('the GitHub Live Folder', () => {
     });
   });
 
+  it('shows when checks pass, fail or start again', () => {
+    let { model } = sync(withFolder(), [pr(1, '2026-10-01', { ci: 'failure' })]);
+    const ci = () => livePins(model, githubFolderOf(model)!)[0]!.live.ci;
+    expect(ci()).toBe('failure');
+    ({ model } = sync(model, [pr(1, '2026-10-01', { ci: 'success' })]));
+    expect(ci()).toBe('success');
+    ({ model } = sync(model, [pr(1, '2026-10-01')]));
+    expect(ci()).toBeUndefined();
+  });
+
   it('gives a closed pull request’s open tab back to Today in the folder’s space', () => {
     const { model } = sync(withFolder(), [pr(1, '2026-10-01'), pr(2, '2026-10-02')]);
     const [two] = livePins(model, githubFolderOf(model)!);
