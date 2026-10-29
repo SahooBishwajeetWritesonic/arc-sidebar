@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  defaultSettings,
   emptyArchive,
   emptyModel,
   emptySession,
@@ -426,14 +427,14 @@ describe('SidebarService', () => {
     const { settings: _none, ...old } = emptyModel();
     const { service } = setup({ tabs: [], model: old as SidebarModel });
     await service.ready;
-    expect(service.snapshot().model.settings).toEqual({ archiveAfter: '12h', appearance: 'auto' });
+    expect(service.snapshot().model.settings).toEqual(defaultSettings());
   });
 
   it('fills in settings added later (appearance) and keeps the ones saved', async () => {
     const old = { ...emptyModel(), settings: { archiveAfter: '7d' } } as unknown as SidebarModel;
     const { service } = setup({ tabs: [], model: old });
     await service.ready;
-    expect(service.snapshot().model.settings).toEqual({ archiveAfter: '7d', appearance: 'auto' });
+    expect(service.snapshot().model.settings).toEqual({ ...defaultSettings(), archiveAfter: '7d' });
   });
 
   describe('spaces', () => {

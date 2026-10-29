@@ -23,9 +23,18 @@ export const ARCHIVE_AFTER_MS: Record<ArchiveAfter, number> = {
 export interface Settings {
   archiveAfter: ArchiveAfter;
   appearance: Appearance;
+  /**
+   * Arc makes the GitHub Live Folder the first time you open a pull request.
+   * Deleting the folder turns that off until you make one again.
+   */
+  githubFolder: boolean;
 }
 
-export const defaultSettings = (): Settings => ({ archiveAfter: '12h', appearance: 'auto' });
+export const defaultSettings = (): Settings => ({
+  archiveAfter: '12h',
+  appearance: 'auto',
+  githubFolder: true,
+});
 
 export interface Space {
   id: string;
@@ -73,13 +82,63 @@ export interface PinItem extends ItemBase {
   url: string;
   title: string;
   customTitle?: string;
+  /** Put here by a Live Folder, which takes it out again when the pull request closes. */
+  live?: LivePin;
 }
 
 export interface FolderItem extends ItemBase {
   kind: 'folder';
   name: string;
   collapsed: boolean;
+  /** A folder that fills itself. */
+  live?: LiveFolder;
 }
+
+export interface GitHubFilters {
+  createdByMe: boolean;
+  reviewRequests: boolean;
+  drafts: boolean;
+  /** "owner/name" each; none means every repository. */
+  repos: string[];
+}
+
+export const defaultGitHubFilters = (): GitHubFilters => ({
+  createdByMe: true,
+  reviewRequests: true,
+  drafts: true,
+  repos: [],
+});
+
+/** Your open GitHub pull requests: the one source Arc shipped. */
+export interface LiveFolder {
+  source: 'github';
+  filters: GitHubFilters;
+  /**
+   * The filters it was last filled with (see filtersKey). PRs arriving while they're unchanged
+   * are new; those a filter change brings in aren't.
+   */
+  filledFor?: string;
+  /** Where your open pull requests are, whatever the filters: the repository choices. */
+  repos?: string[];
+  /** GitHub said nobody was signed in, the last time it was asked. */
+  signedOut?: true;
+}
+
+export interface LivePin {
+  /** "owner/name". */
+  repo: string;
+  number: number;
+  draft: boolean;
+  /** When the pull request was opened (ISO); the folder lists the newest first. */
+  created: string;
+  /**
+   * Arrived while the folder was closed and not opened yet. A closed folder
+   * still shows these under it: Arc "peeks out" new pull requests.
+   */
+  unseen?: true;
+}
+
+export const LIVE_FOLDER_NAME = 'Pull Requests';
 
 export type Item = PinItem | FolderItem;
 
@@ -264,7 +323,38 @@ export type Intent =
     }
   | { type: 'setFolderCollapsed'; itemId: string; collapsed: boolean }
   | { type: 'move'; itemId: string; parentId: string | null; order: string; spaceId?: string }
-  | { type: 'deleteFolder'; itemId: string };
+  | { type: 'deleteFolder'; itemId: string }
+  /** Makes the GitHub Live Folder, and lets Arc make it again after a delete. */
+  | { type: 'createLiveFolder'; itemId: string; spaceId: string; order: string }
+  | { type: 'setLiveFilters'; itemId: string; filters: GitHubFilters }
+  /** Asks GitHub again now. The service answers once the folder is up to date. */
+  | { type: 'refreshLiveFolder'; itemId: string }
+  /**
+   * The service's Live Folder refresh: new, changed and closed pull requests. A closed one's
+   * open tab goes to the top of Today in the folder's space.
+   */
+  | {
+      type: 'syncLiveFolder';
+      itemId: string;
+      items: PinItem[];
+      removedIds: string[];
+      signedOut: boolean;
+      /** Every repository with an open pull request, before the repository filter. */
+      repos: string[];
+      spaceId: string;
+      windowId: number;
+    }
+  /**
+   * Deletes a Live Folder with what it holds (`itemIds`), and stops Arc
+   * making it again. Open tabs go to the top of Today.
+   */
+  | {
+      type: 'deleteLiveFolder';
+      itemId: string;
+      itemIds: string[];
+      spaceId: string;
+      windowId: number;
+    };
 
 /** The service's answer: the revisions at which the intent was applied. */
 export interface IntentResult {

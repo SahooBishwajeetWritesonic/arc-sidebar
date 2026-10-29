@@ -7,7 +7,14 @@ import {
   sameSidebar,
   toExportFile,
 } from './backup';
-import { emptyModel, FAVORITES_ID, FAVORITES_LIMIT, type Item, type SidebarModel } from './types';
+import {
+  defaultSettings,
+  emptyModel,
+  FAVORITES_ID,
+  FAVORITES_LIMIT,
+  type Item,
+  type SidebarModel,
+} from './types';
 
 const pin = (id: string, extra: Partial<Item> = {}): Item =>
   ({
@@ -50,8 +57,25 @@ describe('repairModel', () => {
           theme: { colors: ['#ff8800'], harmony: 'single', intensity: 0.5, grain: 0.25 },
         },
       ],
-      settings: { archiveAfter: '7d', appearance: 'dark' },
+      settings: { archiveAfter: '7d', appearance: 'dark', githubFolder: false },
     };
+    expect(repairModel(structuredClone(model))).toEqual(model);
+  });
+
+  it('keeps a Live Folder, its filters and its pull requests', () => {
+    const model = withItems(
+      folder('f', {
+        live: {
+          source: 'github',
+          filters: { createdByMe: true, reviewRequests: false, drafts: false, repos: ['acme/app'] },
+          filledFor: '[true,false,false,["acme/app"]]',
+        },
+      } as Partial<Item>),
+      pin('p', {
+        parentId: 'f',
+        live: { repo: 'acme/app', number: 7, draft: true, created: '2026-10-01T00:00:00Z' },
+      } as Partial<Item>),
+    );
     expect(repairModel(structuredClone(model))).toEqual(model);
   });
 
@@ -104,7 +128,7 @@ describe('repairModel', () => {
       settings: { archiveAfter: 'forever' },
     })!;
     expect(model.spaces).toEqual([{ id: 's', name: 'S' }]);
-    expect(model.settings).toEqual({ archiveAfter: '12h', appearance: 'auto' });
+    expect(model.settings).toEqual(defaultSettings());
   });
 });
 

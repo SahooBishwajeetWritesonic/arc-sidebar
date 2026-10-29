@@ -27,7 +27,10 @@ export interface Row {
   depth: number;
 }
 
-/** A collapsed folder still shows the child open in the active tab, as Arc does. */
+/**
+ * The Pinned section as rows. A collapsed folder still shows the child open in the active
+ * tab (as Arc does), and a Live Folder its new pull requests.
+ */
 export function flattenSpace(
   model: SidebarModel,
   spaceId: string,
@@ -41,8 +44,10 @@ export function flattenSpace(
       if (!item.collapsed) {
         walk(item.id, depth + 1);
       } else {
-        const active = descendants(model, item.id).find(isActive);
-        if (active) rows.push({ item: active, depth: depth + 1 });
+        for (const child of descendants(model, item.id)) {
+          const peeks = child.kind === 'pin' && child.live?.unseen;
+          if (peeks || isActive(child)) rows.push({ item: child, depth: depth + 1 });
+        }
       }
     }
   };
@@ -68,8 +73,8 @@ export function isWithin(model: SidebarModel, itemId: string, ancestorId: string
 }
 
 /**
- * Whether an item may go under `parentId`: a real space, a folder there that isn't
- * inside the item itself, or the top of Favorites for a pinned tab while there's room.
+ * Whether an item may go under `parentId` in `spaceId`: a real space, a folder not inside it,
+ * or Favorites while there's room. A Live Folder holds only its own PRs, which stay in it.
  */
 export function canPlace(
   model: SidebarModel,
@@ -77,6 +82,8 @@ export function canPlace(
   spaceId: string,
   parentId: string | null,
 ): boolean {
+  const existing = model.items[item.id];
+  if (existing?.kind === 'pin' && existing.live) return false;
   if (spaceId === FAVORITES_ID) {
     if (item.kind !== 'pin' || parentId !== null) return false;
     if (model.items[item.id]?.spaceId === FAVORITES_ID) return true;
@@ -87,6 +94,9 @@ export function canPlace(
   if (parentId === null) return true;
   const parent = model.items[parentId];
   return (
-    parent?.kind === 'folder' && parent.spaceId === spaceId && !isWithin(model, parentId, item.id)
+    parent?.kind === 'folder' &&
+    !parent.live &&
+    parent.spaceId === spaceId &&
+    !isWithin(model, parentId, item.id)
   );
 }

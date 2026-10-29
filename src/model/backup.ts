@@ -4,8 +4,11 @@ import {
   defaultSettings,
   FAVORITES_ID,
   FAVORITES_LIMIT,
+  type GitHubFilters,
   type Harmony,
   type Item,
+  type LiveFolder,
+  type LivePin,
   type Settings,
   type SidebarModel,
   type Space,
@@ -137,17 +140,52 @@ function repairItem(id: string, raw: unknown): Item | undefined {
   const parentId = isString(raw.parentId) ? raw.parentId : null;
   const base = { id, spaceId: raw.spaceId, parentId, order: raw.order };
   if (raw.kind === 'pin' && isString(raw.url) && isString(raw.title)) {
+    const live = repairLivePin(raw.live);
     return {
       ...base,
       kind: 'pin',
       url: raw.url,
       title: raw.title,
       ...(isString(raw.customTitle) && { customTitle: raw.customTitle }),
+      ...(live && { live }),
     };
   }
   if (raw.kind === 'folder' && isString(raw.name)) {
-    return { ...base, kind: 'folder', name: raw.name, collapsed: raw.collapsed === true };
+    const live = repairLiveFolder(raw.live);
+    return {
+      ...base,
+      kind: 'folder',
+      name: raw.name,
+      collapsed: raw.collapsed === true,
+      ...(live && { live }),
+    };
   }
+}
+
+function repairLiveFolder(raw: unknown): LiveFolder | undefined {
+  if (!isRecord(raw) || raw.source !== 'github' || !isRecord(raw.filters)) return;
+  const { createdByMe, reviewRequests, drafts, repos } = raw.filters;
+  const filters: GitHubFilters = {
+    createdByMe: createdByMe !== false,
+    reviewRequests: reviewRequests !== false,
+    drafts: drafts !== false,
+    repos: Array.isArray(repos)
+      ? repos.filter((repo): repo is string => isString(repo) && /^[\w.-]+\/[\w.-]+$/.test(repo))
+      : [],
+  };
+  const seen = Array.isArray(raw.repos) ? raw.repos.filter(isString) : undefined;
+  return {
+    source: 'github',
+    filters,
+    ...(isString(raw.filledFor) && { filledFor: raw.filledFor }),
+    ...(seen && { repos: seen }),
+  };
+}
+
+function repairLivePin(raw: unknown): LivePin | undefined {
+  if (!isRecord(raw) || !isString(raw.repo) || !isString(raw.created)) return;
+  if (typeof raw.number !== 'number') return;
+  return { repo: raw.repo, number: raw.number, draft: raw.draft === true, created: raw.created };
 }
 
 function repairIcon(raw: unknown): SpaceIcon | undefined {
@@ -181,6 +219,7 @@ function repairSettings(raw: unknown): Settings {
   if (raw.appearance === 'auto' || raw.appearance === 'light' || raw.appearance === 'dark') {
     settings.appearance = raw.appearance;
   }
+  if (raw.githubFolder === false) settings.githubFolder = false;
   return settings;
 }
 

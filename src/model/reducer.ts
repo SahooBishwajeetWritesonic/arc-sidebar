@@ -1,10 +1,13 @@
 import { generateNKeysBetween } from 'fractional-indexing';
 import { withTabBefore, withTabOnTop, withoutTab } from '@/platform/today-order';
+import { filtersKey, githubFolderOf } from './live';
 import { canPlace, childrenOf, descendants } from './tree';
 import {
   ARCHIVE_LIMIT,
+  defaultGitHubFilters,
   FAVORITES_ID,
   FAVORITES_LIMIT,
+  LIVE_FOLDER_NAME,
   type ArchiveState,
   type Intent,
   type Item,
@@ -30,6 +33,39 @@ function updateSpace(model: SidebarModel, spaceId: string, change: (space: Space
     return next;
   });
   return changed ? { ...model, spaces } : model;
+}
+
+/** A Live Folder's pull request, no longer new; nothing for anything else. */
+const withoutUnseen = (item: Item): Item[] => {
+  if (item.kind !== 'pin' || !item.live?.unseen) return [];
+  const { unseen: _seen, ...live } = item.live;
+  return [{ ...item, live }];
+};
+
+/** Unbinds the tabs of removed pins and puts them on top of Today in `spaceId`, first topmost. */
+function releaseTabs(
+  session: SessionState,
+  itemIds: readonly string[],
+  spaceId: string,
+  windowOf: (tabId: number) => number | undefined,
+  windowId: number,
+): SessionState {
+  const removed = new Set(itemIds);
+  const bindings: Record<string, number> = {};
+  const released: number[] = [];
+  for (const [itemId, tabId] of Object.entries(session.bindings)) {
+    if (removed.has(itemId)) released.push(tabId);
+    else bindings[itemId] = tabId;
+  }
+  if (!released.length) return session;
+  const orders = { ...session.orders };
+  const tabSpaces = { ...session.tabSpaces };
+  for (const tabId of [...released].reverse()) {
+    tabSpaces[tabId] = spaceId;
+    const key = String(windowOf(tabId) ?? windowId);
+    orders[key] = withTabOnTop(orders[key] ?? [], tabId);
+  }
+  return { ...session, bindings, tabSpaces, orders };
 }
 
 /**
@@ -112,9 +148,73 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
       );
     }
 
-    case 'setFolderCollapsed':
+    case 'setFolderCollapsed': {
       if (item?.kind !== 'folder' || item.collapsed === intent.collapsed) return model;
-      return put({ ...item, collapsed: intent.collapsed });
+      // Opening a Live Folder shows its new pull requests: they stop peeking out.
+      const seen = intent.collapsed ? [] : childrenOf(model, item.spaceId, item.id);
+      return put({ ...item, collapsed: intent.collapsed }, ...seen.flatMap(withoutUnseen));
+    }
+
+    case 'openPin':
+      return item?.kind === 'pin' && item.live?.unseen ? put(...withoutUnseen(item)) : model;
+
+    case 'createLiveFolder': {
+      if (item || githubFolderOf(model)) return model;
+      if (!canPlace(model, { id: intent.itemId, kind: 'folder' }, intent.spaceId, null)) {
+        return model;
+      }
+      return {
+        ...put({
+          kind: 'folder',
+          id: intent.itemId,
+          spaceId: intent.spaceId,
+          parentId: null,
+          order: intent.order,
+          name: LIVE_FOLDER_NAME,
+          collapsed: false,
+          live: { source: 'github', filters: defaultGitHubFilters() },
+        }),
+        settings: { ...model.settings, githubFolder: true },
+      };
+    }
+
+    case 'setLiveFilters':
+      if (item?.kind !== 'folder' || !item.live) return model;
+      return put({ ...item, live: { ...item.live, filters: intent.filters } });
+
+    case 'syncLiveFolder': {
+      if (item?.kind !== 'folder' || !item.live) return model;
+      const next = { ...items };
+      // Only its own pull requests: never anything moved out or in since.
+      for (const id of intent.removedIds) {
+        const removed = next[id];
+        if (removed?.kind === 'pin' && removed.live && removed.parentId === item.id)
+          delete next[id];
+      }
+      for (const pin of intent.items) {
+        const known = next[pin.id];
+        if (known && (known.kind !== 'pin' || known.parentId !== item.id)) continue;
+        next[pin.id] = { ...pin, spaceId: item.spaceId, parentId: item.id };
+      }
+      const { signedOut: _old, ...live } = item.live;
+      next[item.id] = {
+        ...item,
+        live: intent.signedOut
+          ? { ...live, signedOut: true }
+          : { ...live, filledFor: filtersKey(live.filters), repos: intent.repos },
+      };
+      return { ...model, items: next };
+    }
+
+    case 'deleteLiveFolder': {
+      if (item?.kind !== 'folder' || !item.live) return model;
+      const gone = new Set([item.id, ...descendants(model, item.id).map((child) => child.id)]);
+      return {
+        ...model,
+        items: Object.fromEntries(Object.entries(items).filter(([id]) => !gone.has(id))),
+        settings: { ...model.settings, githubFolder: false },
+      };
+    }
 
     case 'move': {
       if (!item) return model;
@@ -251,7 +351,7 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
     }
 
     case 'moveToSpace': {
-      if (!item) return model;
+      if (!item || (item.kind === 'pin' && item.live)) return model;
       if (intent.spaceId === FAVORITES_ID) {
         const count = Object.values(items).filter((i) => i.spaceId === FAVORITES_ID).length;
         if (item.kind !== 'pin' || item.spaceId === FAVORITES_ID || count >= FAVORITES_LIMIT) {
@@ -270,9 +370,9 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
     case 'restoreSidebar':
       return { ...intent.model, rev: model.rev };
 
-    case 'openPin':
     case 'closePin':
     case 'resetPin':
+    case 'refreshLiveFolder':
     case 'reorderToday':
     case 'archiveTabs':
     case 'restoreArchived':
@@ -373,31 +473,22 @@ export function applySessionIntent(
       const tabSpaces = Object.fromEntries(
         Object.entries(session.tabSpaces).map(([tab, space]) => [tab, move(space)]),
       );
+      const activeSpaces = Object.fromEntries(
+        Object.entries(session.activeSpaces).map(([w, space]) => [w, move(space)]),
+      );
       // Tabs the deleted pins had open stay open, in the fallback space's Today.
-      const removed = new Set(intent.itemIds);
-      const bindings: Record<string, number> = {};
-      const released: number[] = [];
-      for (const [itemId, tabId] of Object.entries(session.bindings)) {
-        if (removed.has(itemId)) released.push(tabId);
-        else bindings[itemId] = tabId;
-      }
-      const orders = { ...session.orders };
-      for (const tabId of [...released].reverse()) {
-        tabSpaces[tabId] = intent.fallbackSpaceId;
-        const key = String(windowOf(tabId) ?? intent.windowId);
-        orders[key] = withTabOnTop(orders[key] ?? [], tabId);
-      }
-      return {
-        ...session,
-        lastActive,
-        bindings,
-        tabSpaces,
-        orders: released.length ? orders : session.orders,
-        activeSpaces: Object.fromEntries(
-          Object.entries(session.activeSpaces).map(([w, space]) => [w, move(space)]),
-        ),
-      };
+      return releaseTabs(
+        { ...session, lastActive, tabSpaces, activeSpaces },
+        intent.itemIds,
+        intent.fallbackSpaceId,
+        windowOf,
+        intent.windowId,
+      );
     }
+    case 'syncLiveFolder':
+      return releaseTabs(session, intent.removedIds, intent.spaceId, windowOf, intent.windowId);
+    case 'deleteLiveFolder':
+      return releaseTabs(session, intent.itemIds, intent.spaceId, windowOf, intent.windowId);
     case 'restoreSidebar': {
       const spaces = new Set(intent.model.spaces.map((space) => space.id));
       const first = intent.model.spaces[0]!.id;
