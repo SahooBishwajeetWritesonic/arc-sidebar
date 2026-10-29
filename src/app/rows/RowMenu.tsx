@@ -1,11 +1,13 @@
 import { ContextMenu } from '@base-ui/react/context-menu';
-import { ChevronRight } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useBesideMenu } from './beside';
 import styles from './menu.module.css';
 
 export type MenuEntry =
   | { label: string; onSelect: () => void; danger?: boolean; icon?: ReactNode }
+  /** A setting that's on or off, ticked like a Mac menu item. */
+  | { label: string; checked: boolean; onSelect: () => void }
   | { label: string; submenu: MenuEntry[] }
   | 'separator';
 
@@ -43,6 +45,22 @@ function MenuItems({ items }: { items: MenuEntry[] }) {
       return <ContextMenu.Separator key={i} className={styles.separator} />;
     if ('submenu' in entry)
       return <Submenu key={entry.label} label={entry.label} items={entry.submenu} />;
+    if ('checked' in entry) {
+      return (
+        <ContextMenu.CheckboxItem
+          key={entry.label}
+          className={styles.item}
+          checked={entry.checked}
+          onCheckedChange={() => entry.onSelect()}
+          closeOnClick
+        >
+          <ContextMenu.CheckboxItemIndicator className={styles.check} keepMounted>
+            <Check size={12} strokeWidth={2.5} />
+          </ContextMenu.CheckboxItemIndicator>
+          {entry.label}
+        </ContextMenu.CheckboxItem>
+      );
+    }
     return (
       <ContextMenu.Item
         key={entry.label}
