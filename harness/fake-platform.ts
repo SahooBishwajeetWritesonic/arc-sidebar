@@ -2,13 +2,17 @@ import { generateNKeysBetween } from 'fractional-indexing';
 import { SidebarService, type LiveTab } from '@/background/service';
 import {
   DEFAULT_SPACE_ID,
+  defaultSettings,
   emptyArchive,
   emptyModel,
   emptySession,
   emptySnapshot,
+  type Appearance,
   type ArchiveState,
   type Backup,
   type Intent,
+  type Item,
+  type PinItem,
   type SessionState,
   type SidebarModel,
 } from '@/model/types';
@@ -28,6 +32,12 @@ const BACKUPS_KEY = 'harness:backups';
 const SNAPSHOT_KEY = 'harness:restoreSnapshot';
 const DETAILS_KEY = 'harness:tabDetails';
 
+/** ?theme=light|dark|system, so screenshots can pick a theme; dark by default. */
+export function startingAppearance(): Appearance {
+  const theme = new URLSearchParams(location.search).get('theme');
+  return theme === 'light' ? 'light' : theme === 'system' ? 'auto' : 'dark';
+}
+
 function read<T>(storage: Storage, key: string, fallback: T): T {
   try {
     return JSON.parse(storage.getItem(key) ?? '') as T;
@@ -43,7 +53,11 @@ function read<T>(storage: Storage, key: string, fallback: T): T {
 export class FakePlatform implements Platform {
   private tabs: TabInfo[] = []; // Chrome's strip order
   private nextId = 1;
-  private model: SidebarModel = read(localStorage, MODEL_KEY, emptyModel());
+  private model: SidebarModel = read(localStorage, MODEL_KEY, {
+    ...emptyModel(),
+    // So the harness setting it on load isn't a change (with a backup).
+    settings: { ...defaultSettings(), appearance: startingAppearance() },
+  });
   private session: SessionState = read(sessionStorage, SESSION_KEY, emptySession());
   private archive: ArchiveState = read(localStorage, ARCHIVE_KEY, emptyArchive());
   private backups: Backup[] = read(localStorage, BACKUPS_KEY, []);
@@ -251,37 +265,61 @@ export class FakePlatform implements Platform {
     location.reload();
   }
 
-  /** First run: pin two tabs and put two more in a folder, through the service. */
+  /**
+   * First run: pins two tabs and puts two in a folder in one change, so no backup is taken of
+   * a half-seeded sidebar; pinning each tab after that only binds it.
+   */
   private async seed() {
     await this.service.ready;
     if (Object.keys(this.model.items).length > 0) return;
     const [gmail, calendar, linear, github] = this.tabs;
     if (!gmail || !calendar || !linear || !github) return;
     const keys = generateNKeysBetween(null, null, 3);
-    const pin = (tab: TabInfo, order: string, parentId: string | null): Intent => ({
-      type: 'pinTab',
-      itemId: crypto.randomUUID(),
-      tabId: tab.id,
+    const inner = generateNKeysBetween(null, null, 2);
+    const folderId = crypto.randomUUID();
+    const folder: Item = {
+      kind: 'folder',
+      id: folderId,
+      spaceId: DEFAULT_SPACE_ID,
+      parentId: null,
+      order: keys[2]!,
+      name: 'Dev',
+      collapsed: false,
+    };
+    const pins = (
+      [
+        [gmail, keys[0]!, null],
+        [calendar, keys[1]!, null],
+        [linear, inner[0]!, folderId],
+        [github, inner[1]!, folderId],
+      ] as const
+    ).map(([tab, order, parentId]): PinItem & { tabId: number } => ({
+      kind: 'pin',
+      id: crypto.randomUUID(),
       spaceId: DEFAULT_SPACE_ID,
       parentId,
       order,
       url: tab.url,
       title: tab.title,
-    });
-    const folderId = crypto.randomUUID();
-    await this.service.handleIntent(pin(gmail, keys[0]!, null));
-    await this.service.handleIntent(pin(calendar, keys[1]!, null));
+      tabId: tab.id,
+    }));
     await this.service.handleIntent({
-      type: 'createFolder',
-      itemId: folderId,
-      spaceId: DEFAULT_SPACE_ID,
-      parentId: null,
-      order: keys[2]!,
-      name: 'Dev',
+      type: 'importSidebar',
+      spaces: [],
+      items: [folder, ...pins.map(({ tabId: _tab, ...pin }) => pin)],
     });
-    const inner = generateNKeysBetween(null, null, 2);
-    await this.service.handleIntent(pin(linear, inner[0]!, folderId));
-    await this.service.handleIntent(pin(github, inner[1]!, folderId));
+    for (const { tabId, id, spaceId, parentId, order, url, title } of pins) {
+      await this.service.handleIntent({
+        type: 'pinTab',
+        itemId: id,
+        tabId,
+        spaceId,
+        parentId,
+        order,
+        url,
+        title,
+      });
+    }
   }
 
   private live(tab: TabInfo, index: number): LiveTab {

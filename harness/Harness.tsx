@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { FakePlatform } from './fake-platform';
+import { startingAppearance, type FakePlatform } from './fake-platform';
 import { morePages } from './fixtures';
 import styles from './harness.module.css';
 
@@ -7,10 +7,9 @@ type Scheme = 'light dark' | 'light' | 'dark';
 
 export function Harness({ platform }: { platform: FakePlatform }) {
   const [width, setWidth] = useState(360);
-  // ?theme=light|dark|system, so screenshots can pick a theme.
   const [scheme, setScheme] = useState<Scheme>(() => {
-    const theme = new URLSearchParams(location.search).get('theme');
-    return theme === 'light' ? 'light' : theme === 'system' ? 'light dark' : 'dark';
+    const appearance = startingAppearance();
+    return appearance === 'auto' ? 'light dark' : appearance;
   });
   const [page, setPage] = useState(0);
 
