@@ -1,11 +1,13 @@
 import { browser, type Browser } from 'wxt/browser';
 import { onCommandBarHello, onCommandBarShortcut } from '@/background/command-bar';
 import { copyLinks } from '@/background/copy';
+import { cropVisibleTab } from '@/background/crop';
 import { fetchGitHubJson, fetchPullRequests } from '@/background/github';
 import { SidebarService, type LiveTab } from '@/background/service';
 import { buildTabMenu, onTabMenuClick } from '@/background/tab-menu';
 import type { Intent } from '@/model/types';
 import type { CommandBarMessage } from '@/platform/command-bar';
+import type { CaptureMessage, CaptureReply } from '@/platform/messages';
 import {
   archiveItem,
   backupsItem,
@@ -119,10 +121,23 @@ export default defineBackground(() => {
   );
 
   browser.runtime.onMessage.addListener(
-    (message: { kind?: string; intent?: Intent } | CommandBarMessage, sender, sendResponse) => {
+    (
+      message: { kind?: string; intent?: Intent } | CommandBarMessage | CaptureMessage,
+      sender,
+      sendResponse,
+    ) => {
       if (message?.kind === 'command-bar:hello' && 'token' in message) {
         sendResponse(onCommandBarHello(message.token, sender));
         return;
+      }
+      if (message?.kind === 'capture:shot' && 'area' in message) {
+        const windowId = sender.tab?.windowId;
+        if (windowId === undefined) return;
+        cropVisibleTab(windowId, message.area, message.viewportWidth).then(
+          (png) => sendResponse({ png } satisfies CaptureReply),
+          () => sendResponse({} satisfies CaptureReply),
+        );
+        return true;
       }
       if (message?.kind !== 'intent' || !('intent' in message) || !message.intent) return;
       service
