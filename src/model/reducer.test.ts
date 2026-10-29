@@ -158,6 +158,16 @@ describe('applySessionIntent', () => {
 });
 
 describe('settings, undo and archive', () => {
+  it('turns Developer Mode on and off per site, once', () => {
+    const on = build({ type: 'setDeveloperMode', host: 'App.Example.com', on: true });
+    expect(on.settings.developerSites).toEqual(['localhost', '127.0.0.1', 'app.example.com']);
+    expect(applyIntent(on, { type: 'setDeveloperMode', host: 'app.example.com', on: true })).toBe(
+      on,
+    );
+    const off = applyIntent(on, { type: 'setDeveloperMode', host: 'localhost', on: false });
+    expect(off.settings.developerSites).toEqual(['127.0.0.1', 'app.example.com']);
+  });
+
   it('sets how long until Today tabs archive', () => {
     const model = applyIntent(emptyModel(), { type: 'setArchiveAfter', archiveAfter: '7d' });
     expect(model.settings.archiveAfter).toBe('7d');

@@ -22,6 +22,11 @@ export function isSamePath(a: string, b: string): boolean {
   return x.origin === y.origin && x.pathname === y.pathname;
 }
 
+export function isDeveloperSite(developerSites: readonly string[], url: string): boolean {
+  const host = parse(url)?.hostname.toLowerCase();
+  return host !== undefined && host !== '' && developerSites.includes(host);
+}
+
 export function hostname(url: string): string {
   return parse(url)?.hostname.replace(/^www\./, '') ?? '';
 }

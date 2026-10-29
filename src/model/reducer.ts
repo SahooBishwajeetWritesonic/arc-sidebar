@@ -291,6 +291,14 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
       if (model.settings.appearance === intent.appearance) return model;
       return { ...model, settings: { ...model.settings, appearance: intent.appearance } };
 
+    case 'setDeveloperMode': {
+      const host = intent.host.toLowerCase();
+      const sites = model.settings.developerSites;
+      if (!host || sites.includes(host) === intent.on) return model;
+      const developerSites = intent.on ? [...sites, host] : sites.filter((site) => site !== host);
+      return { ...model, settings: { ...model.settings, developerSites } };
+    }
+
     case 'moveSpace': {
       const from = model.spaces.findIndex((space) => space.id === intent.spaceId);
       if (from === -1) return model;

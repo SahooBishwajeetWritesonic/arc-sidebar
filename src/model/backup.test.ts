@@ -57,7 +57,12 @@ describe('repairModel', () => {
           theme: { colors: ['#ff8800'], harmony: 'single', intensity: 0.5, grain: 0.25 },
         },
       ],
-      settings: { archiveAfter: '7d', appearance: 'dark', githubFolder: false },
+      settings: {
+        archiveAfter: '7d',
+        appearance: 'dark',
+        githubFolder: false,
+        developerSites: ['localhost', 'app.example.com'],
+      },
     };
     expect(repairModel(structuredClone(model))).toEqual(model);
   });

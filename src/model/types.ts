@@ -28,12 +28,18 @@ export interface Settings {
    * Deleting the folder turns that off until you make one again.
    */
   githubFolder: boolean;
+  /**
+   * Hostnames in Arc's Developer Mode: full address in the URL bar, host under tab titles.
+   * Arc turns it on for local servers by itself.
+   */
+  developerSites: string[];
 }
 
 export const defaultSettings = (): Settings => ({
   archiveAfter: '12h',
   appearance: 'auto',
   githubFolder: true,
+  developerSites: ['localhost', '127.0.0.1'],
 });
 
 export interface Space {
@@ -276,6 +282,7 @@ export type Intent =
   | { type: 'setSpaceIcon'; spaceId: string; icon: SpaceIcon | null }
   | { type: 'setSpaceTheme'; spaceId: string; theme: SpaceTheme | null }
   | { type: 'setAppearance'; appearance: Appearance }
+  | { type: 'setDeveloperMode'; host: string; on: boolean }
   | { type: 'moveSpace'; spaceId: string; index: number }
   /**
    * Removes a space and its pins and folders (`itemIds`). Its Today tabs, and

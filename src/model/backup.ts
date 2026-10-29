@@ -220,6 +220,8 @@ function repairSettings(raw: unknown): Settings {
     settings.appearance = raw.appearance;
   }
   if (raw.githubFolder === false) settings.githubFolder = false;
+  if (Array.isArray(raw.developerSites))
+    settings.developerSites = raw.developerSites.filter(isString);
   return settings;
 }
 
