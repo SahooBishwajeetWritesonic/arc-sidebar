@@ -178,7 +178,11 @@ function updateTarget() {
     tracking.slots,
     point,
     source,
-    (folderId) => (source.kind === 'folder' ? isWithin(model, folderId, source.itemId) : false),
+    (folderId) => {
+      const folder = model.items[folderId];
+      if (folder?.kind === 'folder' && folder.live) return true;
+      return source.kind === 'folder' && isWithin(model, folderId, source.itemId);
+    },
     tracking.favorites,
   );
   if (JSON.stringify(target) !== JSON.stringify(useDrag.getState().target)) {

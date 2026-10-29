@@ -51,6 +51,15 @@ describe('findTarget', () => {
     });
   });
 
+  it('drops nothing into a Live Folder: not onto it, nor among its pull requests', () => {
+    const live = (folderId: string) => folderId === 'f1';
+    expect(findTarget(slots, { x: 100, y: 61 }, tab, live)).toBeNull();
+    expect(findTarget(slots, { x: 100, y: 79 }, tab, live)).toBeNull();
+    expect(findTarget(slots, { x: 100, y: 95 }, tab, live)).toBeNull();
+    // Above it is still fine.
+    expect(findTarget(slots, { x: 100, y: 44 }, tab, live)).toMatchObject({ beforeId: 'f1' });
+  });
+
   it('drops at the start of an open folder from its bottom quarter', () => {
     expect(findTarget(slots, { x: 100, y: 79 }, tab, nothingInside)).toMatchObject({
       parentId: 'f1',

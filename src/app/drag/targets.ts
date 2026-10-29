@@ -56,14 +56,14 @@ export type DropTarget =
 const HALF_GAP = 0.5;
 
 /**
- * Arc's drop zones: a row's top or bottom half; a folder's top quarter, middle half
- * (into it) or bottom quarter; a Today tab's middle half splits it, left or right.
+ * Arc's zones: a row's top or bottom half; a folder's top or bottom quarter, or middle half
+ * (into it); a Today tab's middle half splits. `cannotHold`: folders nothing may go into.
  */
 export function findTarget(
   slots: readonly Slot[],
   point: { x: number; y: number },
   source: DragSource,
-  isInsideSource: (folderId: string) => boolean,
+  cannotHold: (folderId: string) => boolean,
   favorites?: FavoritesZone,
 ): DropTarget | null {
   if (favorites && point.y < favorites.bottom) return favoritesTarget(favorites, point, source);
@@ -85,9 +85,9 @@ export function findTarget(
     return target;
   }
 
+  if (target.parentId !== null && cannotHold(target.parentId)) return null;
   if (source.kind !== 'tab') {
     if (target.beforeId === source.itemId || target.afterId === source.itemId) return null;
-    if (target.parentId !== null && isInsideSource(target.parentId)) return null;
   }
   return target;
 }
