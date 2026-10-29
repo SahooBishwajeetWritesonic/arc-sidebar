@@ -841,4 +841,86 @@ describe('SidebarService', () => {
       expect(pin).toMatchObject({ spaceId: 'home', parentId: null });
     });
   });
+
+  describe('shortcuts without the sidebar open', () => {
+    const twoSpaces = (): SidebarModel => ({
+      ...emptyModel(),
+      spaces: [
+        { id: 'default', name: 'Work' },
+        { id: 'home', name: 'Home' },
+      ],
+    });
+
+    it('steps through open tabs in sidebar order: Favorites, Pinned, then Today', async () => {
+      const { service, calls } = setup({
+        tabs: [1, 2, 3, 4].map((id) => tab(id, `https://${id}.com`)),
+      });
+      await service.favoriteTabs([4]);
+      await service.pinTabs([3]);
+      // Sidebar order: 4 (favorite), 3 (pinned), then Today 1, 2.
+      await service.stepTab(1, 3, 1);
+      await service.stepTab(1, 3, -1);
+      await service.stepTab(1, 4, -1); // the top: nowhere to go
+      await service.stepTab(1, 2, 1); // the bottom
+      expect(calls.filter((call) => call.startsWith('activate'))).toEqual([
+        'activate 1',
+        'activate 4',
+      ]);
+    });
+
+    it('pins the current tab, and unpins it back to the top of Today', async () => {
+      const { service, saved } = setup({
+        tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')],
+      });
+      await service.togglePin(2, 1);
+      expect(service.isPinned(2)).toBe(true);
+      expect(saved.session.orders['1']).toEqual([1]);
+      await service.togglePin(2, 1);
+      expect(service.isPinned(2)).toBe(false);
+      expect(saved.session.orders['1']).toEqual([2, 1]);
+    });
+
+    it('switches spaces, selecting the tab last used there, or a new one', async () => {
+      const { service, saved, calls } = setup({
+        tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')],
+        model: twoSpaces(),
+      });
+      await service.moveTabsToSpace([2], 'home');
+      await service.switchSpaceBy(1, 1);
+      expect(saved.session.activeSpaces['1']).toBe('home');
+      expect(calls).toContain('activate 2');
+      await service.handleIntent({
+        type: 'deleteSpace',
+        spaceId: 'home',
+        fallbackSpaceId: 'default',
+        itemIds: [],
+        windowId: 1,
+      });
+      await service.handleIntent({
+        type: 'createSpace',
+        spaceId: 'empty',
+        name: 'Empty',
+        index: 1,
+      });
+      await service.switchSpace(1, 'empty');
+      expect(calls).toContain('create chrome://newtab/');
+    });
+
+    it('clears Today except tabs playing sound, into the archive', async () => {
+      const { service, saved, calls } = setup({
+        tabs: [
+          tab(1, 'https://a.com'),
+          tab(2, 'https://b.com', 2, { audible: true }),
+          tab(3, 'https://c.com'),
+        ],
+      });
+      await service.clearToday(1);
+      expect(calls).toEqual(expect.arrayContaining(['close 1', 'close 3']));
+      expect(calls).not.toContain('close 2');
+      expect(saved.archive.entries.map((entry) => entry.url).sort()).toEqual([
+        'https://a.com',
+        'https://c.com',
+      ]);
+    });
+  });
 });

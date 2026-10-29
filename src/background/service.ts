@@ -8,7 +8,7 @@ import {
   syncIntent,
   type PullRequestResult,
 } from '@/model/live';
-import { canPlace, orderAtEnd } from '@/model/tree';
+import { canPlace, childrenOf, flattenSpace, orderAtEnd } from '@/model/tree';
 import {
   ARCHIVE_AFTER_MS,
   DEFAULT_SPACE_ID,
@@ -426,6 +426,94 @@ export class SidebarService {
     }
   }
 
+  // Shortcuts, when the sidebar isn't open to run them itself.
+
+  /** Arc's next / previous tab, in the sidebar's order. Stops at the ends. */
+  async stepTab(windowId: number, tabId: number, delta: -1 | 1) {
+    await this.ready;
+    const order = this.sidebarOrder(windowId, tabId);
+    const next = order[order.indexOf(tabId) + delta];
+    if (next !== undefined) await this.deps.activateTab(next);
+  }
+
+  /** Arc's ⌘D: pins the tab, or unpins it back to the top of Today. */
+  async togglePin(tabId: number, windowId: number) {
+    await this.ready;
+    const itemId = this.itemOfTab(tabId);
+    if (itemId) await this.handleIntent({ type: 'unpin', itemId, windowId });
+    else await this.pinTabs([tabId]);
+  }
+
+  /** Shows a space in the window, selecting the tab last used there, as the sidebar does. */
+  async switchSpace(windowId: number, spaceId: string) {
+    await this.ready;
+    if (!this.hasSpace(spaceId) || this.activeSpaceOf(windowId) === spaceId) return;
+    const open = new Set(Object.keys(this.details).map(Number));
+    const pinned = flattenSpace(this.model, spaceId, () => false)
+      .map(({ item }) => this.session.bindings[item.id])
+      .filter((id): id is number => id !== undefined && open.has(id));
+    const today = this.todayOf(windowId, spaceId);
+    const last = this.session.lastActive[spaceId];
+    const target =
+      last !== undefined && (pinned.includes(last) || today.includes(last))
+        ? last
+        : (pinned[0] ?? today[0]);
+    await this.handleIntent({
+      type: 'setActiveSpace',
+      windowId,
+      spaceId,
+      openNewTab: target === undefined,
+    });
+    if (target !== undefined) await this.deps.activateTab(target);
+  }
+
+  async switchSpaceBy(windowId: number, delta: -1 | 1) {
+    await this.ready;
+    const index = this.model.spaces.findIndex((space) => space.id === this.activeSpaceOf(windowId));
+    const next = this.model.spaces[index + delta];
+    if (next) await this.switchSpace(windowId, next.id);
+  }
+
+  /** Arc's Clear: archives the shown space's Today tabs, except ones playing sound. */
+  async clearToday(windowId: number) {
+    await this.ready;
+    const spaceId = this.activeSpaceOf(windowId);
+    const tabs = await this.deps.queryTabs();
+    const playing = new Set(tabs.filter((tab) => tab.audible).map((tab) => tab.id));
+    const clearing = this.todayOf(windowId, spaceId).filter((id) => !playing.has(id));
+    if (!clearing.length) return;
+    // Closing every tab would close the window; keep one open, as Arc does.
+    const inWindow = tabs.filter((tab) => tab.windowId === windowId).length;
+    if (clearing.length === inWindow) await this.deps.createTab(windowId, 'chrome://newtab/', true);
+    const batchId = this.deps.newId();
+    const now = this.deps.now();
+    await this.handleIntent({
+      type: 'archiveTabs',
+      windowId,
+      tabs: clearing.map((tabId) => ({
+        tabId,
+        entry: {
+          id: this.deps.newId(),
+          url: this.details[tabId]?.url ?? '',
+          title: this.details[tabId]?.title ?? '',
+          spaceId,
+          archivedAt: now,
+          reason: 'cleared',
+          batchId,
+        },
+      })),
+    });
+  }
+
+  /** Whether a tab is open in a pinned tab or favorite. */
+  isPinned(tabId: number): boolean {
+    return this.itemOfTab(tabId) !== undefined;
+  }
+
+  spacesOf(windowId: number) {
+    return { current: this.activeSpaceOf(windowId), spaces: this.model.spaces };
+  }
+
   /** Chrome's tab menu: Today tabs go to the space's Today, pinned ones to its Pinned. */
   async moveTabsToSpace(tabIds: readonly number[], spaceId: string) {
     await this.ready;
@@ -720,6 +808,31 @@ export class SidebarService {
   private activeSpaceOf(windowId: number): string {
     const space = this.session.activeSpaces[String(windowId)];
     return space && this.hasSpace(space) ? space : (this.model.spaces[0]?.id ?? DEFAULT_SPACE_ID);
+  }
+
+  /** A space's Today tabs in the window, top first. */
+  private todayOf(windowId: number, spaceId: string): number[] {
+    return (this.session.orders[String(windowId)] ?? []).filter(
+      (id) => this.session.tabSpaces[id] === spaceId,
+    );
+  }
+
+  /** Open tabs as the sidebar lists them; a closed folder's tabs only when selected. */
+  private sidebarOrder(windowId: number, selected: number): number[] {
+    const spaceId = this.activeSpaceOf(windowId);
+    const window = new Set(
+      Object.entries(this.details)
+        .filter(([, details]) => details.windowId === windowId)
+        .map(([id]) => Number(id)),
+    );
+    const bound = (itemId: string) => this.session.bindings[itemId];
+    const favorites = childrenOf(this.model, FAVORITES_ID, null).map((item) => bound(item.id));
+    const pinned = flattenSpace(this.model, spaceId, (item) => bound(item.id) === selected).map(
+      ({ item }) => bound(item.id),
+    );
+    return [...favorites, ...pinned, ...this.todayOf(windowId, spaceId)].filter(
+      (id): id is number => id !== undefined && window.has(id),
+    );
   }
 
   private itemOfTab(tabId: number): string | undefined {
