@@ -175,6 +175,19 @@
   font-weight: 600;
 }
 
+/* Title and Developer Mode's host, both inside the 40 pt row (research/07: 11 pt). */
+.twoLines {
+  display: flex;
+  flex-direction: column;
+  line-height: 17px;
+}
+
+.subtitle {
+  color: var(--ink-secondary);
+  font-size: 11px;
+  line-height: 13px;
+}
+
 /* A split row: one pill holding a small pill per tab. From a reference: 4 pt padding and gap,
    8 pt corners, small pills white 7% above the big one. Titles end in an ellipsis. */
 .row[data-nav-row='split'] .plate {

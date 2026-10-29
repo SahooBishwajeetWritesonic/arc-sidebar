@@ -4,7 +4,7 @@ import { closeTodayTab, favoriteTab, moveTabToSpace, pinTab } from '@/app/action
 import { Favicon } from '@/app/rows/Favicon';
 import { IconSwap } from '@/app/rows/IconSwap';
 import { Row } from '@/app/rows/Row';
-import { Title } from '@/app/rows/Title';
+import { Title, useDeveloperHost } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
 import { FAVORITES_ID, FAVORITES_LIMIT } from '@/model/types';
@@ -19,6 +19,7 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
   const previous = useTabs((state) => state.previousId === id);
   const spaceId = useTabs((state) => state.tabSpaces[id] ?? state.spaceId);
   const spaces = useSidebar((state) => state.model.spaces);
+  const developerHost = useDeveloperHost(live?.url ?? '');
   const canFavorite = useSidebar(
     (state) =>
       Object.values(state.model.items).filter((item) => item.spaceId === FAVORITES_ID).length <
@@ -55,7 +56,7 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
       ]}
     >
       <Favicon url={tab.url} loading={tab.loading && !tab.favIconUrl} />
-      <Title text={tab.title} />
+      <Title text={tab.title} subtitle={developerHost} />
       {(tab.audible || tab.muted) && (
         <button
           type="button"

@@ -17,7 +17,7 @@ import { InlineEdit } from '@/app/rows/InlineEdit';
 import { isPress } from '@/app/drag/drag';
 import type { MenuEntry } from '@/app/rows/RowMenu';
 import { Row } from '@/app/rows/Row';
-import { Title } from '@/app/rows/Title';
+import { Title, useDeveloperHost } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
 import { FAVORITES_ID, FAVORITES_LIMIT, type PinItem } from '@/model/types';
@@ -41,6 +41,7 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
   const selected = useTabs((state) => tabId !== undefined && state.activeId === tabId);
   const previous = useTabs((state) => tabId !== undefined && state.previousId === tabId);
   const editing = useUi((state) => state.editingId === itemId);
+  const developerHost = useDeveloperHost(tab?.url ?? (item?.kind === 'pin' ? item.url : ''));
   const spaces = useSidebar((state) => state.model.spaces);
   const canFavorite = useSidebar(
     (state) =>
@@ -137,7 +138,7 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
           onCancel={stopEditing}
         />
       ) : (
-        <Title text={title} />
+        <Title text={title} subtitle={developerHost} />
       )}
       {tab && (tab.audible || tab.muted) && (
         <button
