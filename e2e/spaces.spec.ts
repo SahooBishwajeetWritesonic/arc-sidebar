@@ -94,10 +94,14 @@ test('deleting a space can be undone', async ({ page }) => {
   await expect(panel(page).getByRole('button', { name: 'Work', exact: true })).toBeVisible();
 });
 
-/** A two-finger swipe: a stream of small wheel events, then the fingers lift. */
-async function swipe(page: Page, direction: 'left' | 'right') {
+/**
+ * A two-finger horizontal swipe: small wheel events, then the fingers lift.
+ * `fromBottom` swipes that far above the panel's bottom edge instead of over the rows.
+ */
+async function swipe(page: Page, direction: 'left' | 'right', fromBottom?: number) {
   const box = (await page.locator('iframe[title="Sidebar"]').boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + 200);
+  const y = fromBottom === undefined ? box.y + 200 : box.y + box.height - fromBottom;
+  await page.mouse.move(box.x + box.width / 2, y);
   const step = direction === 'left' ? 6 : -6; // swiping left scrolls right (positive deltaX)
   for (let i = 0; i < 20; i++) {
     await page.mouse.wheel(step, 0);
@@ -115,6 +119,18 @@ test('swiping left goes to the next space and right comes back', async ({ page }
   await swipe(page, 'left');
   await expect(panel(page).locator('[data-active-page]')).toHaveAttribute('aria-label', 'Work');
   await swipe(page, 'right');
+  await expect(panel(page).locator('[data-active-page]')).toHaveAttribute('aria-label', 'Space');
+});
+
+test('swiping works anywhere in the sidebar, not only over the rows', async ({ page }) => {
+  await ready(page);
+  await newSpace(page, 'Work');
+  await panel(page).getByRole('button', { name: 'Space', exact: true }).click();
+  await expect.poll(() => titles(page, 'pin')).toHaveLength(4);
+
+  await swipe(page, 'left', 120); // the empty area below the rows
+  await expect(panel(page).locator('[data-active-page]')).toHaveAttribute('aria-label', 'Work');
+  await swipe(page, 'right', 20); // the bottom bar
   await expect(panel(page).locator('[data-active-page]')).toHaveAttribute('aria-label', 'Space');
 });
 

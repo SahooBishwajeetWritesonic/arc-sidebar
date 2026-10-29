@@ -111,8 +111,8 @@ type Swipe =
   | { kind: 'track'; start: number; base: number; samples: { t: number; x: number }[] };
 
 /**
- * Two-finger horizontal swipes drag the track. When the fingers lift (momentum begins)
- * the swipe commits to a page and the rest of the momentum is ignored.
+ * Two-finger swipes move the track; when fingers lift it commits to a page, ignoring momentum.
+ * As in Arc, swipes work anywhere in the sidebar (`data-swipe-area`), not just over the pager.
  */
 function trackSwipes(
   element: HTMLElement,
@@ -122,7 +122,7 @@ function trackSwipes(
   },
 ) {
   const gestures = WheelGestures({ preventWheelAction: 'x' });
-  const unobserve = gestures.observe(element);
+  const unobserve = gestures.observe(element.closest<HTMLElement>('[data-swipe-area]') ?? element);
   const sidebar = element.closest<HTMLElement>('[data-sidebar]');
   // Rows don't light up under the pointer while it swipes.
   const setSwiping = (on: boolean) => {

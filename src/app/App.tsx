@@ -128,7 +128,7 @@ export function App() {
     // reducedMotion="user": with Reduce Motion on, movement is skipped and fades stay.
     <MotionConfig reducedMotion="user">
       {/* As in Arc, the sidebar scrolls above a transparent bottom bar. */}
-      <div className={styles.shell}>
+      <div className={styles.shell} data-swipe-area>
         {ready && <Backdrop looks={looks} />}
         <main data-sidebar className={styles.sidebar} onKeyDown={onKeyDown}>
           {ready && (
