@@ -74,10 +74,10 @@ function AddMenu() {
       <Menu.Portal>
         <Menu.Positioner className={menu.positioner} side="top" align="end" sideOffset={6}>
           <Menu.Popup className={menu.popup}>
-            <Menu.Item className={menu.item} onClick={createSpace}>
+            <Menu.Item className={menu.item} onClick={() => createSpace()}>
               New Space
             </Menu.Item>
-            <Menu.Item className={menu.item} onClick={newFolder}>
+            <Menu.Item className={menu.item} onClick={() => newFolder()}>
               New Folder
             </Menu.Item>
             <Menu.Separator className={menu.separator} />

@@ -1,0 +1,223 @@
+/*
+ * Measured from Arc (research/refs): 764 pt wide, 64 pt field, 46 pt rows on a 50 pt pitch,
+ * 12 pt corners. No transitions: it is instant.
+ */
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--command-scrim);
+  color: var(--ink);
+  font-family: var(--font-ui);
+}
+
+.card {
+  position: absolute;
+  top: clamp(16px, 24vh, 240px);
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--command-width), 100% - 32px);
+  max-height: calc(100% - clamp(16px, 24vh, 240px) - 16px);
+  overflow: hidden;
+  border-radius: var(--command-radius);
+  background: var(--sheet);
+  box-shadow:
+    0 0 0 0.5px var(--command-edge),
+    0 2px 6px var(--command-shadow),
+    0 24px 64px var(--command-shadow);
+}
+
+.layer[data-placement='sidebar'] .card {
+  top: var(--pad-side);
+  left: var(--pad-side);
+  right: var(--pad-side);
+  translate: none;
+  width: auto;
+  max-height: calc(100% - 2 * var(--pad-side));
+}
+
+.field {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--command-input-height);
+  padding: 0 20px;
+}
+
+.layer[data-placement='sidebar'] .field {
+  height: 52px;
+  padding: 0 14px;
+}
+
+.fieldIcon {
+  flex: none;
+  color: var(--ink-secondary);
+}
+
+.chip {
+  flex: none;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: var(--accessory-radius);
+  background: var(--field);
+  color: var(--ink-secondary);
+  font-size: var(--label-size);
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--command-input-size);
+  caret-color: var(--command-accent);
+}
+
+.layer[data-placement='sidebar'] .input {
+  font-size: 16px;
+}
+
+.input::placeholder {
+  color: var(--ink-secondary);
+}
+
+/* About eight rows, with half of the next showing so it reads as scrollable. */
+.list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: calc(8.5 * var(--command-row-height) + 8 * 4px + 8px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 8px;
+  border-top: 0.5px solid var(--command-divider);
+  list-style: none;
+}
+
+.row {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--command-row-height);
+  padding: 0 11px 0 14px;
+  border-radius: var(--command-row-radius);
+  font-size: var(--title-size);
+  cursor: default;
+}
+
+.layer[data-placement='sidebar'] .row {
+  height: var(--row-height);
+  gap: var(--favicon-gap);
+  padding: 0 8px 0 var(--row-inset);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .row:hover {
+    background: var(--command-row-hover);
+  }
+}
+
+.row[aria-selected='true'] {
+  background: var(--command-accent);
+  color: var(--on-accent);
+}
+
+.icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--favicon-size);
+  height: var(--favicon-size);
+  color: var(--ink-secondary);
+}
+
+.row[aria-selected='true'] .icon {
+  color: var(--on-accent);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.row[aria-selected='true'] .title {
+  font-weight: 600;
+}
+
+.detail {
+  margin-inline-start: 4px;
+  color: var(--ink-secondary);
+  font-weight: 400;
+}
+
+.row[aria-selected='true'] .detail {
+  color: color-mix(in srgb, var(--on-accent) 85%, transparent);
+}
+
+.hint {
+  flex: none;
+  color: var(--ink-secondary);
+  font-size: var(--label-size);
+}
+
+.row[aria-selected='true'] .hint {
+  color: var(--on-accent);
+  font-weight: 500;
+}
+
+/* Arc's arrow at the end of a row; on the selected row, a small light tile. */
+.go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--accessory-size);
+  height: var(--accessory-size);
+  border-radius: var(--accessory-radius);
+  color: var(--ink-secondary);
+}
+
+.row[aria-selected='true'] .go {
+  background: var(--on-accent);
+  color: var(--command-accent);
+}
+
+/* In the narrow sidebar the hint words go; the arrow says enough. */
+.layer[data-placement='sidebar'] .hint {
+  display: none;
+}
+
+.empty {
+  margin: 0;
+  padding: 14px 22px 18px;
+  border-top: 0.5px solid var(--command-divider);
+  color: var(--ink-secondary);
+  font-size: var(--label-size);
+}
+
+@media (forced-colors: active) {
+  .card {
+    outline: 1px solid CanvasText;
+  }
+
+  .row[aria-selected='true'] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}

@@ -113,7 +113,7 @@ export function newFolderWith(itemId: string) {
   startEditing(folderId);
 }
 
-export function newFolder() {
+export function newFolder(name?: string) {
   const { model, spaceId } = useSidebar.getState();
   const folderId = newId();
   dispatch({
@@ -122,9 +122,9 @@ export function newFolder() {
     spaceId,
     parentId: null,
     order: orderAtEnd(model, spaceId, null),
-    name: 'New Folder',
+    name: name ?? 'New Folder',
   });
-  startEditing(folderId);
+  if (name === undefined) startEditing(folderId);
 }
 
 export function deleteFolder(itemId: string) {
@@ -406,7 +406,7 @@ export function switchSpaceBy(delta: -1 | 1) {
   if (next) switchSpace(next.id);
 }
 
-export function createSpace() {
+export function createSpace(name?: string) {
   const { model, spaceId, windowId } = useSidebar.getState();
   if (windowId === null) return;
   const index = model.spaces.findIndex((space) => space.id === spaceId) + 1;
@@ -414,11 +414,11 @@ export function createSpace() {
   dispatch({
     type: 'createSpace',
     spaceId: newSpaceId,
-    name: `Space ${model.spaces.length + 1}`,
+    name: name ?? `Space ${model.spaces.length + 1}`,
     index,
   });
   dispatch({ type: 'setActiveSpace', windowId, spaceId: newSpaceId, openNewTab: true });
-  startEditing(newSpaceId);
+  if (name === undefined) startEditing(newSpaceId);
 }
 
 export function renameSpace(spaceId: string, name: string) {

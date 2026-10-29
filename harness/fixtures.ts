@@ -1,3 +1,4 @@
+import type { HistoryEntry } from '@/platform/types';
 import type { Fixture } from './fake-platform';
 
 export const startingTabs: Fixture[] = [
@@ -75,3 +76,44 @@ export const edgeTabs: Fixture[] = [
   { title: 'Annual report 2026.pdf', url: 'https://example.com/annual-report-2026.pdf' },
   { title: 'Asleep: discarded to save memory', url: 'https://asleep.example/', discarded: true },
 ];
+
+const day = 24 * 3600_000;
+
+/** Chrome's history for the command bar: addresses typed often complete inline. */
+export const historyPages: HistoryEntry[] = [
+  { url: 'https://github.com/', title: 'GitHub', visitCount: 120, typedCount: 40 },
+  {
+    url: 'https://github.com/anthropics/claude-code',
+    title: 'anthropics/claude-code',
+    visitCount: 30,
+    typedCount: 6,
+  },
+  { url: 'https://gist.github.com/', title: 'Discover gists', visitCount: 8, typedCount: 2 },
+  { url: 'https://news.ycombinator.com/', title: 'Hacker News', visitCount: 90, typedCount: 25 },
+  { url: 'https://arc.net/', title: 'Arc from The Browser Company', visitCount: 12, typedCount: 3 },
+  {
+    url: 'https://developer.chrome.com/docs/extensions/reference/api/commands',
+    title: 'chrome.commands | API | Chrome for Developers',
+    visitCount: 6,
+    typedCount: 0,
+  },
+  {
+    url: 'https://developer.chrome.com/docs/extensions/reference/api/history',
+    title: 'chrome.history | API | Chrome for Developers',
+    visitCount: 3,
+    typedCount: 0,
+  },
+  {
+    url: 'https://motion.dev/docs/react-animation',
+    title: 'React animation | Motion',
+    visitCount: 14,
+    typedCount: 0,
+  },
+  { url: 'https://www.gitlab.com/', title: 'GitLab', visitCount: 40, typedCount: 0 },
+  {
+    url: 'https://resources.arc.net/hc/en-us/articles/19212718608151',
+    title: 'Command Bar: Your Arc Search Engine',
+    visitCount: 2,
+    typedCount: 0,
+  },
+].map((entry, i) => ({ ...entry, lastVisitTime: Date.UTC(2026, 9, 28) - i * day }));

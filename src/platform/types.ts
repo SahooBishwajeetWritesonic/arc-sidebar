@@ -64,4 +64,11 @@ export interface Platform {
   newTab(windowId: number): void;
   setMuted(tabId: number, muted: boolean): void;
   faviconUrl(pageUrl: string): string | undefined;
+
+  searchHistory(text: string): Promise<HistoryEntry[]>;
+  /** Opens `url` in a new tab, which lands at the top of Today. */
+  openUrl(windowId: number, url: string): void;
+  /** Searches with Chrome's default search engine, in a new tab. */
+  searchWeb(text: string): void;
+  duplicateTab(tabId: number): void;
 }

@@ -207,6 +207,24 @@ export function openNewTab() {
   if (windowId !== null) platform?.newTab(windowId);
 }
 
+/** Opens an address in a new tab (from the command bar). */
+export function openUrl(url: string) {
+  const { windowId } = useTabs.getState();
+  if (windowId !== null) platform?.openUrl(windowId, url);
+}
+
+export function searchWeb(text: string) {
+  platform?.searchWeb(text);
+}
+
+export function duplicateTab(id: number) {
+  platform?.duplicateTab(id);
+}
+
+export function searchHistory(text: string) {
+  return platform?.searchHistory(text) ?? Promise.resolve([]);
+}
+
 export function toggleMuted(id: number) {
   const tab = useTabs.getState().tabs.get(id);
   if (tab) platform?.setMuted(id, !tab.muted);

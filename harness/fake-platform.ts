@@ -16,7 +16,8 @@ import {
   type SessionState,
   type SidebarModel,
 } from '@/model/types';
-import type { Platform, TabEvent, TabInfo } from '@/platform/types';
+import { hostname } from '@/model/urls';
+import type { HistoryEntry, Platform, TabEvent, TabInfo } from '@/platform/types';
 
 export interface Fixture {
   title: string;
@@ -71,8 +72,10 @@ export class FakePlatform implements Platform {
   private modelListeners = new Set<(model: SidebarModel) => void>();
   private sessionListeners = new Set<(session: SessionState) => void>();
   readonly service: SidebarService;
+  private history: HistoryEntry[];
 
-  constructor(fixtures: Fixture[]) {
+  constructor(fixtures: Fixture[], history: HistoryEntry[] = []) {
+    this.history = [...history];
     this.tabs = fixtures.map((fixture, i) => this.makeTab(fixture, i === 0));
     this.service = new SidebarService({
       queryTabs: async () => this.tabs.map((tab, index) => this.live(tab, index)),
@@ -198,6 +201,29 @@ export class FakePlatform implements Platform {
 
   setMuted(tabId: number, muted: boolean) {
     this.patch(tabId, { muted });
+  }
+
+  async searchHistory(text: string) {
+    await new Promise((resolve) => setTimeout(resolve, 4)); // like chrome.history
+    const query = text.toLowerCase();
+    return this.history
+      .filter((entry) => `${entry.title} ${entry.url}`.toLowerCase().includes(query))
+      .sort((a, b) => b.lastVisitTime - a.lastVisitTime)
+      .slice(0, 200);
+  }
+
+  openUrl(_windowId: number, url: string) {
+    this.openTab({ title: this.titles.get(url) ?? hostname(url), url });
+  }
+
+  searchWeb(text: string) {
+    const url = `https://www.google.com/search?q=${encodeURIComponent(text)}`;
+    this.openTab({ title: `${text} - Google Search`, url });
+  }
+
+  duplicateTab(tabId: number) {
+    const tab = this.tabs.find((t) => t.id === tabId);
+    if (tab) this.openTab({ title: tab.title, url: tab.url });
   }
 
   faviconUrl(pageUrl: string) {

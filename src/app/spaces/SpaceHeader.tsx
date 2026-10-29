@@ -37,7 +37,7 @@ export function SpaceHeader({ spaceId }: { spaceId: string }) {
     },
     ...(space.icon ? [{ label: 'Remove Icon', onSelect: () => setSpaceIcon(spaceId, null) }] : []),
     'separator',
-    { label: 'New Space', onSelect: createSpace },
+    { label: 'New Space', onSelect: () => createSpace() },
     ...(canDelete
       ? [{ label: 'Delete Space', onSelect: () => deleteSpace(spaceId), danger: true }]
       : []),

@@ -93,6 +93,36 @@ export const chromePlatform: Platform = {
     void browser.tabs.update(tabId, { muted });
   },
 
+  async searchHistory(text) {
+    const items = await browser.history.search({ text, startTime: 0, maxResults: 200 });
+    return items.flatMap((item) =>
+      item.url
+        ? [
+            {
+              url: item.url,
+              title: item.title ?? '',
+              visitCount: item.visitCount ?? 0,
+              typedCount: item.typedCount ?? 0,
+              lastVisitTime: item.lastVisitTime ?? 0,
+            },
+          ]
+        : [],
+    );
+  },
+
+  openUrl(windowId, url) {
+    void browser.tabs.create({ windowId, url, active: true });
+  },
+
+  searchWeb(text) {
+    // NEW_TAB opens in the focused window: the one the bar was opened in.
+    void browser.search.query({ text, disposition: 'NEW_TAB' });
+  },
+
+  duplicateTab(tabId) {
+    void browser.tabs.duplicate(tabId);
+  },
+
   faviconUrl(pageUrl) {
     if (!pageUrl) return undefined;
     const params = new URLSearchParams({ pageUrl, size: '32' });
