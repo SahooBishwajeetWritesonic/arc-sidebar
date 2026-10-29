@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e": "playwright test",
+    "perf": "vite build --config harness/vite.config.ts && playwright test -c playwright.perf.config.ts",
     "format": "prettier --write .",
     "postinstall": "wxt prepare"
   },
