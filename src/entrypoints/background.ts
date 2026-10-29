@@ -1,9 +1,9 @@
 import { browser, type Browser } from 'wxt/browser';
-import { onCommandBarHello, onCommandBarShortcut } from '@/background/command-bar';
-import { copyLinks } from '@/background/copy';
+import { onCommandBarHello } from '@/background/command-bar';
 import { cropVisibleTab } from '@/background/crop';
 import { fetchGitHubJson, fetchPullRequests } from '@/background/github';
 import { SidebarService, type LiveTab } from '@/background/service';
+import { onShortcut } from '@/background/shortcuts';
 import { buildTabMenu, onTabMenuClick } from '@/background/tab-menu';
 import type { Intent } from '@/model/types';
 import type { CommandBarMessage } from '@/platform/command-bar';
@@ -108,12 +108,7 @@ export default defineBackground(() => {
     if (!alarm) void browser.alarms.create(AUTO_ARCHIVE_ALARM, { periodInMinutes: 5 });
   });
 
-  browser.commands.onCommand.addListener((command, tab) => {
-    if (command === 'command-bar') onCommandBarShortcut(tab);
-    if (tab && (command === 'copy-url' || command === 'copy-url-markdown')) {
-      void copyLinks(tab, command === 'copy-url-markdown');
-    }
-  });
+  browser.commands.onCommand.addListener((command, tab) => onShortcut(command, tab, service));
 
   void service.ready.then(() => buildTabMenu(service.snapshot().model.spaces));
   browser.contextMenus.onClicked.addListener(
