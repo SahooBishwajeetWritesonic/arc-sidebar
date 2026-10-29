@@ -105,3 +105,9 @@
   /* Resolved here, in the page's own scheme, then inherited by its rows. */
   color: var(--ink);
 }
+
+@media (forced-colors: active) {
+  .space[aria-current='true'] {
+    color: Highlight;
+  }
+}

@@ -75,3 +75,12 @@
   border-radius: 12px;
   background: var(--drag-hint);
 }
+
+/* Forced colours drop backgrounds and shadows; see rows.module.css. */
+@media (forced-colors: active) {
+  .tile[data-selected]:not(:focus-visible),
+  .tilePlate[data-popup-open] .tile {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}

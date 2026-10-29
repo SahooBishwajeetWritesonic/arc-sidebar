@@ -241,3 +241,13 @@
 .clear:hover {
   color: var(--ink);
 }
+
+/* Forced colours (high contrast) drop backgrounds and shadows: selection and
+   the menu ring become outlines in system colours, and the focus ring wins. */
+@media (forced-colors: active) {
+  .row[data-selected]:not(:focus-visible) .plate,
+  .plate[data-popup-open] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
