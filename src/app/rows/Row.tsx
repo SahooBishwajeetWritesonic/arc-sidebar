@@ -14,7 +14,7 @@ import { dropOn } from '@/app/actions';
 import { beginPress, isPress, useDrag, type Ghost } from '@/app/drag/drag';
 import type { DragSource } from '@/app/drag/targets';
 import { fade, spring } from '@/app/motion';
-import { selectFrom } from '@/app/selection/actions';
+import { selectFrom, selectionMenu } from '@/app/selection/actions';
 import { clearSelection, isSelectable, rowKey, useSelection } from '@/state/selection';
 import { LayoutKey } from './layout-key';
 import { RowMenu, type MenuEntry } from './RowMenu';
@@ -104,6 +104,8 @@ export function Row({
     else onTap?.();
   };
 
+  const items = marked === 2 ? selectionMenu : menu;
+
   return (
     <motion.li
       ref={rowRef}
@@ -134,8 +136,8 @@ export function Row({
       }
       onDoubleClick={(event: MouseEvent) => !fromMenu(event) && onDoubleClick?.()}
     >
-      {menu ? (
-        <RowMenu items={menu} className={styles.plate} style={plateStyle}>
+      {items ? (
+        <RowMenu items={items} className={styles.plate} style={plateStyle}>
           {children}
         </RowMenu>
       ) : (

@@ -11,14 +11,13 @@ export type MenuEntry =
   | { label: string; submenu: MenuEntry[] }
   | 'separator';
 
-/** Right-click menu for a row; the row's pill is the trigger. */
 export function RowMenu({
   items,
   className,
   style,
   children,
 }: {
-  items: MenuEntry[];
+  items: MenuEntry[] | (() => MenuEntry[]);
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
@@ -39,8 +38,9 @@ export function RowMenu({
   );
 }
 
-function MenuItems({ items }: { items: MenuEntry[] }) {
-  return items.map((entry, i) => {
+function MenuItems({ items }: { items: MenuEntry[] | (() => MenuEntry[]) }) {
+  const entries = typeof items === 'function' ? items() : items;
+  return entries.map((entry, i) => {
     if (entry === 'separator')
       return <ContextMenu.Separator key={i} className={styles.separator} />;
     if ('submenu' in entry)

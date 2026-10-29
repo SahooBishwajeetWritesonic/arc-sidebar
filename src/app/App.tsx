@@ -12,7 +12,8 @@ import {
   switchSpace,
   switchSpaceBy,
 } from '@/app/actions';
-import { clearSelection, useSelection } from '@/state/selection';
+import { closeSelection } from '@/app/selection/actions';
+import { clearSelection, rowKey, useSelection } from '@/state/selection';
 import { useSidebar } from '@/state/sidebar';
 import { activateTab, openUrl, useTabs } from '@/state/tabs';
 import { setCommandBar, useUi } from '@/state/ui';
@@ -123,6 +124,13 @@ function onKeyDown(event: KeyboardEvent<HTMLElement>) {
       break;
     case 'Delete':
     case 'Backspace':
+      if (
+        useSelection.getState().keys.length > 1 &&
+        useSelection.getState().keys.includes(rowKey(kind, id))
+      ) {
+        closeSelection();
+        break;
+      }
       remove(kind, id);
       focusRow(index + 1 < rows.length ? index + 1 : index - 1);
       break;
