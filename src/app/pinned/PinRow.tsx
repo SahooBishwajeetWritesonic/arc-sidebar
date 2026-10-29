@@ -15,6 +15,7 @@ import { Favicon } from '@/app/rows/Favicon';
 import { InlineEdit } from '@/app/rows/InlineEdit';
 import type { MenuEntry } from '@/app/rows/RowMenu';
 import { Row } from '@/app/rows/Row';
+import { Title } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
 import { FAVORITES_ID, FAVORITES_LIMIT, type PinItem } from '@/model/types';
@@ -116,7 +117,7 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
           onCancel={stopEditing}
         />
       ) : (
-        <span className={styles.title}>{title}</span>
+        <Title text={title} />
       )}
       {tab && (tab.audible || tab.muted) && (
         <button

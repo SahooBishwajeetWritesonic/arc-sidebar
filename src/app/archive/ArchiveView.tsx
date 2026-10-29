@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { forgetArchived, restoreArchived } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
 import rows from '@/app/rows/rows.module.css';
+import { Title } from '@/app/rows/Title';
 import type { ArchiveEntry } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
 import { showView } from '@/state/ui';
@@ -85,7 +86,7 @@ export function ArchiveView() {
               >
                 <div className={rows.plate}>
                   <Favicon url={entry.url} />
-                  <span className={rows.title}>{entry.title}</span>
+                  <Title text={entry.title} />
                   <span className={styles.time}>{time.format(entry.archivedAt)}</span>
                   <button
                     type="button"

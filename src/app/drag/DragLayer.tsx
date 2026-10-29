@@ -37,7 +37,11 @@ export function DragLayer() {
             ) : (
               <Globe className={styles.icon} size={16} strokeWidth={1.75} />
             )}
-            {!asTile && <span className={styles.title}>{ghost.title}</span>}
+            {!asTile && (
+              <span className={styles.title} dir="auto">
+                {ghost.title}
+              </span>
+            )}
           </div>,
           document.body,
         )}

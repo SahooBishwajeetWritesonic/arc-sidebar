@@ -3,6 +3,7 @@ import { Volume2, VolumeX, X } from 'lucide-react';
 import { closeTodayTab, favoriteTab, moveTabToSpace, pinTab } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
 import { Row } from '@/app/rows/Row';
+import { Title } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
 import { FAVORITES_ID, FAVORITES_LIMIT } from '@/model/types';
@@ -53,7 +54,7 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
       ]}
     >
       <Favicon url={tab.url} loading={tab.loading && !tab.favIconUrl} />
-      <span className={styles.title}>{tab.title}</span>
+      <Title text={tab.title} />
       {(tab.audible || tab.muted) && (
         <button
           type="button"

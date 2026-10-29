@@ -46,6 +46,10 @@
   mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
 }
 
+.title:dir(rtl) {
+  mask-image: linear-gradient(to left, #000 calc(100% - 24px), transparent);
+}
+
 /* Over Favorites the ghost is an icon-only tile. */
 .ghost[data-tile] {
   justify-content: center;

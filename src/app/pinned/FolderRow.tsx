@@ -3,6 +3,7 @@ import { Folder, FolderOpen } from 'lucide-react';
 import { deleteFolder, moveItemToSpace, renameItem, setFolderCollapsed } from '@/app/actions';
 import { InlineEdit } from '@/app/rows/InlineEdit';
 import { Row } from '@/app/rows/Row';
+import { Title } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
 import type { FolderItem } from '@/model/types';
@@ -58,7 +59,7 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
           onCancel={stopEditing}
         />
       ) : (
-        <span className={`${styles.title} ${styles.folderTitle}`}>{folder.name}</span>
+        <Title text={folder.name} className={styles.folderTitle} />
       )}
     </Row>
   );
