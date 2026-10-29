@@ -143,3 +143,6 @@ export function dispatch(intent: Intent) {
 }
 
 export const newId = () => crypto.randomUUID();
+
+/** The service's backups of the model, newest first. */
+export const loadBackups = async () => (await platform?.loadBackups()) ?? [];

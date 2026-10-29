@@ -18,6 +18,7 @@ import { BottomBar } from './chrome/BottomBar';
 import { DragLayer } from './drag/DragLayer';
 import { Favorites } from './favorites/Favorites';
 import { ImportDialog } from './import/ImportDialog';
+import { RestoreDialog } from './restore/RestoreDialog';
 import { fade } from './motion';
 import styles from './app.module.css';
 import { SpacePager } from './spaces/SpacePager';
@@ -163,6 +164,7 @@ export function App() {
       <ToastLayer />
       <ThemePicker />
       <ImportDialog />
+      <RestoreDialog />
     </MotionConfig>
   );
 }

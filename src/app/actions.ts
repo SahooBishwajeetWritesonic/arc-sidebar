@@ -8,6 +8,7 @@ import {
   type Appearance,
   type ArchiveAfter,
   type ArchiveEntry,
+  type SidebarModel,
   type SpaceIcon,
   type SpaceTheme,
 } from '@/model/types';
@@ -338,6 +339,21 @@ export function exportSidebar() {
   link.download = `arc-sidebar-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function restoreSidebar(model: SidebarModel) {
+  const { model: current, session, windowId } = useSidebar.getState();
+  dispatch({ type: 'restoreSidebar', model, windowId: windowId! });
+  showToast('Sidebar restored', {
+    label: 'Undo',
+    run: () =>
+      dispatch({
+        type: 'restoreSidebar',
+        model: current,
+        windowId: windowId!,
+        bindings: session.bindings,
+      }),
+  });
 }
 
 /** Adds the chosen part of Arc's sidebar. */

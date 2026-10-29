@@ -159,6 +159,11 @@ export class FakePlatform implements Platform {
     return () => void this.archiveListeners.delete(listener);
   }
 
+  async loadBackups() {
+    await this.service.ready;
+    return this.backups;
+  }
+
   async sendIntent(intent: Intent) {
     await new Promise((resolve) => setTimeout(resolve, 6)); // message hop
     return this.service.handleIntent(intent);
