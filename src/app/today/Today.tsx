@@ -20,7 +20,7 @@ export function Today({ spaceId }: { spaceId: string }) {
   return (
     <section aria-label="Today">
       <NewTabRow />
-      <ul role="listbox" aria-label="Today tabs" className={styles.list}>
+      <ul role="listbox" aria-label="Today tabs" aria-multiselectable className={styles.list}>
         <LayoutKey value={layoutKey}>
           <AnimatePresence initial={false} mode="popLayout">
             {rows.map((row) =>

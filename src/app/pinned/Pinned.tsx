@@ -32,7 +32,7 @@ export function Pinned({ spaceId }: { spaceId: string }) {
 
   return (
     <section aria-label="Pinned">
-      <ul role="listbox" aria-label="Pinned tabs" className={styles.list}>
+      <ul role="listbox" aria-label="Pinned tabs" aria-multiselectable className={styles.list}>
         <LayoutKey value={layoutKey}>
           <AnimatePresence initial={false} mode="popLayout">
             {rows.flatMap(({ item, depth }) =>

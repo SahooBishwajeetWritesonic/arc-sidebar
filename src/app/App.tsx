@@ -1,5 +1,5 @@
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, PointerEvent } from 'react';
 import {
   clearToday,
   closePin,
@@ -12,6 +12,7 @@ import {
   switchSpace,
   switchSpaceBy,
 } from '@/app/actions';
+import { clearSelection, useSelection } from '@/state/selection';
 import { useSidebar } from '@/state/sidebar';
 import { activateTab, openUrl, useTabs } from '@/state/tabs';
 import { setCommandBar, useUi } from '@/state/ui';
@@ -53,6 +54,14 @@ function remove(kind: string, id: string) {
 }
 
 function onKeyDown(event: KeyboardEvent<HTMLElement>) {
+  // Not from a menu (React bubbles its keys here too): there Escape only closes the menu.
+  const inSidebar = event.currentTarget.contains(event.target as Node);
+  if (event.key === 'Escape' && inSidebar && useSelection.getState().keys.length) {
+    clearSelection();
+    event.preventDefault();
+    return;
+  }
+
   // Arc's Clear: ⌘⇧K (only while the panel has focus; Chrome keeps it otherwise).
   if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'k') {
     event.preventDefault();
@@ -123,6 +132,14 @@ function onKeyDown(event: KeyboardEvent<HTMLElement>) {
   event.preventDefault();
 }
 
+/** A press on the sidebar's empty space lets go of a selection, as in Finder. */
+function onPointerDown(event: PointerEvent<HTMLElement>) {
+  const target = event.target as Element;
+  if (event.currentTarget.contains(target) && !target.closest('[data-nav-row]')) {
+    clearSelection();
+  }
+}
+
 export function App() {
   const tabsReady = useTabs((state) => state.ready);
   const sidebarReady = useSidebar((state) => state.ready);
@@ -147,7 +164,12 @@ export function App() {
             <UrlBar />
           </Boundary>
         )}
-        <main data-sidebar className={styles.sidebar} onKeyDown={onKeyDown}>
+        <main
+          data-sidebar
+          className={styles.sidebar}
+          onKeyDown={onKeyDown}
+          onPointerDown={onPointerDown}
+        >
           {ready && (
             <AnimatePresence mode="wait" initial={false}>
               {view === 'archive' ? (

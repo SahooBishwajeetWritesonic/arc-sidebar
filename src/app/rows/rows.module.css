@@ -52,10 +52,20 @@
   background: var(--row-previous-hover);
 }
 
+/* One of the rows selected with ⌘- or ⇧-click. The tab in front keeps its own fill. */
+.row[data-multi-selected]:not([data-selected]) .plate,
+.row[data-multi-selected]:not([data-selected]):hover .plate {
+  background: var(--row-multi-selected);
+}
+
 /* While dragging or swiping, rows don't light up under the pointer; a folder
    a drop would go into does. */
-:global([data-sidebar][data-dragging]) .row:not([data-selected], [data-previous]):hover .plate,
-:global([data-sidebar][data-swiping]) .row:not([data-selected], [data-previous]):hover .plate {
+:global([data-sidebar][data-dragging])
+  .row:not([data-selected], [data-previous], [data-multi-selected]):hover
+  .plate,
+:global([data-sidebar][data-swiping])
+  .row:not([data-selected], [data-previous], [data-multi-selected]):hover
+  .plate {
   background: none;
 }
 

@@ -14,6 +14,8 @@ import { dropOn } from '@/app/actions';
 import { beginPress, isPress, useDrag, type Ghost } from '@/app/drag/drag';
 import type { DragSource } from '@/app/drag/targets';
 import { fade, spring } from '@/app/motion';
+import { selectFrom } from '@/app/selection/actions';
+import { clearSelection, isSelectable, rowKey, useSelection } from '@/state/selection';
 import { LayoutKey } from './layout-key';
 import { RowMenu, type MenuEntry } from './RowMenu';
 import styles from './rows.module.css';
@@ -72,9 +74,31 @@ export function Row({
       : undefined,
   );
   const plateStyle = { '--depth': depth } as CSSProperties;
+  const key = rowKey(kind, id);
+  const selectable = isSelectable(kind);
+  // 0: not selected; 1: the only one; 2: one of several, which act together.
+  const marked = useSelection((state) =>
+    !state.keys.includes(key) ? 0 : state.keys.length > 1 ? 2 : 1,
+  );
+  // The last tab's tint would read as one more selected row.
+  const selecting = useSelection((state) => state.keys.length > 0);
 
   const onPointerDown = (event: PointerEvent<HTMLLIElement>) => {
-    if (!isPress(event) || fromMenu(event)) return;
+    if (fromMenu(event)) return;
+    // A right- or middle-click outside the selection is about that row alone.
+    if (!isPress(event)) {
+      if (marked !== 2) clearSelection();
+      return;
+    }
+    // ⌘-click adds or drops the row, ⇧-click takes the rows between; neither opens it.
+    if (selectable && (event.metaKey || event.shiftKey)) {
+      // No text selection; the row takes focus itself, so Escape and Delete work on the selection.
+      event.preventDefault();
+      event.currentTarget.focus({ preventScroll: true });
+      selectFrom(event.currentTarget, key, event.shiftKey);
+      return;
+    }
+    clearSelection();
     onPress?.();
     if (drag) beginPress(event, { ...drag, onTap, onDrop: dropOn });
     else onTap?.();
@@ -96,11 +120,12 @@ export function Row({
       data-parent-id={parentId ?? ''}
       data-open={open || undefined}
       data-selected={selected || undefined}
-      data-previous={(previous && !selected) || undefined}
+      data-multi-selected={marked > 0 || undefined}
+      data-previous={(previous && !selected && !selecting) || undefined}
       data-drop-into={dropInto || undefined}
       data-split-drop={splitSide}
       role="option"
-      aria-selected={!!selected}
+      aria-selected={!!selected || marked > 0}
       tabIndex={selected ? 0 : -1}
       onPointerDown={onPointerDown}
       onMouseDown={(event: MouseEvent) => event.button === 1 && event.preventDefault()}
