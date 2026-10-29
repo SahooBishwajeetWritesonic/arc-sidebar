@@ -54,3 +54,24 @@ export const manyTabs = (count: number): Fixture[] =>
     const site = sites[i % sites.length]!;
     return { title: `${site.title} (${i + 1})`, url: `${site.url}?tab=${i + 1}` };
   });
+
+/** Titles and pages that break naive rows (?fixture=edge). */
+export const edgeTabs: Fixture[] = [
+  {
+    title: `Pneumonoultramicroscopicsilicovolcanoconiosis${'Supercalifragilistic'.repeat(12)}`,
+    url: 'https://long.example/',
+  },
+  {
+    title: 'https://example.com/a/very/long/path/that/keeps/going?with=a&query=string#and-a-hash',
+    url: 'https://example.com/a/very/long/path/that/keeps/going?with=a&query=string#and-a-hash',
+  },
+  { title: 'مرحبا بالعالم - أخبار اليوم', url: 'https://www.aljazeera.net/' },
+  { title: 'שלום עולם - חדשות', url: 'https://www.ynet.co.il/' },
+  { title: '東京の天気 - 日本気象協会', url: 'https://tenki.jp/' },
+  { title: '🎉🚀 Launch day 👩🏽‍💻 notes ✨', url: 'https://party.example/' },
+  { title: '', url: 'https://untitled.example/some/page' },
+  { title: 'Settings', url: 'chrome://settings/' },
+  { title: 'notes.txt', url: 'file:///Users/me/notes.txt' },
+  { title: 'Annual report 2026.pdf', url: 'https://example.com/annual-report-2026.pdf' },
+  { title: 'Asleep: discarded to save memory', url: 'https://asleep.example/', discarded: true },
+];

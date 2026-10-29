@@ -22,6 +22,7 @@ export interface Fixture {
   title: string;
   url: string;
   audible?: boolean;
+  discarded?: boolean;
 }
 
 const WINDOW_ID = 1;
@@ -358,7 +359,7 @@ export class FakePlatform implements Platform {
       active,
       audible: fixture.audible ?? false,
       muted: false,
-      discarded: false,
+      discarded: fixture.discarded ?? false,
     };
   }
 
