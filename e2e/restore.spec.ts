@@ -46,12 +46,11 @@ test('restores the backup from before a change, keeping its tab open, with Undo'
   await expect(panel(page).getByRole('status')).toHaveText(/Sidebar restored/);
   await expect(today(page).filter({ hasText: 'Engineering Wiki' })).toHaveCount(1);
 
-  // Undo brings the pin back, bound to its tab again (selected: it is the active tab).
+  // Undo brings the pin back, bound to its tab again (only an open pin can close its tab).
   await panel(page).getByRole('status').getByRole('button', { name: 'Undo' }).click();
   await expect(today(page).filter({ hasText: 'Engineering Wiki' })).toHaveCount(0);
-  await expect(
-    panel(page).locator('[data-nav-row="pin"][data-selected]', { hasText: 'Engineering Wiki' }),
-  ).toHaveCount(1);
+  const pin = panel(page).locator('[data-nav-row="pin"]', { hasText: 'Engineering Wiki' });
+  await expect(pin.getByRole('button', { name: 'Close tab' })).toHaveCount(1);
 });
 
 test('restores a file saved with Export Sidebar', async ({ page }, testInfo) => {

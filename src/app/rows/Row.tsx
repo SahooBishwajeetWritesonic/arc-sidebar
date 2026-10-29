@@ -73,7 +73,7 @@ export function Row({
   const plateStyle = { '--depth': depth } as CSSProperties;
 
   const onPointerDown = (event: PointerEvent<HTMLLIElement>) => {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || fromMenu(event)) return;
     onPress?.();
     if (drag) beginPress(event, { ...drag, onTap, onDrop: dropOn });
     else onTap?.();
@@ -103,8 +103,10 @@ export function Row({
       tabIndex={selected ? 0 : -1}
       onPointerDown={onPointerDown}
       onMouseDown={(event: MouseEvent) => event.button === 1 && event.preventDefault()}
-      onAuxClick={(event: MouseEvent) => event.button === 1 && onMiddleClick?.()}
-      onDoubleClick={onDoubleClick}
+      onAuxClick={(event: MouseEvent) =>
+        event.button === 1 && !fromMenu(event) && onMiddleClick?.()
+      }
+      onDoubleClick={(event: MouseEvent) => !fromMenu(event) && onDoubleClick?.()}
     >
       {menu ? (
         <RowMenu items={menu} className={styles.plate} style={plateStyle}>
@@ -118,6 +120,13 @@ export function Row({
     </motion.li>
   );
 }
+
+/**
+ * React passes events from the row's menu up to the row, though the menu is
+ * drawn elsewhere on the page: a click on a menu item mustn't press the row.
+ */
+const fromMenu = (event: MouseEvent | PointerEvent) =>
+  !event.currentTarget.contains(event.target as Node);
 
 /**
  * A row that leaves while it, its menu or its rename field has focus hands focus to the

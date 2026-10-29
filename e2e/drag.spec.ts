@@ -114,6 +114,22 @@ test('a folder only toggles on a click, not when dragged', async ({ page }) => {
   await expect.poll(() => rows(page)).not.toContain('pin:1:My issues · Linear');
 });
 
+test('choosing from a row’s menu doesn’t also press the row', async ({ page }) => {
+  await ready(page);
+  await row(page, 'Dev').click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Rename…' }).click();
+  await expect(panel(page).getByRole('textbox')).toBeFocused();
+  // Renaming hides the title, so find the folder by its kind.
+  const folder = panel(page).locator('[data-active-page] [data-nav-row="folder"]');
+  await expect(folder).toHaveAttribute('data-open');
+  await page.keyboard.press('Escape');
+
+  // Closing another pinned tab from its menu doesn't select it first.
+  await row(page, 'Google Calendar').click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Close Tab' }).click();
+  await expect(row(page, 'Inbox (3)')).toHaveAttribute('data-selected');
+});
+
 test('Alt+Down moves a pinned tab with the keyboard', async ({ page }) => {
   await ready(page);
   await row(page, 'Inbox (3)').focus();
