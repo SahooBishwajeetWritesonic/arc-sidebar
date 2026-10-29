@@ -185,12 +185,15 @@ export function leaveTab(id: number): boolean {
   return true;
 }
 
-/** Drops a tab the panel is closing, before Chrome confirms it. */
-export function forgetTab(id: number) {
-  useTabs.setState((current) => applyTabEvents(current, [{ type: 'remove', tabId: id }]));
-  // Ignore late updates for this tab until Chrome's own 'remove' arrives.
-  closing.add(id);
+/** Drops tabs being closed from the panel before Chrome confirms it, in one update. */
+export function forgetTabs(ids: readonly number[]) {
+  const events = ids.map((tabId): TabEvent => ({ type: 'remove', tabId }));
+  useTabs.setState((current) => applyTabEvents(current, events));
+  // Ignore late updates for these tabs until Chrome's own 'remove' arrives.
+  for (const id of ids) closing.add(id);
 }
+
+export const forgetTab = (id: number) => forgetTabs([id]);
 
 export function openNewTab() {
   const { windowId } = useTabs.getState();

@@ -17,6 +17,7 @@ import { dispatch, newId, useSidebar } from '@/state/sidebar';
 import {
   activateTab,
   forgetTab,
+  forgetTabs,
   leaveTab,
   openNewTab,
   selectTodayIds,
@@ -274,7 +275,7 @@ export function clearToday() {
     tabId: tab.id,
     entry: archiveEntry(tab, 'cleared', batchId),
   }));
-  for (const tab of tabs) forgetTab(tab.id);
+  forgetTabs(tabs.map((tab) => tab.id));
   dispatch({ type: 'archiveTabs', windowId, tabs: archived });
   showToast(`Cleared ${tabs.length} ${tabs.length === 1 ? 'tab' : 'tabs'}`, {
     label: 'Undo',
