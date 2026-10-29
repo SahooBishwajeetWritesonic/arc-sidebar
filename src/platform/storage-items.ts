@@ -13,6 +13,7 @@ import {
   type TabDetails,
 } from '@/model/types';
 import type { CommandBarRequest } from './command-bar';
+import type { FloatingKind } from './peek';
 
 /** Pins, folders, spaces and settings. Versioned so schema changes can migrate. */
 export const modelItem = storage.defineItem<SidebarModel>('local:sidebar', {
@@ -65,3 +66,16 @@ export const commandBarRequestItem = storage.defineItem<CommandBarRequest | null
   'session:commandBarRequest',
   { fallback: null },
 );
+
+/** A Peek or Little Arc window: its one tab, and the window it came from. */
+export interface FloatingWindow {
+  kind: FloatingKind;
+  tabId: number;
+  from: number;
+  openedAt: number;
+}
+
+/** Peek and Little Arc windows, by window id. */
+export const floatingItem = storage.defineItem<Record<string, FloatingWindow>>('session:floating', {
+  fallback: {},
+});

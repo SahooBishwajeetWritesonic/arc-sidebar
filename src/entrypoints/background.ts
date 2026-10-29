@@ -3,6 +3,15 @@ import { onCommandBarHello } from '@/background/command-bar';
 import { cropVisibleTab } from '@/background/crop';
 import { fetchGitHubJson, fetchPullRequests } from '@/background/github';
 import { SidebarService, type LiveTab } from '@/background/service';
+import {
+  isPeekMessage,
+  onBindingsChanged,
+  onFocusChanged,
+  onKeepItemClick,
+  onPeekMessage,
+  onWindowRemoved,
+  syncKeepItem,
+} from '@/background/peek';
 import { onShortcut } from '@/background/shortcuts';
 import { buildTabMenu, onTabMenuClick } from '@/background/tab-menu';
 import type { Intent } from '@/model/types';
@@ -52,7 +61,10 @@ export default defineBackground(() => {
       return modelItem.setValue(model);
     },
     loadSession: () => sessionItem.getValue(),
-    saveSession: (session) => sessionItem.setValue(session),
+    saveSession: (session) => {
+      onBindingsChanged(new Set(Object.values(session.bindings)));
+      return sessionItem.setValue(session);
+    },
     loadArchive: () => archiveItem.getValue(),
     saveArchive: (archive) => archiveItem.setValue(archive),
     loadBackups: () => backupsItem.getValue(),
@@ -95,7 +107,16 @@ export default defineBackground(() => {
   browser.tabs.onDetached.addListener(
     (tabId, { oldWindowId }) => void service.onTabDetached(tabId, oldWindowId),
   );
-  browser.windows.onRemoved.addListener((windowId) => void service.onWindowRemoved(windowId));
+  browser.windows.onRemoved.addListener((windowId) => {
+    void service.onWindowRemoved(windowId);
+    void onWindowRemoved(windowId);
+  });
+  browser.windows.onFocusChanged.addListener((windowId) => void onFocusChanged(windowId));
+  void syncKeepItem();
+  // Pages in pinned tabs learn so again, in case they were told while the worker was stopped.
+  void service.ready.then(() =>
+    onBindingsChanged(new Set(Object.values(service.snapshot().session.bindings))),
+  );
 
   // Chrome can drop alarms on restart, so recreate it each time the worker starts.
   browser.alarms.onAlarm.addListener((alarm) => {
@@ -111,9 +132,9 @@ export default defineBackground(() => {
   browser.commands.onCommand.addListener((command, tab) => onShortcut(command, tab, service));
 
   void service.ready.then(() => buildTabMenu(service.snapshot().model.spaces));
-  browser.contextMenus.onClicked.addListener(
-    (info, tab) => void onTabMenuClick(info, tab, service),
-  );
+  browser.contextMenus.onClicked.addListener((info, tab) => {
+    if (!onKeepItemClick(info, tab)) void onTabMenuClick(info, tab, service);
+  });
 
   browser.runtime.onMessage.addListener(
     (
@@ -121,6 +142,11 @@ export default defineBackground(() => {
       sender,
       sendResponse,
     ) => {
+      if (isPeekMessage(message)) {
+        const bound = () =>
+          service.ready.then(() => new Set(Object.values(service.snapshot().session.bindings)));
+        return onPeekMessage(message, sender, bound, sendResponse);
+      }
       if (message?.kind === 'command-bar:hello' && 'token' in message) {
         sendResponse(onCommandBarHello(message.token, sender));
         return;

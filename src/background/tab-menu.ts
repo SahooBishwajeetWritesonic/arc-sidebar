@@ -1,6 +1,7 @@
 import { browser, type Browser } from 'wxt/browser';
 import type { Space } from '@/model/types';
 import { copyLinks, selectionOf } from './copy';
+import { addKeepItem } from './peek';
 import type { SidebarService } from './service';
 
 const COPY = 'copy-url';
@@ -14,8 +15,8 @@ let building: Promise<void> = Promise.resolve();
 let built = '';
 
 /**
- * Arc's tab actions in Chrome's own tab right-click menu, under the extension's name.
- * Rebuilt when the spaces change, for Move to Space (absent with one space).
+ * Arc's tab actions in Chrome's tab right-click menu. Building clears every menu, so it
+ * re-adds the page menu's Open in Tab for Peeks too.
  */
 export function buildTabMenu(spaces: readonly Space[]): Promise<void> {
   const key = JSON.stringify(spaces.map((space) => [space.id, space.name]));
@@ -23,6 +24,7 @@ export function buildTabMenu(spaces: readonly Space[]): Promise<void> {
   built = key;
   building = building.then(async () => {
     await browser.contextMenus.removeAll();
+    addKeepItem();
     const contexts: [`${Browser.contextMenus.ContextType}`] = ['tab'];
     const item = (properties: Browser.contextMenus.CreateProperties) =>
       browser.contextMenus.create({ contexts, ...properties });

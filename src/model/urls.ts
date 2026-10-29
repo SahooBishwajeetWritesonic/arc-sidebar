@@ -27,6 +27,22 @@ export function isDeveloperSite(developerSites: readonly string[], url: string):
   return host !== undefined && host !== '' && developerSites.includes(host);
 }
 
+/** Second-level labels sold like top-level domains under a country's (co.uk, com.au). */
+const SHARED_LABEL = /^(ac|co|com|edu|go|gov|ne|net|or|org)$/;
+
+/**
+ * A page's registered domain ("mail.google.com" → "google.com"), roughly, without the public
+ * suffix list. IPs and single names (localhost) are their own site; "" with no host.
+ */
+export function siteOf(url: string): string {
+  const host = parse(url)?.hostname.toLowerCase() ?? '';
+  if (!host.includes('.') || host.startsWith('[') || /^[\d.]+$/.test(host)) return host;
+  const labels = host.split('.');
+  const shared =
+    labels.length > 2 && labels.at(-1)!.length === 2 && SHARED_LABEL.test(labels.at(-2)!);
+  return labels.slice(shared ? -3 : -2).join('.');
+}
+
 export function hostname(url: string): string {
   return parse(url)?.hostname.replace(/^www\./, '') ?? '';
 }
