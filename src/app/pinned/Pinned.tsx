@@ -9,6 +9,7 @@ import { useSidebar } from '@/state/sidebar';
 import { selectTodayIds, useTabs } from '@/state/tabs';
 import { FolderRow } from './FolderRow';
 import { PinRow } from './PinRow';
+import { SignInRow } from './SignInRow';
 
 export function Pinned({ spaceId }: { spaceId: string }) {
   const model = useSidebar((state) => state.model);
@@ -22,19 +23,27 @@ export function Pinned({ spaceId }: { spaceId: string }) {
     () => flattenSpace(model, spaceId, (item) => bindings[item.id] === activeId),
     [model, spaceId, bindings, activeId],
   );
-  const layoutKey = rows.map(({ item, depth }) => `${item.id}:${depth}`).join();
+  // An open Live Folder that GitHub says nobody is signed in to starts with a way to sign in.
+  const signIn = (item: (typeof rows)[number]['item']) =>
+    item.kind === 'folder' && !item.collapsed && item.live?.signedOut === true;
+  const layoutKey = rows
+    .map(({ item, depth }) => `${item.id}:${depth}${signIn(item) ? ':sign-in' : ''}`)
+    .join();
 
   return (
     <section aria-label="Pinned">
       <ul role="listbox" aria-label="Pinned tabs" className={styles.list}>
         <LayoutKey value={layoutKey}>
           <AnimatePresence initial={false} mode="popLayout">
-            {rows.map(({ item, depth }) =>
-              item.kind === 'folder' ? (
-                <FolderRow key={item.id} itemId={item.id} depth={depth} />
-              ) : (
-                <PinRow key={item.id} itemId={item.id} depth={depth} />
-              ),
+            {rows.flatMap(({ item, depth }) =>
+              item.kind === 'folder'
+                ? [
+                    <FolderRow key={item.id} itemId={item.id} depth={depth} />,
+                    signIn(item) && (
+                      <SignInRow key={`${item.id}:sign-in`} folderId={item.id} depth={depth + 1} />
+                    ),
+                  ]
+                : [<PinRow key={item.id} itemId={item.id} depth={depth} />],
             )}
           </AnimatePresence>
         </LayoutKey>

@@ -1,12 +1,23 @@
-import { memo, useRef, type Ref } from 'react';
+import { memo, useRef, useState, type Ref } from 'react';
 import { Folder, FolderOpen } from 'lucide-react';
-import { deleteFolder, moveItemToSpace, renameItem, setFolderCollapsed } from '@/app/actions';
+import {
+  deleteFolder,
+  deleteLiveFolder,
+  moveItemToSpace,
+  refreshLiveFolder,
+  renameItem,
+  setFolderCollapsed,
+  setLiveFilters,
+} from '@/app/actions';
+import { Favicon } from '@/app/rows/Favicon';
 import { InlineEdit } from '@/app/rows/InlineEdit';
+import type { MenuEntry } from '@/app/rows/RowMenu';
 import { Row } from '@/app/rows/Row';
 import { Title } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
-import type { FolderItem } from '@/model/types';
+import { knownRepos, type LiveFolderItem } from '@/model/live';
+import type { FolderItem, GitHubFilters } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
 import { startEditing, stopEditing, useUi } from '@/state/ui';
 
@@ -20,6 +31,7 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
   const item = useSidebar((state) => state.model.items[itemId]);
   const editing = useUi((state) => state.editingId === itemId);
   const spaces = useSidebar((state) => state.model.spaces);
+  const [refreshing, setRefreshing] = useState(false);
 
   const last = useRef<FolderItem | undefined>(undefined);
   if (item?.kind === 'folder') last.current = item;
@@ -27,6 +39,10 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
   if (!folder) return null;
 
   const Icon = folder.collapsed ? Folder : FolderOpen;
+  const refresh = () => {
+    setRefreshing(true);
+    void refreshLiveFolder(itemId).finally(() => setRefreshing(false));
+  };
   return (
     <Row
       ref={ref}
@@ -42,13 +58,27 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
         ghost: () => ({ title: folder.name, folder: true }),
       }}
       menu={[
+        ...(folder.live
+          ? [
+              pullRequestsMenu({ ...folder, live: folder.live }),
+              { label: 'Refresh', onSelect: refresh },
+              'separator' as const,
+            ]
+          : []),
         { label: 'Rename…', onSelect: () => startEditing(itemId) },
         ...moveToSpaceMenu(spaces, folder.spaceId, (target) => moveItemToSpace(itemId, target)),
         'separator',
-        { label: 'Delete Folder', onSelect: () => deleteFolder(itemId), danger: true },
+        folder.live
+          ? { label: 'Delete Live Folder', onSelect: () => deleteLiveFolder(itemId), danger: true }
+          : { label: 'Delete Folder', onSelect: () => deleteFolder(itemId), danger: true },
       ]}
     >
-      <Icon className={styles.favicon} size={16} strokeWidth={1.75} aria-hidden />
+      {refreshing ? (
+        // The same spinner as a loading tab, while GitHub answers.
+        <Favicon url="" loading />
+      ) : (
+        <Icon className={styles.favicon} size={16} strokeWidth={1.75} aria-hidden />
+      )}
       {editing ? (
         <InlineEdit
           initial={folder.name}
@@ -64,3 +94,52 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
     </Row>
   );
 });
+
+/** Arc's filters for the GitHub Live Folder, ticked when on. */
+function pullRequestsMenu(folder: LiveFolderItem): MenuEntry {
+  const { filters } = folder.live;
+  const set = (change: Partial<GitHubFilters>) =>
+    setLiveFilters(folder.id, { ...filters, ...change });
+  const toggleRepo = (repo: string) =>
+    set({
+      repos: filters.repos.includes(repo)
+        ? filters.repos.filter((chosen) => chosen !== repo)
+        : [...filters.repos, repo],
+    });
+  const repos = knownRepos(folder);
+  return {
+    label: 'Pull Requests',
+    submenu: [
+      {
+        label: 'Created by Me',
+        checked: filters.createdByMe,
+        onSelect: () => set({ createdByMe: !filters.createdByMe }),
+      },
+      {
+        label: 'Review Requests',
+        checked: filters.reviewRequests,
+        onSelect: () => set({ reviewRequests: !filters.reviewRequests }),
+      },
+      {
+        label: 'Drafts',
+        checked: filters.drafts,
+        onSelect: () => set({ drafts: !filters.drafts }),
+      },
+      ...(repos.length
+        ? [
+            'separator' as const,
+            {
+              label: 'All Repositories',
+              checked: !filters.repos.length,
+              onSelect: () => set({ repos: [] }),
+            },
+            ...repos.map((repo) => ({
+              label: repo,
+              checked: filters.repos.includes(repo),
+              onSelect: () => toggleRepo(repo),
+            })),
+          ]
+        : []),
+    ],
+  };
+}

@@ -13,7 +13,7 @@ import {
   switchSpaceBy,
 } from '@/app/actions';
 import { useSidebar } from '@/state/sidebar';
-import { activateTab, useTabs } from '@/state/tabs';
+import { activateTab, openUrl, useTabs } from '@/state/tabs';
 import { setCommandBar, useUi } from '@/state/ui';
 import { ArchiveView } from './archive/ArchiveView';
 import { Boundary } from './chrome/Boundary';
@@ -37,6 +37,7 @@ function press(kind: string, id: string) {
   if (kind === 'tab' || kind === 'split') activateTab(Number(id));
   if (kind === 'pin') pressPin(id);
   if (kind === 'newtab') setCommandBar(true);
+  if (kind === 'link') openUrl(id);
   if (kind === 'folder') {
     const folder = useSidebar.getState().model.items[id];
     if (folder?.kind === 'folder') setFolderCollapsed(id, !folder.collapsed);

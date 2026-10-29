@@ -18,7 +18,8 @@ import { LayoutKey } from './layout-key';
 import { RowMenu, type MenuEntry } from './RowMenu';
 import styles from './rows.module.css';
 
-export type RowKind = 'tab' | 'split' | 'pin' | 'folder';
+/** 'link': a row that opens a page, such as a Live Folder's sign-in. */
+export type RowKind = 'tab' | 'split' | 'pin' | 'folder' | 'link';
 
 interface RowProps {
   kind: RowKind;

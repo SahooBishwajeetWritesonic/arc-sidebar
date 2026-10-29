@@ -1,10 +1,18 @@
 import { Menu } from '@base-ui/react/menu';
 import { Archive, Check, ChevronRight, Plus } from 'lucide-react';
-import { createSpace, exportSidebar, newFolder, setArchiveAfter, switchSpace } from '@/app/actions';
+import {
+  createSpace,
+  exportSidebar,
+  newFolder,
+  newLiveFolder,
+  setArchiveAfter,
+  switchSpace,
+} from '@/app/actions';
 import { useBesideMenu } from '@/app/rows/beside';
 import menu from '@/app/rows/menu.module.css';
 import { SpaceGlyph } from '@/app/spaces/icons';
 import spaces from '@/app/spaces/spaces.module.css';
+import { githubFolderOf } from '@/model/live';
 import type { ArchiveAfter } from '@/model/types';
 import { loadBackups, useSidebar } from '@/state/sidebar';
 import { setImporting, setRestoring, showView, useUi } from '@/state/ui';
@@ -67,6 +75,7 @@ function SpaceSwitcher() {
 
 function AddMenu() {
   const archiveAfter = useSidebar((state) => state.model.settings?.archiveAfter ?? '12h');
+  const hasLiveFolder = useSidebar((state) => githubFolderOf(state.model) !== undefined);
   const beside = useBesideMenu();
   return (
     <Menu.Root>
@@ -82,6 +91,11 @@ function AddMenu() {
             <Menu.Item className={menu.item} onClick={() => newFolder()}>
               New Folder
             </Menu.Item>
+            {!hasLiveFolder && (
+              <Menu.Item className={menu.item} onClick={newLiveFolder}>
+                New GitHub Live Folder
+              </Menu.Item>
+            )}
             <Menu.Separator className={menu.separator} />
             <Menu.SubmenuRoot {...beside.root}>
               <Menu.SubmenuTrigger ref={beside.trigger} className={menu.item}>

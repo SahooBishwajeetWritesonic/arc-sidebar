@@ -1,13 +1,15 @@
 import type { ArcSidebar } from '@/import/arc';
 import { planImport, type ImportChoice } from '@/import/plan';
 import { toExportFile } from '@/model/backup';
-import { childrenOf, flattenSpace, orderAtEnd, orderBefore } from '@/model/tree';
+import { githubFolderOf } from '@/model/live';
+import { childrenOf, descendants, flattenSpace, orderAtEnd, orderBefore } from '@/model/tree';
 import {
   FAVORITES_ID,
   FAVORITES_LIMIT,
   type Appearance,
   type ArchiveAfter,
   type ArchiveEntry,
+  type GitHubFilters,
   type SidebarModel,
   type SpaceIcon,
   type SpaceTheme,
@@ -131,6 +133,42 @@ export function newFolder(name?: string) {
 
 export function deleteFolder(itemId: string) {
   dispatch({ type: 'deleteFolder', itemId });
+}
+
+/** The one GitHub Live Folder, at the end of the shown space's Pinned section. */
+export function newLiveFolder() {
+  const { model, spaceId } = useSidebar.getState();
+  if (githubFolderOf(model)) return;
+  const order = orderAtEnd(model, spaceId, null);
+  dispatch({ type: 'createLiveFolder', itemId: newId(), spaceId, order });
+}
+
+export function setLiveFilters(itemId: string, filters: GitHubFilters) {
+  dispatch({ type: 'setLiveFilters', itemId, filters });
+}
+
+/** Asks GitHub again now; settles once the folder is up to date. */
+export function refreshLiveFolder(itemId: string) {
+  return dispatch({ type: 'refreshLiveFolder', itemId });
+}
+
+/** Arc doesn't make the Live Folder again until you do; its open tabs go to Today. */
+export function deleteLiveFolder(itemId: string) {
+  const { model, windowId } = useSidebar.getState();
+  const folder = model.items[itemId];
+  if (folder?.kind !== 'folder' || windowId === null) return;
+  const inside = descendants(model, itemId);
+  dispatch({
+    type: 'deleteLiveFolder',
+    itemId,
+    itemIds: inside.map((item) => item.id),
+    spaceId: folder.spaceId,
+    windowId,
+  });
+  showToast(`Deleted “${folder.name}”`, {
+    label: 'Undo',
+    run: () => dispatch({ type: 'restoreItems', items: [folder, ...inside] }),
+  });
 }
 
 export function dropOn(source: DragSource, target: DropTarget) {

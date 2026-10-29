@@ -53,23 +53,37 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
   if (!pin) return null;
 
   const awayFromPin = tab !== undefined && !isSamePage(tab.url, pin.url);
-  const title = awayFromPin ? tab.title : (pin.customTitle ?? tab?.title ?? pin.title);
+  // A Live Folder's pull request keeps its title rather than GitHub's longer page title.
+  const saved = pin.live ? pin.title : (tab?.title ?? pin.title);
+  const title = awayFromPin ? tab.title : (pin.customTitle ?? saved);
 
-  const menu: MenuEntry[] = [
+  // A Live Folder's pull requests stay in it: no moving, favoriting or unpinning.
+  const liveMenu: MenuEntry[] = [
     { label: 'Rename…', onSelect: () => startEditing(itemId) },
-    ...(awayFromPin
-      ? [
-          { label: 'Back to Pinned URL', onSelect: () => resetPin(itemId) },
-          { label: 'Replace Pinned URL with Current', onSelect: () => replacePinUrl(itemId) },
-        ]
+    ...(awayFromPin ? [{ label: 'Back to Pull Request', onSelect: () => resetPin(itemId) }] : []),
+    ...(tab
+      ? ['separator' as const, { label: 'Close Tab', onSelect: () => closePin(itemId) }]
       : []),
-    { label: 'New Folder with Tab', onSelect: () => newFolderWith(itemId) },
-    ...(canFavorite ? [{ label: 'Add to Favorites', onSelect: () => favoriteItem(itemId) }] : []),
-    ...moveToSpaceMenu(spaces, pin.spaceId, (target) => moveItemToSpace(itemId, target)),
-    'separator',
-    ...(tab ? [{ label: 'Close Tab', onSelect: () => closePin(itemId) }] : []),
-    { label: 'Unpin', onSelect: () => unpinWithUndo(itemId), danger: true },
   ];
+  const menu: MenuEntry[] = pin.live
+    ? liveMenu
+    : [
+        { label: 'Rename…', onSelect: () => startEditing(itemId) },
+        ...(awayFromPin
+          ? [
+              { label: 'Back to Pinned URL', onSelect: () => resetPin(itemId) },
+              { label: 'Replace Pinned URL with Current', onSelect: () => replacePinUrl(itemId) },
+            ]
+          : []),
+        { label: 'New Folder with Tab', onSelect: () => newFolderWith(itemId) },
+        ...(canFavorite
+          ? [{ label: 'Add to Favorites', onSelect: () => favoriteItem(itemId) }]
+          : []),
+        ...moveToSpaceMenu(spaces, pin.spaceId, (target) => moveItemToSpace(itemId, target)),
+        'separator',
+        ...(tab ? [{ label: 'Close Tab', onSelect: () => closePin(itemId) }] : []),
+        { label: 'Unpin', onSelect: () => unpinWithUndo(itemId), danger: true },
+      ];
 
   return (
     <Row
@@ -82,10 +96,14 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
       previous={previous}
       onPress={tab ? () => pressPin(itemId) : undefined}
       onTap={tab ? undefined : () => pressPin(itemId)}
-      drag={{
-        source: { kind: 'pin', itemId, bound: tab !== undefined },
-        ghost: () => ({ title, faviconUrl: faviconFor(tab?.url ?? pin.url), folder: false }),
-      }}
+      drag={
+        pin.live
+          ? undefined
+          : {
+              source: { kind: 'pin', itemId, bound: tab !== undefined },
+              ghost: () => ({ title, faviconUrl: faviconFor(tab?.url ?? pin.url), folder: false }),
+            }
+      }
       onMiddleClick={() => closePin(itemId)}
       onDoubleClick={() => startEditing(itemId)}
       menu={menu}

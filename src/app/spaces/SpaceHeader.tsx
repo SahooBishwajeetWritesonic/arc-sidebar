@@ -1,9 +1,10 @@
 import { motion } from 'motion/react';
-import { createSpace, deleteSpace, renameSpace, setSpaceIcon } from '@/app/actions';
+import { createSpace, deleteSpace, newLiveFolder, renameSpace, setSpaceIcon } from '@/app/actions';
 import { spring } from '@/app/motion';
 import { InlineEdit } from '@/app/rows/InlineEdit';
 import { openThemePicker } from '@/app/theme/ThemePicker';
 import { RowMenu, type MenuEntry } from '@/app/rows/RowMenu';
+import { githubFolderOf } from '@/model/live';
 import { useSidebar } from '@/state/sidebar';
 import { startEditing, stopEditing, useUi } from '@/state/ui';
 import { EMOJIS, SpaceGlyph, SYMBOLS } from './icons';
@@ -15,6 +16,7 @@ export function SpaceHeader({ spaceId }: { spaceId: string }) {
   const space = useSidebar((state) => state.model.spaces.find((s) => s.id === spaceId));
   const canDelete = useSidebar((state) => state.model.spaces.length > 1);
   const editing = useUi((state) => state.editingId === spaceId);
+  const hasLiveFolder = useSidebar((state) => githubFolderOf(state.model) !== undefined);
   if (!space) return null;
 
   const menu: MenuEntry[] = [
@@ -37,6 +39,8 @@ export function SpaceHeader({ spaceId }: { spaceId: string }) {
     },
     ...(space.icon ? [{ label: 'Remove Icon', onSelect: () => setSpaceIcon(spaceId, null) }] : []),
     'separator',
+    // Arc turns its GitHub Live Folder back on from the sidebar's menu.
+    ...(hasLiveFolder ? [] : [{ label: 'New GitHub Live Folder', onSelect: newLiveFolder }]),
     { label: 'New Space', onSelect: () => createSpace() },
     ...(canDelete
       ? [{ label: 'Delete Space', onSelect: () => deleteSpace(spaceId), danger: true }]

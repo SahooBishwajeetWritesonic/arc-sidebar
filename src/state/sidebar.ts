@@ -118,7 +118,8 @@ export async function connectSidebar(source: Platform, windowId: number): Promis
   };
 }
 
-export function dispatch(intent: Intent) {
+/** Applies an intent at once; the promise settles when the service has answered. */
+export function dispatch(intent: Intent): Promise<void> {
   const entry: Pending = { intent };
   pending.push(entry);
   if (intent.type === 'openPin') {
@@ -129,7 +130,7 @@ export function dispatch(intent: Intent) {
     }
   }
   rebuild();
-  platform?.sendIntent(intent).then(
+  const answered = platform?.sendIntent(intent).then(
     (result) => {
       entry.result = result;
       rebuild();
@@ -140,6 +141,7 @@ export function dispatch(intent: Intent) {
       rebuild();
     },
   );
+  return answered ?? Promise.resolve();
 }
 
 export const newId = () => crypto.randomUUID();
