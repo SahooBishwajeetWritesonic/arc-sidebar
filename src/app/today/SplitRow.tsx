@@ -2,6 +2,7 @@ import { memo, useRef, type PointerEvent, type Ref } from 'react';
 import { Volume2, VolumeX, X } from 'lucide-react';
 import { closeTodayTab, closeTodayTabs, moveTabsToSpace, separateSplit } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
+import { IconSwap } from '@/app/rows/IconSwap';
 import { Row } from '@/app/rows/Row';
 import { Title } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
@@ -51,7 +52,7 @@ export const SplitRow = memo(function SplitRow({ ids, splitViewId, ref }: SplitR
           onPointerDown={stop}
           onClick={() => toggleMuted(id)}
         >
-          {tab.muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+          <IconSwap on={tab.muted} off={<Volume2 size={14} />} to={<VolumeX size={14} />} />
         </button>
       )}
       <button

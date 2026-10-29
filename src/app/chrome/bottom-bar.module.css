@@ -24,6 +24,14 @@
   color: var(--ink-secondary);
 }
 
+.button {
+  transition: scale var(--press-time) linear;
+}
+
+.button:active {
+  scale: var(--press-scale-icon);
+}
+
 .button:hover,
 .button[data-popup-open],
 .button[aria-pressed='true'] {

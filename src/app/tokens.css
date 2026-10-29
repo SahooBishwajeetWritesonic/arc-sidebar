@@ -79,6 +79,13 @@
 
   /* CSS motion (springs live in motion.ts): Arc's fades are ease-out */
   --ease-out: cubic-bezier(0, 0, 0.58, 1);
+  /* Press feedback: Arc's 70 ms linear shrink (research/08); icons shrink more. */
+  --press-time: 70ms;
+  --press-scale: 0.97;
+  --press-scale-icon: 0.88;
+  /* Icons that morph into each other (copy → tick, play ↔ pause). */
+  --swap-time: 180ms;
+  --ease-swap: cubic-bezier(0.23, 1, 0.32, 1);
   --popup-in: 150ms;
   --popup-out: 100ms;
 }

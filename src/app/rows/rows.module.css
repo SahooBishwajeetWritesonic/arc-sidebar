@@ -110,6 +110,13 @@
   height: var(--favicon-size);
 }
 
+.folderIcon {
+  display: grid;
+  flex: none;
+  width: var(--favicon-size);
+  height: var(--favicon-size);
+}
+
 /* A pinned tab's favicon resets it to its pinned URL when it has navigated away. */
 .faviconButton {
   display: grid;

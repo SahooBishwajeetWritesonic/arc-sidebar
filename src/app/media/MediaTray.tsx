@@ -3,6 +3,7 @@ import { Pause, Play, SkipBack, SkipForward, Volume2, VolumeX, X } from 'lucide-
 import { useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import { fade, spring } from '@/app/motion';
 import { Favicon } from '@/app/rows/Favicon';
+import { IconSwap } from '@/app/rows/IconSwap';
 import { dismissPlayer, playPause, skip, useMedia } from '@/state/media';
 import { activateTab, toggleMuted, useTabs } from '@/state/tabs';
 import styles from './media.module.css';
@@ -63,7 +64,11 @@ function Player({ tabId }: { tabId: number }) {
         </Control>
       )}
       <Control label={playing ? 'Pause' : 'Play'} onClick={() => playPause(tabId)}>
-        {playing ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+        <IconSwap
+          on={playing}
+          off={<Play size={14} fill="currentColor" />}
+          to={<Pause size={14} fill="currentColor" />}
+        />
       </Control>
       {can('nexttrack') && (
         <Control label="Next track" onClick={() => skip(tabId, 'nexttrack')}>
@@ -71,7 +76,7 @@ function Player({ tabId }: { tabId: number }) {
         </Control>
       )}
       <Control label={tab.muted ? 'Unmute' : 'Mute'} onClick={() => toggleMuted(tabId)}>
-        {tab.muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+        <IconSwap on={tab.muted} off={<Volume2 size={14} />} to={<VolumeX size={14} />} />
       </Control>
       <Control label="Close player" className={styles.close} onClick={() => dismissPlayer(tabId)}>
         <X size={14} />

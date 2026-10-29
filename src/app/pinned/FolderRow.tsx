@@ -10,6 +10,7 @@ import {
   setLiveFilters,
 } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
+import { IconSwap } from '@/app/rows/IconSwap';
 import { InlineEdit } from '@/app/rows/InlineEdit';
 import type { MenuEntry } from '@/app/rows/RowMenu';
 import { Row } from '@/app/rows/Row';
@@ -38,7 +39,6 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
   const folder = last.current;
   if (!folder) return null;
 
-  const Icon = folder.collapsed ? Folder : FolderOpen;
   const refresh = () => {
     setRefreshing(true);
     void refreshLiveFolder(itemId).finally(() => setRefreshing(false));
@@ -77,7 +77,13 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
         // The same spinner as a loading tab, while GitHub answers.
         <Favicon url="" loading />
       ) : (
-        <Icon className={styles.favicon} size={16} strokeWidth={1.75} aria-hidden />
+        <span className={styles.folderIcon} aria-hidden>
+          <IconSwap
+            on={!folder.collapsed}
+            off={<Folder size={16} strokeWidth={1.75} />}
+            to={<FolderOpen size={16} strokeWidth={1.75} />}
+          />
+        </span>
       )}
       {editing ? (
         <InlineEdit

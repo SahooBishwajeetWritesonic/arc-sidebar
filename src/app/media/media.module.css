@@ -96,6 +96,19 @@
   color: var(--ink-secondary);
 }
 
+.source,
+.control {
+  transition: scale var(--press-time) linear;
+}
+
+.source:active {
+  scale: var(--press-scale);
+}
+
+.control:active {
+  scale: var(--press-scale-icon);
+}
+
 .source:focus-visible,
 .control:focus-visible {
   outline: 2px dashed var(--focus-ring);

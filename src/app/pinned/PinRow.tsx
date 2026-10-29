@@ -12,6 +12,7 @@ import {
   unpinWithUndo,
 } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
+import { IconSwap } from '@/app/rows/IconSwap';
 import { InlineEdit } from '@/app/rows/InlineEdit';
 import { isPress } from '@/app/drag/drag';
 import type { MenuEntry } from '@/app/rows/RowMenu';
@@ -147,7 +148,7 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
           onPointerDown={stop}
           onClick={() => toggleMuted(tab.id)}
         >
-          {tab.muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+          <IconSwap on={tab.muted} off={<Volume2 size={14} />} to={<VolumeX size={14} />} />
         </button>
       )}
       {tab && (
