@@ -1,5 +1,6 @@
 import type { ArcSidebar } from '@/import/arc';
 import { planImport, type ImportChoice } from '@/import/plan';
+import { toExportFile } from '@/model/backup';
 import { childrenOf, flattenSpace, orderAtEnd, orderBefore } from '@/model/tree';
 import {
   FAVORITES_ID,
@@ -325,11 +326,12 @@ export function unpinWithUndo(itemId: string) {
   });
 }
 
+/** Downloads spaces, pins, folders and settings as JSON, for Restore Sidebar. */
 export function exportSidebar() {
   const { model } = useSidebar.getState();
-  const data = { app: 'arc-sidebar', format: 1, exportedAt: new Date().toISOString(), model };
+  const file = toExportFile(model, new Date());
   const url = URL.createObjectURL(
-    new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+    new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' }),
   );
   const link = document.createElement('a');
   link.href = url;
