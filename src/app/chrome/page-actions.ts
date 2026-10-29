@@ -8,7 +8,7 @@ import { captureFullPage, openUrl, setSitePermission, startCapture } from '@/sta
 
 /** The copy button: the address without tracking parameters, as Copy URL. */
 export function copyPageUrl(tab: TabInfo) {
-  copyText(linksText([tab]));
+  void copyText(linksText([tab]));
   showToast(copiedText(1));
 }
 

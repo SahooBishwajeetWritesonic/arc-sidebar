@@ -179,8 +179,9 @@ export function CommandBar({ host, sidebarOpen, placement, address }: CommandBar
     const copy =
       command.type === 'action' &&
       (command.action === 'copyUrl' || command.action === 'copyMarkdown');
-    // Only a focused page can write the clipboard, so the bar copies.
-    if (copy) runCommand(command);
+    // Only a focused page can write the clipboard, so the bar copies, and
+    // waits: closing removes its frame, which would cut the copy short.
+    if (copy) await runCommand(command);
     const browserOnly =
       command.type === 'openUrl' || command.type === 'search' || command.type === 'switchToTab';
     if (browserOnly) runCommand(command);

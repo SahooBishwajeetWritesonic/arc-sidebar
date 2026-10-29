@@ -82,8 +82,8 @@ function runAction(command: Extract<Command, { type: 'action' }>) {
     case 'copyUrl':
     case 'copyMarkdown':
       // Without tracking parameters, as Arc's Copy URL.
-      if (tab) copyText(linksText([tab], command.action === 'copyMarkdown'));
-      break;
+      // Returned, so the bar can wait for it before its frame goes.
+      return tab ? copyText(linksText([tab], command.action === 'copyMarkdown')) : undefined;
     case 'duplicateTab':
       if (tab) duplicateTab(tab.id);
       break;
@@ -133,8 +133,10 @@ function runAction(command: Extract<Command, { type: 'action' }>) {
  * Copies from a focused page (the bar, on Return). The async clipboard needs the frame to be
  * allowed it; the old copy command doesn't.
  */
-export function copyText(text: string) {
-  navigator.clipboard?.writeText(text).catch(() => {
+export async function copyText(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
     const field = document.createElement('textarea');
     field.value = text;
     field.style.position = 'fixed';
@@ -143,5 +145,5 @@ export function copyText(text: string) {
     field.select();
     document.execCommand('copy');
     field.remove();
-  });
+  }
 }
