@@ -6,8 +6,9 @@
   z-index: 30;
 }
 
+/* As wide as their items, like a Mac's, so a submenu fits beside its menu in the narrow panel. */
 .popup {
-  min-width: 200px;
+  min-width: 96px;
   padding: 5px;
   border-radius: 10px;
   background: var(--menu-bg);

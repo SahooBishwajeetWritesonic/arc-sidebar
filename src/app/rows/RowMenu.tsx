@@ -1,6 +1,7 @@
 import { ContextMenu } from '@base-ui/react/context-menu';
 import { ChevronRight } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
+import { useBesideMenu } from './beside';
 import styles from './menu.module.css';
 
 export type MenuEntry =
@@ -40,23 +41,8 @@ function MenuItems({ items }: { items: MenuEntry[] }) {
   return items.map((entry, i) => {
     if (entry === 'separator')
       return <ContextMenu.Separator key={i} className={styles.separator} />;
-    if ('submenu' in entry) {
-      return (
-        <ContextMenu.SubmenuRoot key={entry.label}>
-          <ContextMenu.SubmenuTrigger className={styles.item}>
-            {entry.label}
-            <ChevronRight className={styles.chevron} size={12} strokeWidth={2.5} aria-hidden />
-          </ContextMenu.SubmenuTrigger>
-          <ContextMenu.Portal>
-            <ContextMenu.Positioner className={styles.positioner} alignOffset={-5} sideOffset={2}>
-              <ContextMenu.Popup className={styles.popup}>
-                <MenuItems items={entry.submenu} />
-              </ContextMenu.Popup>
-            </ContextMenu.Positioner>
-          </ContextMenu.Portal>
-        </ContextMenu.SubmenuRoot>
-      );
-    }
+    if ('submenu' in entry)
+      return <Submenu key={entry.label} label={entry.label} items={entry.submenu} />;
     return (
       <ContextMenu.Item
         key={entry.label}
@@ -69,4 +55,28 @@ function MenuItems({ items }: { items: MenuEntry[] }) {
       </ContextMenu.Item>
     );
   });
+}
+
+function Submenu({ label, items }: { label: string; items: MenuEntry[] }) {
+  const beside = useBesideMenu();
+  return (
+    <ContextMenu.SubmenuRoot {...beside.root}>
+      <ContextMenu.SubmenuTrigger ref={beside.trigger} className={styles.item}>
+        {label}
+        <ChevronRight className={styles.chevron} size={12} strokeWidth={2.5} aria-hidden />
+      </ContextMenu.SubmenuTrigger>
+      <ContextMenu.Portal>
+        <ContextMenu.Positioner
+          className={styles.positioner}
+          {...beside.positioner}
+          alignOffset={-5}
+          sideOffset={2}
+        >
+          <ContextMenu.Popup ref={beside.popup} className={styles.popup}>
+            <MenuItems items={items} />
+          </ContextMenu.Popup>
+        </ContextMenu.Positioner>
+      </ContextMenu.Portal>
+    </ContextMenu.SubmenuRoot>
+  );
 }

@@ -72,3 +72,25 @@ test('a part of the panel that fails shows a note and leaves the rest working', 
   await expect(alerts.first().getByRole('button', { name: 'Reload sidebar' })).toBeVisible();
   await expect(panel(page).getByRole('button', { name: 'More' })).toBeVisible();
 });
+
+test('a submenu opens beside its menu, even in the narrowest panel', async ({ page }) => {
+  await ready(page);
+  await page.locator('input[type=range]').fill('320');
+  const header = panel(page).locator('[data-active-page] [data-space-header]');
+  const box = (await header.boundingBox())!;
+  // Near the right edge, where the menu has no room on its right.
+  await header.click({ button: 'right', position: { x: box.width - 30, y: box.height / 2 } });
+  await panel(page).getByRole('menuitem', { name: 'Symbol' }).hover();
+  const menus = panel(page).getByRole('menu');
+  await expect(menus).toHaveCount(2);
+  const [menu, submenu] = await menus.evaluateAll((all) =>
+    all.map((m) => {
+      const r = m.getBoundingClientRect();
+      return { left: r.left, right: r.right };
+    }),
+  );
+  const overlap = Math.min(menu!.right, submenu!.right) - Math.max(menu!.left, submenu!.left);
+  // Only the few pixels a Mac submenu overlaps its menu by.
+  expect(overlap).toBeLessThanOrEqual(5);
+  expect(submenu!.left).toBeGreaterThanOrEqual(0);
+});

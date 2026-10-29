@@ -1,6 +1,7 @@
 import { Menu } from '@base-ui/react/menu';
 import { Archive, Check, ChevronRight, Plus } from 'lucide-react';
 import { createSpace, exportSidebar, newFolder, setArchiveAfter, switchSpace } from '@/app/actions';
+import { useBesideMenu } from '@/app/rows/beside';
 import menu from '@/app/rows/menu.module.css';
 import { SpaceGlyph } from '@/app/spaces/icons';
 import spaces from '@/app/spaces/spaces.module.css';
@@ -66,6 +67,7 @@ function SpaceSwitcher() {
 
 function AddMenu() {
   const archiveAfter = useSidebar((state) => state.model.settings?.archiveAfter ?? '12h');
+  const beside = useBesideMenu();
   return (
     <Menu.Root>
       <Menu.Trigger className={styles.button} aria-label="More">
@@ -81,14 +83,19 @@ function AddMenu() {
               New Folder
             </Menu.Item>
             <Menu.Separator className={menu.separator} />
-            <Menu.SubmenuRoot>
-              <Menu.SubmenuTrigger className={menu.item}>
+            <Menu.SubmenuRoot {...beside.root}>
+              <Menu.SubmenuTrigger ref={beside.trigger} className={menu.item}>
                 Archive Today Tabs After
                 <ChevronRight className={menu.chevron} size={12} strokeWidth={2.5} aria-hidden />
               </Menu.SubmenuTrigger>
               <Menu.Portal>
-                <Menu.Positioner className={menu.positioner} alignOffset={-5} sideOffset={2}>
-                  <Menu.Popup className={menu.popup}>
+                <Menu.Positioner
+                  className={menu.positioner}
+                  {...beside.positioner}
+                  alignOffset={-5}
+                  sideOffset={2}
+                >
+                  <Menu.Popup ref={beside.popup} className={menu.popup}>
                     <Menu.RadioGroup
                       value={archiveAfter}
                       onValueChange={(value) => setArchiveAfter(value as ArchiveAfter)}
