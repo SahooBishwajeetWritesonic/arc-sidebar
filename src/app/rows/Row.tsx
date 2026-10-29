@@ -1,6 +1,9 @@
-import { motion } from 'motion/react';
+import { motion, useIsPresent } from 'motion/react';
 import {
+  useCallback,
   useContext,
+  useEffect,
+  useRef,
   type CSSProperties,
   type MouseEvent,
   type PointerEvent,
@@ -56,6 +59,7 @@ export function Row({
   children,
   ref,
 }: RowProps) {
+  const rowRef = useFocusHandoff(ref);
   const layoutKey = useContext(LayoutKey);
   const dropInto = useDrag(
     (state) => state.target?.section === 'pinned' && state.target.into === String(id),
@@ -71,7 +75,7 @@ export function Row({
 
   return (
     <motion.li
-      ref={ref}
+      ref={rowRef}
       layout="position"
       layoutDependency={layoutKey}
       initial={{ opacity: 0 }}
@@ -105,5 +109,38 @@ export function Row({
         </div>
       )}
     </motion.li>
+  );
+}
+
+/**
+ * A row that leaves while it, its menu or its rename field has focus hands focus to the
+ * nearest row that stays, so the keyboard isn't left on nothing.
+ */
+function useFocusHandoff(ref: Ref<HTMLLIElement> | undefined) {
+  const row = useRef<HTMLLIElement | null>(null);
+  const isPresent = useIsPresent();
+
+  useEffect(() => {
+    const element = row.current;
+    if (isPresent || !element) return;
+    element.dataset.leaving = '';
+    const menuOpen = element.querySelector('[data-popup-open]') !== null;
+    if (!menuOpen && !element.contains(document.activeElement)) return;
+    const page = element.closest('[data-active-page]') ?? document;
+    const rows = [...page.querySelectorAll<HTMLElement>('[data-nav-row]')];
+    const at = rows.indexOf(element);
+    const nearest = [...rows.slice(at + 1), ...rows.slice(0, at).reverse()].find(
+      (other) => other.dataset.leaving === undefined,
+    );
+    nearest?.focus({ preventScroll: true });
+  }, [isPresent]);
+
+  return useCallback(
+    (element: HTMLLIElement | null) => {
+      row.current = element;
+      if (typeof ref === 'function') ref(element);
+      else if (ref) ref.current = element;
+    },
+    [ref],
   );
 }
