@@ -151,6 +151,25 @@ describe('searchCommands', () => {
     expect(pinned).not.toContain('action:pinTab:');
   });
 
+  it('offers Add Split View for a Today tab and Remove Split View once it is split', () => {
+    const plain = keys(searchCommands('split', context(), [], { actionsOnly: true }));
+    expect(plain).toContain('action:splitView:');
+    const tabs = new Map(context().tabs);
+    tabs.set(1, { ...tabs.get(1)!, splitViewId: 3 });
+    const split = keys(searchCommands('split', context({ tabs }), [], { actionsOnly: true }));
+    expect(split).toEqual(['action:removeSplit:']);
+  });
+
+  it('picks what to split with: this space’s other unsplit tabs, an address or history', () => {
+    const tabs = new Map(context().tabs);
+    tabs.set(6, { ...tabs.get(4)!, id: 6, title: 'Already split', splitViewId: 3 });
+    const ctx = context({ tabs, todayIds: [4, 6, 1] });
+    const empty = searchCommands('', ctx, [], { pickSplit: true });
+    expect(keys(empty)).toEqual(['tab:4']);
+    expect(empty[0]!.hint).toBe('Split');
+    expect(keys(searchCommands('arc.net', ctx, [], { pickSplit: true }))).toEqual(['open-url']);
+  });
+
   it('adds history that isn’t already shown, most visited first', () => {
     const history: HistoryEntry[] = [
       {

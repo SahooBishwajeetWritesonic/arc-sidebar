@@ -1,6 +1,7 @@
 import {
   Archive,
   ArrowRight,
+  Columns2,
   ArrowRightLeft,
   ChevronLeft,
   ChevronRight,
@@ -16,6 +17,7 @@ import {
   Pencil,
   Pin,
   PinOff,
+  RectangleHorizontal,
   Replace,
   RotateCcw,
   Search,
@@ -88,27 +90,35 @@ export function CommandBar({ host, sidebarOpen, placement }: CommandBarProps) {
   const [completing, setCompleting] = useState(false);
   const [actionsOnly, setActionsOnly] = useState(false);
   const [prompt, setPrompt] = useState<{ result: Result; value: string } | null>(null);
+  // An action waiting for a tab or address ("Add Split View…").
+  const [picking, setPicking] = useState<Result | null>(null);
 
-  const slash = typed.startsWith('/');
-  const actionsMode = actionsOnly || slash;
+  const slash = typed.startsWith('/') && !picking;
+  const actionsMode = (actionsOnly || slash) && !picking;
   const query = slash ? typed.slice(1) : typed;
   const history = useHistory(actionsMode ? '' : query);
   const typedAddresses = useTypedAddresses();
   const completion = useMemo(
     () =>
-      completing && !actionsMode && !prompt
+      completing && !actionsMode && !prompt && !picking
         ? completeAddress(query, [...typedAddresses, ...history])
         : null,
-    [completing, actionsMode, prompt, query, typedAddresses, history],
+    [completing, actionsMode, prompt, picking, query, typedAddresses, history],
   );
   const results = useMemo(
     () =>
-      prompt ? [] : searchCommands(query, ctx, history, { actionsOnly: actionsMode, completion }),
-    [prompt, query, ctx, history, actionsMode, completion],
+      prompt
+        ? []
+        : searchCommands(query, ctx, history, {
+            actionsOnly: actionsMode,
+            pickSplit: picking !== null,
+            completion,
+          }),
+    [prompt, picking, query, ctx, history, actionsMode, completion],
   );
 
   // The selection goes back to the top whenever what's typed changes.
-  const listKey = `${actionsMode}:${query}`;
+  const listKey = `${actionsMode}:${picking?.key}:${query}`;
   const [selection, setSelection] = useState({ listKey, index: 0 });
   const index = Math.min(selection.listKey === listKey ? selection.index : 0, results.length - 1);
   const select = (next: number) =>
@@ -158,8 +168,19 @@ export function CommandBar({ host, sidebarOpen, placement }: CommandBarProps) {
 
   function choose(result: Result | undefined) {
     if (!result) return;
-    if (result.prompt) setPrompt({ result, value: result.prompt.initial });
-    else void run(result.command);
+    if (picking?.command.type === 'action') {
+      const { command } = result;
+      if (command.type === 'switchToTab') void run({ ...picking.command, tabId: command.tabId });
+      if (command.type === 'openUrl') void run({ ...picking.command, url: command.url });
+    } else if (result.prompt) {
+      setPrompt({ result, value: result.prompt.initial });
+    } else if (result.pick) {
+      setPicking(result);
+      setActionsOnly(false);
+      setTyped('');
+    } else {
+      void run(result.command);
+    }
   }
 
   function onChange(event: ChangeEvent<HTMLInputElement>) {
@@ -191,10 +212,13 @@ export function CommandBar({ host, sidebarOpen, placement }: CommandBarProps) {
       }
     } else if (event.key === 'Escape') {
       if (prompt) setPrompt(null);
-      else host.close();
+      else if (picking) {
+        setPicking(null);
+        setTyped('');
+      } else host.close();
     } else if (event.key === 'Tab') {
       // Tab toggles searching actions only (Arc), and goes back.
-      if (!prompt) setActionsOnly(!actionsOnly);
+      if (!prompt && !picking) setActionsOnly(!actionsOnly);
     } else if (event.key === 'Backspace' && actionsOnly && !value) {
       setActionsOnly(false);
     } else {
@@ -208,7 +232,18 @@ export function CommandBar({ host, sidebarOpen, placement }: CommandBarProps) {
     event.preventDefault();
   }
 
-  const chip = prompt ? prompt.result.prompt!.label : actionsMode ? 'Actions' : null;
+  const chip = prompt
+    ? prompt.result.prompt!.label
+    : picking
+      ? picking.pick!.label
+      : actionsMode
+        ? 'Actions'
+        : null;
+  const placeholder = picking
+    ? 'Search tabs or enter URL…'
+    : actionsMode
+      ? 'Search actions…'
+      : 'Search or Enter URL…';
   const layerStyle = {
     colorScheme: scheme,
     '--command-accent': themeAccent(theme),
@@ -232,7 +267,7 @@ export function CommandBar({ host, sidebarOpen, placement }: CommandBarProps) {
             ref={input}
             className={styles.input}
             value={value}
-            placeholder={actionsMode ? 'Search actions…' : 'Search or Enter URL…'}
+            placeholder={placeholder}
             spellCheck={false}
             autoComplete="off"
             autoCapitalize="off"
@@ -292,6 +327,8 @@ const ACTION_ICONS: Record<ActionId, LucideIcon> = {
   resetTab: RotateCcw,
   replacePin: Replace,
   renameTab: Pencil,
+  splitView: Columns2,
+  removeSplit: RectangleHorizontal,
   nextSpace: ChevronRight,
   previousSpace: ChevronLeft,
   newSpace: SquarePlus,

@@ -44,6 +44,7 @@ interface ActionSpec {
   spaceId?: string;
   appearance?: Appearance;
   prompt?: Result['prompt'];
+  pick?: Result['pick'];
 }
 
 const action = (spec: ActionSpec): Result & { words: string } => ({
@@ -58,6 +59,7 @@ const action = (spec: ActionSpec): Result & { words: string } => ({
   hint: '',
   words: spec.words ?? '',
   ...(spec.prompt && { prompt: spec.prompt }),
+  ...(spec.pick && { pick: spec.pick }),
 });
 
 /** The actions that make sense now, current tab first, in the order Tab lists them. */
@@ -99,6 +101,17 @@ export function availableActions(ctx: CommandContext): (Result & { words: string
       for (const space of otherSpaces) {
         add({ action: 'moveToSpace', title: `Move to ${space.name}`, spaceId: space.id });
       }
+    }
+    // Chrome splits two tabs; the sidebar shows Today pairs.
+    if (tab.splitViewId !== undefined) {
+      add({ action: 'removeSplit', title: 'Remove Split View', words: 'separate unsplit' });
+    } else if (!pin) {
+      add({
+        action: 'splitView',
+        title: 'Add Split View…',
+        words: 'side by side',
+        pick: { label: 'Split with' },
+      });
     }
     add({ action: 'copyUrl', title: 'Copy Current URL', words: 'link address' });
     add({ action: 'duplicateTab', title: 'Duplicate Current Tab' });

@@ -14,6 +14,8 @@ export type ActionId =
   | 'resetTab'
   | 'replacePin'
   | 'renameTab'
+  | 'splitView'
+  | 'removeSplit'
   | 'nextSpace'
   | 'previousSpace'
   | 'newSpace'
@@ -44,6 +46,9 @@ export type Command =
       appearance?: Appearance;
       /** What was typed for an action that asks for a name ("Rename Current Tab…"). */
       text?: string;
+      /** The tab or address picked for an action that asks for one ("Add Split View…"). */
+      tabId?: number;
+      url?: string;
     };
 
 /** A row in the command bar. */
@@ -60,4 +65,6 @@ export interface Result {
   hint: string;
   /** An action that asks for a name first; this is what the field starts with. */
   prompt?: { label: string; initial: string };
+  /** An action that asks for a tab or an address first. */
+  pick?: { label: string };
 }

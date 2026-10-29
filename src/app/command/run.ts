@@ -13,7 +13,9 @@ import {
   renameItem,
   replacePinUrl,
   resetPin,
+  separateSplit,
   setAppearance,
+  splitTodayTabs,
   switchSpace,
   switchSpaceBy,
   unfavoriteToPinned,
@@ -22,7 +24,7 @@ import {
 import { pinOf } from '@/command/actions';
 import type { Command } from '@/command/types';
 import { useSidebar } from '@/state/sidebar';
-import { activateTab, duplicateTab, openUrl, searchWeb, useTabs } from '@/state/tabs';
+import { activateTab, duplicateTab, openInSplit, openUrl, searchWeb, useTabs } from '@/state/tabs';
 
 /**
  * Runs a command bar row in this page: the sidebar, or the bar's own frame
@@ -90,6 +92,15 @@ function runAction(command: Extract<Command, { type: 'action' }>) {
       break;
     case 'renameTab':
       if (pin && name) renameItem(pin.id, name);
+      break;
+    case 'splitView':
+      // The picked tab or page goes on the right, as Arc's "Add Split View".
+      if (!tab || pin) break;
+      if (command.tabId !== undefined) splitTodayTabs(command.tabId, tab.id, 'right');
+      else if (command.url) openInSplit(tab.id, command.url);
+      break;
+    case 'removeSplit':
+      if (tab?.splitViewId !== undefined) separateSplit(tab.splitViewId);
       break;
     case 'nextSpace':
       switchSpaceBy(1);

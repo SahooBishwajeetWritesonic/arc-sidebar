@@ -156,6 +156,8 @@ export function completeAddress(
 export interface SearchOptions {
   /** Only actions (after Tab, or a leading "/"). */
   actionsOnly?: boolean;
+  /** Picking the tab or address to split the current tab with. */
+  pickSplit?: boolean;
   /** The address the input is completing to, which becomes the first row. */
   completion?: { text: string; url: string } | null;
 }
@@ -168,9 +170,10 @@ export function searchCommands(
   query: string,
   ctx: CommandContext,
   history: readonly HistoryEntry[],
-  { actionsOnly = false, completion = null }: SearchOptions = {},
+  { actionsOnly = false, pickSplit = false, completion = null }: SearchOptions = {},
 ): Result[] {
   const text = query.trim();
+  if (pickSplit) return splitChoices(text, ctx, history);
   const actions = availableActions(ctx);
   const plain = ({ words: _words, ...result }: Result & { words: string }): Result => result;
 
@@ -253,6 +256,58 @@ export function searchCommands(
         detail: item.title ? displayUrl(item.url) : undefined,
         url: item.url,
         hint: 'Open',
+      }),
+    );
+  return results;
+}
+
+/**
+ * What the current tab can split with: this space's other Today tabs that
+ * aren't split already, a typed address, or a page from history.
+ */
+function splitChoices(text: string, ctx: CommandContext, history: readonly HistoryEntry[]) {
+  const tabs = ctx.todayIds
+    .map((id) => ctx.tabs.get(id))
+    .filter((tab) => tab && tab.id !== ctx.activeId && tab.splitViewId === undefined)
+    .map((tab): Page => ({
+      key: `tab:${tab!.id}`,
+      command: { type: 'switchToTab', tabId: tab!.id },
+      title: tab!.title,
+      url: tab!.url,
+      hint: 'Split',
+      text: `${tab!.title} ${displayUrl(tab!.url)}`,
+      tabId: tab!.id,
+    }));
+  if (!text) return tabs.slice(0, LIMIT.pages).map(strip);
+
+  const results: Result[] = [];
+  const url = typedUrl(text);
+  if (url) {
+    results.push({
+      key: 'open-url',
+      command: { type: 'openUrl', url },
+      title: displayUrl(url),
+      url,
+      hint: 'Split',
+    });
+  }
+  ranked(tabs, text)
+    .slice(0, LIMIT.pages)
+    .forEach(({ item }) => results.push(strip(item)));
+  ranked(
+    history.map((entry) => ({ ...entry, text: `${entry.title} ${displayUrl(entry.url)}` })),
+    text,
+    (a, b) => b.visitCount - a.visitCount,
+  )
+    .slice(0, LIMIT.history)
+    .forEach(({ item }) =>
+      results.push({
+        key: `history:${item.url}`,
+        command: { type: 'openUrl', url: item.url },
+        title: item.title || displayUrl(item.url),
+        detail: item.title ? displayUrl(item.url) : undefined,
+        url: item.url,
+        hint: 'Split',
       }),
     );
   return results;
