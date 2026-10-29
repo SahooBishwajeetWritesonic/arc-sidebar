@@ -78,6 +78,13 @@ export function Harness({ platform }: { platform: FakePlatform }) {
           Split the active tab with the next one
         </button>
 
+        <h2>GitHub</h2>
+        <button onClick={() => platform.openPullRequestPage()}>Open a pull request</button>
+        <button onClick={() => void platform.requestReview()}>Someone asks for a review</button>
+        <button onClick={() => void platform.mergePullRequest()}>Merge the newest</button>
+        <button onClick={() => void platform.setGitHubSignedIn(false)}>Sign out of GitHub</button>
+        <button onClick={() => void platform.setGitHubSignedIn(true)}>Sign in to GitHub</button>
+
         <h2>Archive</h2>
         <button onClick={() => platform.ageTabs(13)}>Make inactive tabs 13 hours old</button>
         <button onClick={() => void platform.runAutoArchive()}>Run auto-archive now</button>
