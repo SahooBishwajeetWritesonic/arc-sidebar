@@ -7,8 +7,8 @@ import type { Command } from '@/command/types';
 export type CommandBarMessage =
   /** Background → sidebars: is this window's sidebar open, and does it have focus? */
   | { kind: 'command-bar:ping'; windowId: number }
-  /** Background → sidebar: open or close the bar inside the sidebar. */
-  | { kind: 'command-bar:toggle'; windowId: number; requestId: string }
+  /** Background → sidebar: open or close the bar there (with `address` to edit the tab's). */
+  | { kind: 'command-bar:toggle'; windowId: number; requestId: string; address?: string }
   /** Bar → sidebar: run this. */
   | { kind: 'command-bar:run'; windowId: number; command: Command }
   /** Bar → background: the token it was opened with, to prove the page didn't frame it. */
@@ -24,12 +24,15 @@ export interface HelloReply {
   ok: boolean;
   windowId?: number;
   sidebarOpen?: boolean;
+  /** Opened to edit the tab's address (Arc's ⌘L), starting from this. */
+  address?: string;
 }
 
 export interface CommandBarRequest {
   id: string;
   windowId: number;
   at: number;
+  address?: string;
 }
 
 /** How long a request waits for a sidebar that is still starting. */

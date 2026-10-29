@@ -2,15 +2,18 @@ import { browser } from 'wxt/browser';
 import { runInSidebar } from '@/app/command/sidebar';
 import { REQUEST_TTL_MS, type CommandBarMessage, type PingReply } from '@/platform/command-bar';
 import { commandBarRequestItem } from '@/platform/storage-items';
-import { toggleCommandBar } from '@/state/ui';
+import { editAddress, setCommandBar, toggleCommandBar, useUi } from '@/state/ui';
 
 /** When the sidebar has focus, the shortcut opens the bar here rather than over the page. */
 export function serveCommandBar(windowId: number): () => void {
   const handled = new Set<string>();
-  const toggleOnce = (requestId: string) => {
+  const toggleOnce = (requestId: string, address?: string) => {
     if (handled.has(requestId)) return;
     handled.add(requestId);
-    toggleCommandBar();
+    if (address === undefined) toggleCommandBar();
+    // The same shortcut again closes it, as Arc's ⌘L does.
+    else if (useUi.getState().commandBar) setCommandBar(false);
+    else editAddress(address);
   };
 
   const listener = (
@@ -24,7 +27,7 @@ export function serveCommandBar(windowId: number): () => void {
         sendResponse({ focused: document.hasFocus() } satisfies PingReply);
         break;
       case 'command-bar:toggle':
-        toggleOnce(message.requestId);
+        toggleOnce(message.requestId, message.address);
         sendResponse(true);
         break;
       case 'command-bar:run':
@@ -38,7 +41,7 @@ export function serveCommandBar(windowId: number): () => void {
   // Opened by the shortcut on a page Chrome protects: show the bar it asked for.
   void commandBarRequestItem.getValue().then((request) => {
     if (request?.windowId === windowId && Date.now() - request.at < REQUEST_TTL_MS) {
-      toggleOnce(request.id);
+      toggleOnce(request.id, request.address);
     }
   });
   return () => browser.runtime.onMessage.removeListener(listener);

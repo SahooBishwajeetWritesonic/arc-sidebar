@@ -1,9 +1,10 @@
 import { browser, type Browser } from 'wxt/browser';
+import { addressLabel } from '@/model/urls';
 import type { CommandBarMessage, HelloReply, PingReply } from '@/platform/command-bar';
 import { commandBarRequestItem } from '@/platform/storage-items';
 
 /** Tokens handed to overlays not yet open, by tab: the frame proves itself with one. */
-const pending = new Map<number, { token: string; sidebarOpen: boolean }>();
+const pending = new Map<number, { token: string; sidebarOpen: boolean; address?: string }>();
 
 const send = (message: CommandBarMessage) => browser.runtime.sendMessage(message);
 
@@ -14,25 +15,31 @@ export function canCoverPage(url: string | undefined): boolean {
 }
 
 /**
- * Over the page as in Arc, else in the sidebar. A closed sidebar only opens
- * synchronously, inside the shortcut's gesture.
+ * Over the page as in Arc, else in the sidebar. A closed sidebar only opens synchronously,
+ * inside the shortcut's gesture. `editAddress` is Arc's ⌘L.
  */
-export function onCommandBarShortcut(tab: Browser.tabs.Tab | undefined) {
+export function onCommandBarShortcut(
+  tab: Browser.tabs.Tab | undefined,
+  { editAddress = false } = {},
+) {
   if (tab?.id === undefined) return;
+  const url = tab.url ?? '';
+  // A new tab's address isn't worth editing: start empty, still loading in this tab.
+  const address = editAddress ? (addressLabel(url) ? url : '') : undefined;
   if (!canCoverPage(tab.url)) {
     void browser.sidePanel.open({ windowId: tab.windowId });
-    void toggleInSidebar(tab.windowId);
+    void toggleInSidebar(tab.windowId, address);
     return;
   }
-  void coverPage(tab.id, tab.windowId);
+  void coverPage(tab.id, tab.windowId, address);
 }
 
-async function coverPage(tabId: number, windowId: number) {
+async function coverPage(tabId: number, windowId: number, address?: string) {
   const sidebar = await pingSidebar(windowId);
-  if (sidebar?.focused) return void toggleInSidebar(windowId);
+  if (sidebar?.focused) return void toggleInSidebar(windowId, address);
 
   const token = crypto.randomUUID();
-  pending.set(tabId, { token, sidebarOpen: sidebar !== null });
+  pending.set(tabId, { token, sidebarOpen: sidebar !== null, address });
   const message: CommandBarMessage = { kind: 'command-bar:overlay', token };
   try {
     await browser.tabs.sendMessage(tabId, message);
@@ -46,7 +53,7 @@ async function coverPage(tabId: number, windowId: number) {
       await browser.tabs.sendMessage(tabId, message);
     } catch {
       pending.delete(tabId);
-      if (sidebar) await toggleInSidebar(windowId);
+      if (sidebar) await toggleInSidebar(windowId, address);
     }
   }
 }
@@ -62,10 +69,10 @@ async function pingSidebar(windowId: number): Promise<PingReply | null> {
 }
 
 /** Also stored, so a sidebar still starting picks the request up. */
-async function toggleInSidebar(windowId: number) {
+async function toggleInSidebar(windowId: number, address?: string) {
   const requestId = crypto.randomUUID();
-  await commandBarRequestItem.setValue({ id: requestId, windowId, at: Date.now() });
-  await send({ kind: 'command-bar:toggle', windowId, requestId }).catch(() => {});
+  await commandBarRequestItem.setValue({ id: requestId, windowId, at: Date.now(), address });
+  await send({ kind: 'command-bar:toggle', windowId, requestId, address }).catch(() => {});
 }
 
 /** The bar's frame checking in: only one the overlay script opened gets an answer. */
@@ -77,5 +84,10 @@ export function onCommandBarHello(
   const expected = tabId === undefined ? undefined : pending.get(tabId);
   if (!expected || expected.token !== token || sender.frameId === 0) return { ok: false };
   pending.delete(tabId!);
-  return { ok: true, windowId: sender.tab!.windowId, sidebarOpen: expected.sidebarOpen };
+  return {
+    ok: true,
+    windowId: sender.tab!.windowId,
+    sidebarOpen: expected.sidebarOpen,
+    address: expected.address,
+  };
 }

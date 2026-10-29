@@ -31,7 +31,7 @@ async function start() {
   };
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <CommandPage host={host} sidebarOpen={hello.sidebarOpen ?? false} />
+      <CommandPage host={host} sidebarOpen={hello.sidebarOpen ?? false} address={hello.address} />
     </StrictMode>,
   );
 }
