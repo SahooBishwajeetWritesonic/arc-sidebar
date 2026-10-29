@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { SpaceTheme } from '@/model/types';
 import { contrast, hexToRgb, rgbToHex, rotateHue } from './color';
-import { DEFAULT_PLATE, harmonize, readableScheme, themeLook } from './engine';
+import {
+  DEFAULT_ACCENT,
+  DEFAULT_PLATE,
+  harmonize,
+  readableScheme,
+  themeAccent,
+  themeLook,
+} from './engine';
 
 const theme = (colors: string[], intensity = 0.5): SpaceTheme => ({
   colors,
@@ -78,5 +85,18 @@ describe('readableScheme', () => {
 
   it('switches to dark text on mid-grey, where white only reaches about 3.6:1', () => {
     expect(readableScheme([128, 128, 128], 'dark')).toBe('light');
+  });
+});
+
+describe('themeAccent', () => {
+  it('keeps a dark enough colour and darkens a pale one until white text reads on it', () => {
+    expect(themeAccent(theme(['#1d4ed8']))).toBe('#1d4ed8');
+    const pale = themeAccent(theme(['#ffd1dc']));
+    expect(contrast(hexToRgb(pale), [255, 255, 255])).toBeGreaterThanOrEqual(4.5);
+    expect(pale).not.toBe('#ffd1dc');
+  });
+
+  it("uses Arc's highlight for a space without a theme", () => {
+    expect(themeAccent(undefined)).toBe(DEFAULT_ACCENT);
   });
 });

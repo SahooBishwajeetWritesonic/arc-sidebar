@@ -1,5 +1,14 @@
 import type { Harmony, SpaceTheme } from '@/model/types';
-import { contrast, hexToRgb, mix, rgbToHex, rotateHue, type Rgb } from './color';
+import {
+  contrast,
+  hexToRgb,
+  hslToRgb,
+  mix,
+  rgbToHex,
+  rgbToHsl,
+  rotateHue,
+  type Rgb,
+} from './color';
 
 /**
  * Space themes, after Arc's model (layered gradients over a base, research/05)
@@ -89,6 +98,23 @@ export function themeLook(theme: SpaceTheme | undefined, preferred: Scheme): The
     swatch: c0,
     grain: theme.grain,
   };
+}
+
+/** Arc's own highlight, for spaces without a theme. */
+export const DEFAULT_ACCENT = '#3970c5';
+
+/**
+ * The theme's first colour, darkened until white text reads on it (4.5:1), for highlights
+ * such as the command bar's selected row, which Arc tints with the space.
+ */
+export function themeAccent(theme: SpaceTheme | undefined): string {
+  const first = theme?.colors[0];
+  if (!first) return DEFAULT_ACCENT;
+  const white: Rgb = [255, 255, 255];
+  const [h, s, start] = rgbToHsl(hexToRgb(first));
+  let l = start;
+  while (l > 0 && contrast(hslToRgb([h, s, l]), white) < 4.5) l -= 0.01;
+  return rgbToHex(hslToRgb([h, s, Math.max(l, 0)]));
 }
 
 export function readableScheme(surface: Rgb, preferred: Scheme): Scheme {
