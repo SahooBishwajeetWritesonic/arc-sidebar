@@ -358,7 +358,17 @@ export class FakePlatform implements Platform {
 
   faviconUrl(pageUrl: string) {
     if (!/^https?:/.test(pageUrl)) return undefined;
-    return `https://www.google.com/s2/favicons?domain=${new URL(pageUrl).hostname}&sz=32`;
+    const { hostname } = new URL(pageUrl);
+    // Google's GitHub icon is on a white square; Chrome keeps GitHub's own round mark, white in
+    // dark mode. The harness's scheme is the one its controls chose, else the system's.
+    if (hostname === 'github.com') {
+      const chosen = getComputedStyle(document.documentElement).colorScheme;
+      const dark =
+        chosen === 'dark' ||
+        (chosen !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+      return `https://github.githubassets.com/favicons/favicon${dark ? '-dark' : ''}.png`;
+    }
+    return `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
   }
 
   // Simulation helpers for the harness controls
