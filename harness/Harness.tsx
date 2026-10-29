@@ -1,5 +1,6 @@
-import { useEffect, useState, type CSSProperties } from 'react';
-import { CLOSE_MESSAGE } from '@/platform/command-bar';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { CLOSE_MESSAGE, type SwitcherPost } from '@/platform/command-bar';
+import { trackModifiers } from '@/platform/modifiers';
 import { startingAppearance, type FakePlatform } from './fake-platform';
 import { morePages } from './fixtures';
 import styles from './harness.module.css';
@@ -14,18 +15,41 @@ export function Harness({ platform }: { platform: FakePlatform }) {
   });
   const [page, setPage] = useState(0);
   const [commandBar, setCommandBar] = useState(false);
+  const [switcher, setSwitcher] = useState<'loading' | 'shown' | null>(null);
+  const switcherFrame = useRef<HTMLIFrameElement>(null);
+  const [held] = useState(() => trackModifiers(window));
 
-  // ⌥T over the "page" opens the command bar over it, as the extension's shortcut does.
+  // ⌥T and ⌃. stand in for the command bar and recent-tabs shortcuts. This page plays the
+  // overlay script's part, watching the keys until the list is drawn.
   useEffect(() => {
+    const post = (message: SwitcherPost) =>
+      switcherFrame.current?.contentWindow?.postMessage(message, '*');
     const onKey = (event: KeyboardEvent) => {
       if (event.altKey && event.code === 'KeyT') {
         event.preventDefault();
         setCommandBar((open) => !open);
       }
+      if (event.ctrlKey && event.code === 'Period') {
+        event.preventDefault();
+        if (switcherFrame.current) post({ arcSwitcher: 'next' });
+        else setSwitcher('loading');
+      }
     };
     const onMessage = (event: MessageEvent) => {
-      const data = event.data as Partial<typeof CLOSE_MESSAGE> | null;
-      if (data?.arcCommandBar === CLOSE_MESSAGE.arcCommandBar) setCommandBar(false);
+      const data = event.data as
+        | (Partial<typeof CLOSE_MESSAGE> & Partial<SwitcherPost> & { harnessSwitcher?: string })
+        | null;
+      const fromSwitcher = event.source === switcherFrame.current?.contentWindow;
+      if (data?.arcCommandBar === CLOSE_MESSAGE.arcCommandBar) {
+        if (fromSwitcher) setSwitcher(null);
+        else setCommandBar(false);
+      }
+      if (fromSwitcher && data?.arcSwitcher === 'ready') {
+        const stillHeld = held();
+        post({ arcSwitcher: 'held', held: stillHeld });
+        if (stillHeld) setSwitcher('shown');
+      }
+      if (fromSwitcher && data?.harnessSwitcher === 'again') post({ arcSwitcher: 'next' });
     };
     addEventListener('keydown', onKey);
     addEventListener('message', onMessage);
@@ -34,6 +58,11 @@ export function Harness({ platform }: { platform: FakePlatform }) {
       removeEventListener('message', onMessage);
     };
   }, []);
+
+  // Shown, the list takes the keyboard (a hidden frame can't take focus).
+  useEffect(() => {
+    if (switcher === 'shown') switcherFrame.current?.focus();
+  }, [switcher]);
 
   // The controls follow the chosen scheme; the panel follows the Appearance
   // setting, which this sets through the real service.
@@ -64,6 +93,7 @@ export function Harness({ platform }: { platform: FakePlatform }) {
 
         <h2>Command bar</h2>
         <button onClick={() => setCommandBar(true)}>Open over the page (⌥T)</button>
+        <p>Recent tabs (Arc’s Ctrl-Tab): hold ⌃ and press . over the page.</p>
 
         <h2>Tabs (as if from Chrome)</h2>
         <button onClick={openTab}>Open tab</button>
@@ -118,6 +148,15 @@ export function Harness({ platform }: { platform: FakePlatform }) {
 
       {commandBar && (
         <iframe title="Command bar" className={styles.commandFrame} src="/command.html" />
+      )}
+      {switcher && (
+        <iframe
+          ref={switcherFrame}
+          title="Recent tabs"
+          className={styles.commandFrame}
+          src="/command.html?switcher"
+          style={{ visibility: switcher === 'shown' ? undefined : 'hidden' }}
+        />
       )}
 
       {/* Mimics Chrome's panel header; the frame gives the panel its own viewport. */}
