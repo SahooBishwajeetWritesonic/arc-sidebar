@@ -1,9 +1,17 @@
 import { motion } from 'motion/react';
-import type { CSSProperties, MouseEvent, PointerEvent, ReactNode, Ref } from 'react';
+import {
+  useContext,
+  type CSSProperties,
+  type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import { dropOn } from '@/app/actions';
 import { beginPress, useDrag, type Ghost } from '@/app/drag/drag';
 import type { DragSource } from '@/app/drag/targets';
 import { fade, spring } from '@/app/motion';
+import { LayoutKey } from './layout-key';
 import { RowMenu, type MenuEntry } from './RowMenu';
 import styles from './rows.module.css';
 
@@ -48,6 +56,7 @@ export function Row({
   children,
   ref,
 }: RowProps) {
+  const layoutKey = useContext(LayoutKey);
   const dropInto = useDrag(
     (state) => state.target?.section === 'pinned' && state.target.into === String(id),
   );
@@ -64,6 +73,7 @@ export function Row({
     <motion.li
       ref={ref}
       layout="position"
+      layoutDependency={layoutKey}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: fade }}

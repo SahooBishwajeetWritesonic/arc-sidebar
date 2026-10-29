@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useMemo } from 'react';
 import { clearToday } from '@/app/actions';
 import { spring } from '@/app/motion';
+import { LayoutKey } from '@/app/rows/layout-key';
 import styles from '@/app/rows/rows.module.css';
 import { flattenSpace } from '@/model/tree';
 import { useSidebar } from '@/state/sidebar';
@@ -21,22 +22,26 @@ export function Pinned({ spaceId }: { spaceId: string }) {
     () => flattenSpace(model, spaceId, (item) => bindings[item.id] === activeId),
     [model, spaceId, bindings, activeId],
   );
+  const layoutKey = rows.map(({ item, depth }) => `${item.id}:${depth}`).join();
 
   return (
     <section aria-label="Pinned">
       <ul role="listbox" aria-label="Pinned tabs" className={styles.list}>
-        <AnimatePresence initial={false} mode="popLayout">
-          {rows.map(({ item, depth }) =>
-            item.kind === 'folder' ? (
-              <FolderRow key={item.id} itemId={item.id} depth={depth} />
-            ) : (
-              <PinRow key={item.id} itemId={item.id} depth={depth} />
-            ),
-          )}
-        </AnimatePresence>
+        <LayoutKey value={layoutKey}>
+          <AnimatePresence initial={false} mode="popLayout">
+            {rows.map(({ item, depth }) =>
+              item.kind === 'folder' ? (
+                <FolderRow key={item.id} itemId={item.id} depth={depth} />
+              ) : (
+                <PinRow key={item.id} itemId={item.id} depth={depth} />
+              ),
+            )}
+          </AnimatePresence>
+        </LayoutKey>
       </ul>
       <motion.div
         layout="position"
+        layoutDependency={layoutKey}
         transition={{ layout: spring.row }}
         className={styles.divider}
         data-can-clear={canClear || undefined}
