@@ -35,6 +35,12 @@
   --accessory-hover: light-dark(rgb(0 0 0 / 0.07), rgb(255 255 255 / 0.1));
   --bar-hover: light-dark(rgb(0 0 0 / 0.05), rgb(255 255 255 / 0.078));
   --separator: light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.14));
+  /* Split rows: each tab a small pill inside the row's pill. */
+  --split-pane-radius: 8px;
+  --split-pane: light-dark(rgb(255 255 255 / 0.4), rgb(250 251 255 / 0.07));
+  --split-pane-hover: light-dark(rgb(255 255 255 / 0.62), rgb(250 251 255 / 0.12));
+  --split-selected: light-dark(rgb(255 255 255 / 0.35), rgb(250 251 255 / 0.2));
+  --split-pane-selected: light-dark(rgb(255 255 255 / 0.92), rgb(250 251 255 / 0.07));
   --focus-ring: #ffd60a; /* Arc's keyboard focus is a yellow ring */
   --slash: light-dark(rgb(0 0 0 / 0.3), rgb(255 255 255 / 0.3));
 

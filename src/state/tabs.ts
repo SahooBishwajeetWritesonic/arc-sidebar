@@ -212,16 +212,28 @@ export function closeTab(id: number) {
  * and the row goes at once. Returns false if the tab is already gone.
  */
 export function leaveTab(id: number): boolean {
+  return leaveTabs([id]).length > 0;
+}
+
+/**
+ * The same for several tabs at once (a split row's two): selection moves to
+ * the nearest row that stays. Returns the tabs that were still open.
+ */
+export function leaveTabs(ids: readonly number[]): number[] {
   const state = useTabs.getState();
-  if (!state.tabs.has(id)) return false;
-  if (state.activeId === id) {
-    const ids = selectTodayIds(state);
-    const index = ids.indexOf(id);
-    const next = ids[index + 1] ?? ids[index - 1];
+  const present = ids.filter((id) => state.tabs.has(id));
+  if (!present.length) return present;
+  if (state.activeId !== null && present.includes(state.activeId)) {
+    const today = selectTodayIds(state);
+    const index = today.indexOf(state.activeId);
+    const stays = (id: number | undefined) => id !== undefined && !present.includes(id);
+    const next =
+      today.slice(index + 1).find(stays) ??
+      today.slice(0, Math.max(index, 0)).reverse().find(stays);
     if (next !== undefined) activateTab(next);
   }
-  forgetTab(id);
-  return true;
+  forgetTabs(present);
+  return present;
 }
 
 /** Drops tabs being closed from the panel before Chrome confirms it, in one update. */

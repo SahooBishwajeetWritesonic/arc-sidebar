@@ -18,10 +18,11 @@ import {
   activateTab,
   forgetTab,
   forgetTabs,
-  leaveTab,
+  leaveTabs,
   openNewTab,
   selectTodayIds,
   splitTabs,
+  unsplit,
   useTabs,
 } from '@/state/tabs';
 import { startEditing } from '@/state/ui';
@@ -262,13 +263,23 @@ function archiveEntry(tab: TabInfo, reason: ArchiveEntry['reason'], batchId: str
 
 /** Closing a Today tab archives it, as in Arc. */
 export function closeTodayTab(tabId: number) {
-  const tab = useTabs.getState().tabs.get(tabId);
+  closeTodayTabs([tabId]);
+}
+
+/** Closes Today tabs together (a split row's two), archiving them as one batch. */
+export function closeTodayTabs(tabIds: readonly number[]) {
+  const { tabs } = useTabs.getState();
   const { windowId } = useSidebar.getState();
-  if (!tab || windowId === null || !leaveTab(tabId)) return;
+  if (windowId === null) return;
+  const closing = leaveTabs(tabIds)
+    .map((id) => tabs.get(id))
+    .filter((tab): tab is TabInfo => tab !== undefined);
+  if (!closing.length) return;
+  const batchId = newId();
   dispatch({
     type: 'archiveTabs',
     windowId,
-    tabs: [{ tabId, entry: archiveEntry(tab, 'closed', newId()) }],
+    tabs: closing.map((tab) => ({ tabId: tab.id, entry: archiveEntry(tab, 'closed', batchId) })),
   });
 }
 
@@ -528,4 +539,20 @@ export function splitTodayTabs(tabId: number, withTabId: number, side: 'left' | 
   const [left, right] = side === 'left' ? [tabId, withTabId] : [withTabId, tabId];
   splitTabs(left, right);
   activateTab(tabId);
+}
+
+/** Arc's "Separate All Tabs": the two go back to being rows of their own. */
+export function separateSplit(splitViewId: number) {
+  unsplit(splitViewId);
+}
+
+export function splitOf(tabId: number): number[] {
+  const { tabs } = useTabs.getState();
+  const split = tabs.get(tabId)?.splitViewId;
+  if (split === undefined) return [tabId];
+  return [...tabs.values()].filter((tab) => tab.splitViewId === split).map((tab) => tab.id);
+}
+
+export function moveTabsToSpace(tabIds: readonly number[], spaceId: string) {
+  for (const tabId of tabIds) moveTabToSpace(tabId, spaceId);
 }

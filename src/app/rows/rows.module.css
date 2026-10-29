@@ -168,6 +168,49 @@
   font-weight: 600;
 }
 
+/* A split row: one pill holding a small pill per tab. From a reference: 4 pt padding and gap,
+   8 pt corners, small pills white 7% above the big one. Titles end in an ellipsis. */
+.row[data-nav-row='split'] .plate {
+  gap: 4px;
+  padding: 4px;
+}
+
+.row[data-nav-row='split'][data-selected] .plate {
+  background: var(--split-selected);
+  box-shadow: none;
+}
+
+.pane {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding-inline: 6px 2px;
+  border-radius: var(--split-pane-radius);
+  background: var(--split-pane);
+}
+
+.row[data-selected] .pane {
+  background: var(--split-pane-selected);
+  box-shadow:
+    0 0 0 0.5px var(--row-selected-edge),
+    0 1px 2px var(--row-selected-shadow);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pane:hover,
+  .row[data-selected] .pane:hover {
+    background: var(--split-pane-hover);
+  }
+}
+
+.title.paneTitle,
+.title.paneTitle:dir(rtl) {
+  mask-image: none;
+  text-overflow: ellipsis;
+}
+
 .edit {
   flex: 1;
   min-width: 0;

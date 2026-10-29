@@ -4,9 +4,11 @@ import {
   clearToday,
   closePin,
   closeTodayTab,
+  closeTodayTabs,
   moveByKeyboard,
   pressPin,
   setFolderCollapsed,
+  splitOf,
   switchSpace,
   switchSpaceBy,
 } from '@/app/actions';
@@ -31,7 +33,7 @@ import { ToastLayer } from './toast/ToastLayer';
 
 /** Enter on a row does what a click does. */
 function press(kind: string, id: string) {
-  if (kind === 'tab') activateTab(Number(id));
+  if (kind === 'tab' || kind === 'split') activateTab(Number(id));
   if (kind === 'pin') pressPin(id);
   if (kind === 'newtab') setCommandBar(true);
   if (kind === 'folder') {
@@ -43,6 +45,7 @@ function press(kind: string, id: string) {
 /** Delete closes a tab (pinned tabs keep their pin). */
 function remove(kind: string, id: string) {
   if (kind === 'tab') closeTodayTab(Number(id));
+  if (kind === 'split') closeTodayTabs(splitOf(Number(id)));
   if (kind === 'pin') closePin(id);
 }
 
