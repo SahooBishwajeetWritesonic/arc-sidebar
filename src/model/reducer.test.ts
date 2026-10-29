@@ -425,3 +425,19 @@ describe('importSidebar', () => {
     expect(Object.keys(model.items)).toHaveLength(FAVORITES_LIMIT);
   });
 });
+
+describe('placement rules (found by the torture test)', () => {
+  it('unpinning puts the tab back in its own window’s Today', () => {
+    // Tab 7 lives in window 2; the unpin comes from window 1's panel.
+    let session = applySessionIntent(
+      { ...emptySession(), orders: { '1': [5], '2': [7] } },
+      pin('p7', 'a0'),
+    );
+    session = applySessionIntent(
+      session,
+      { type: 'unpin', itemId: 'p7', windowId: 1, spaceId: S },
+      (tabId) => (tabId === 7 ? 2 : undefined),
+    );
+    expect(session.orders).toEqual({ '1': [5], '2': [7] });
+  });
+});

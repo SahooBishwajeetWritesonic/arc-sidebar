@@ -206,7 +206,7 @@ export class SidebarService {
     const model = applyIntent(this.model, intent);
     // An import is big enough to always keep a backup of what came before.
     if (model !== this.model) this.writeModel(model, intent.type === 'importSidebar');
-    const session = applySessionIntent(this.session, intent);
+    const session = applySessionIntent(this.session, intent, (id) => this.details[id]?.windowId);
     if (session !== this.session) this.writeSession(session);
     const archive = applyArchiveIntent(this.archive, intent);
     if (archive !== this.archive) this.writeArchive(archive);

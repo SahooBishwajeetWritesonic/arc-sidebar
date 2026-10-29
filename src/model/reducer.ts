@@ -254,8 +254,15 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
   }
 }
 
-/** The session part of an intent that a panel can predict. */
-export function applySessionIntent(session: SessionState, intent: Intent): SessionState {
+/**
+ * The session part of an intent that a panel can predict. `windowOf` is a tab's
+ * window when known: the service always knows; a panel knows only its own tabs.
+ */
+export function applySessionIntent(
+  session: SessionState,
+  intent: Intent,
+  windowOf: (tabId: number) => number | undefined = () => undefined,
+): SessionState {
   switch (intent.type) {
     case 'pinTab': {
       const orders = Object.fromEntries(
@@ -276,7 +283,7 @@ export function applySessionIntent(session: SessionState, intent: Intent): Sessi
       if (tabId === undefined) return session;
       const { [intent.itemId]: _unbound, ...bindings } = session.bindings;
       if (intent.type === 'closePin') return { ...session, bindings };
-      const key = String(intent.windowId);
+      const key = String(windowOf(tabId) ?? intent.windowId);
       const order = session.orders[key] ?? [];
       const placed =
         intent.todayBeforeTabId === undefined
@@ -340,15 +347,18 @@ export function applySessionIntent(session: SessionState, intent: Intent): Sessi
         if (removed.has(itemId)) released.push(tabId);
         else bindings[itemId] = tabId;
       }
-      for (const tabId of released) tabSpaces[tabId] = intent.fallbackSpaceId;
-      const key = String(intent.windowId);
-      const order = released.reduceRight(withTabOnTop, session.orders[key] ?? []);
+      const orders = { ...session.orders };
+      for (const tabId of [...released].reverse()) {
+        tabSpaces[tabId] = intent.fallbackSpaceId;
+        const key = String(windowOf(tabId) ?? intent.windowId);
+        orders[key] = withTabOnTop(orders[key] ?? [], tabId);
+      }
       return {
         ...session,
         lastActive,
         bindings,
         tabSpaces,
-        orders: released.length ? { ...session.orders, [key]: order } : session.orders,
+        orders: released.length ? orders : session.orders,
         activeSpaces: Object.fromEntries(
           Object.entries(session.activeSpaces).map(([w, space]) => [w, move(space)]),
         ),
