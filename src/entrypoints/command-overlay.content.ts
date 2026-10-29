@@ -1,10 +1,16 @@
-import { CLOSE_MESSAGE, type CommandBarMessage } from '@/platform/command-bar';
+import {
+  CLOSE_MESSAGE,
+  type CommandBarMessage,
+  type SwitcherPost,
+  type SwitcherReply,
+} from '@/platform/command-bar';
 import type { NoteMessage } from '@/platform/messages';
+import { trackModifiers } from '@/platform/modifiers';
 import { showPageNote } from '@/platform/page-note';
 
 /**
- * Kept tiny: it runs in every page. The bar's frame goes in the top layer, in a closed
- * shadow root, so the page's styles and scripts can't reach it.
+ * Kept tiny: it runs in every page. Frames go in a closed shadow root, out of reach.
+ * Until the recent tabs' frame has the keyboard, this page watches the shortcut's keys.
  */
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -16,8 +22,11 @@ export default defineContentScript({
     if (scope.arcCommandOverlay) return;
     scope.arcCommandOverlay = true;
     let close: (() => void) | undefined;
+    // The recent tabs' frame, while they're the ones showing.
+    let switcher: HTMLIFrameElement | undefined;
+    const held = trackModifiers(window);
 
-    function open(token: string) {
+    function open(token: string, asSwitcher = false) {
       const previous = document.activeElement;
       const host = document.createElement('div');
       host.setAttribute('popover', 'manual');
@@ -46,16 +55,21 @@ export default defineContentScript({
       host.attachShadow({ mode: 'closed' }).append(frame);
 
       const onMessage = (event: MessageEvent) => {
-        const data = event.data as Partial<typeof CLOSE_MESSAGE> | null;
-        if (
-          event.source === frame.contentWindow &&
-          data?.arcCommandBar === CLOSE_MESSAGE.arcCommandBar
-        ) {
-          close?.();
+        if (event.source !== frame.contentWindow) return;
+        const data = event.data as Partial<typeof CLOSE_MESSAGE> & Partial<SwitcherPost>;
+        if (data?.arcCommandBar === CLOSE_MESSAGE.arcCommandBar) close?.();
+        if (data?.arcSwitcher === 'ready') {
+          // Let go while it loaded, it switches without ever showing.
+          const reply: SwitcherPost = { arcSwitcher: 'held', held: held() };
+          frame.contentWindow?.postMessage(reply, '*');
+          if (!reply.held) return;
+          frame.style.visibility = '';
+          frame.focus();
         }
       };
       close = () => {
         close = undefined;
+        switcher = undefined;
         removeEventListener('message', onMessage);
         host.remove();
         if (previous instanceof HTMLElement) previous.focus({ preventScroll: true });
@@ -63,7 +77,10 @@ export default defineContentScript({
       addEventListener('message', onMessage);
       (document.body ?? document.documentElement).append(host);
       host.showPopover();
-      frame.focus();
+      if (!asSwitcher) return frame.focus();
+      // Hidden, keyboard still here to see the keys let go, until the list is drawn.
+      switcher = frame;
+      frame.style.visibility = 'hidden';
     }
 
     browser.runtime.onMessage.addListener(
@@ -74,11 +91,27 @@ export default defineContentScript({
           return;
         }
         if (message?.kind !== 'command-bar:overlay') return;
+        if (message.switcher) {
+          sendResponse(onSwitcher(message.token) satisfies SwitcherReply);
+          return;
+        }
         if (close) close();
         else open(message.token);
         sendResponse(true);
       },
     );
+    function onSwitcher(token: string): SwitcherReply {
+      if (switcher) {
+        switcher.contentWindow?.postMessage({ arcSwitcher: 'next' } satisfies SwitcherPost, '*');
+        return 'next';
+      }
+      // Let go already: no list, just the previous tab.
+      if (!held()) return 'quick';
+      close?.();
+      open(token, true);
+      return 'opened';
+    }
+
     ctx.onInvalidated(() => {
       close?.();
       scope.arcCommandOverlay = false;

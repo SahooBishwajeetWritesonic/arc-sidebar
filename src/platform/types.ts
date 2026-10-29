@@ -99,6 +99,8 @@ export interface Platform {
   setMuted(tabId: number, muted: boolean): void;
   faviconUrl(pageUrl: string): string | undefined;
 
+  /** The window's tabs, most recently used first (Chrome's lastAccessed). */
+  recentTabs(windowId: number): Promise<number[]>;
   searchHistory(text: string): Promise<HistoryEntry[]>;
   /** Opens `url` in a new tab, which lands at the top of Today. */
   openUrl(windowId: number, url: string): void;

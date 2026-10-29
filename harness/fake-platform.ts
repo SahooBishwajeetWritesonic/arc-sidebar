@@ -243,6 +243,11 @@ export class FakePlatform implements Platform {
     this.patch(tabId, { muted });
   }
 
+  async recentTabs() {
+    const at = (id: number) => this.accessed.get(id) ?? 0;
+    return [...this.tabs].sort((a, b) => at(b.id) - at(a.id)).map((tab) => tab.id);
+  }
+
   async searchHistory(text: string) {
     await new Promise((resolve) => setTimeout(resolve, 4)); // like chrome.history
     const query = text.toLowerCase();

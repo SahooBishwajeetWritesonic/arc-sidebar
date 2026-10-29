@@ -1,7 +1,7 @@
 import { browser, type Browser } from 'wxt/browser';
 import type { Command } from '@/command/types';
 import type { CommandBarMessage } from '@/platform/command-bar';
-import { onCommandBarShortcut } from './command-bar';
+import { onCommandBarShortcut, onRecentTabsShortcut } from './command-bar';
 import { copyFromShortcut, showNote } from './copy';
 import { openLittleArc } from './peek';
 import type { SidebarService } from './service';
@@ -37,6 +37,8 @@ async function run(command: string, tab: Browser.tabs.Tab, tabId: number, servic
         );
     case 'little-arc':
       return openLittleArc(windowId);
+    case 'recent-tabs':
+      return onRecentTabsShortcut(tab);
     case 'next-tab':
     case 'previous-tab':
       return service.stepTab(windowId, tabId, command === 'next-tab' ? 1 : -1);

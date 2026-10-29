@@ -1,10 +1,18 @@
 import { browser, type Browser } from 'wxt/browser';
 import { addressLabel } from '@/model/urls';
-import type { CommandBarMessage, HelloReply, PingReply } from '@/platform/command-bar';
+import type {
+  CommandBarMessage,
+  HelloReply,
+  PingReply,
+  SwitcherReply,
+} from '@/platform/command-bar';
 import { commandBarRequestItem } from '@/platform/storage-items';
 
 /** Tokens handed to overlays not yet open, by tab: the frame proves itself with one. */
-const pending = new Map<number, { token: string; sidebarOpen: boolean; address?: string }>();
+const pending = new Map<
+  number,
+  { token: string; sidebarOpen: boolean; address?: string; switcher?: boolean }
+>();
 
 const send = (message: CommandBarMessage) => browser.runtime.sendMessage(message);
 
@@ -32,6 +40,33 @@ export function onCommandBarShortcut(
     return;
   }
   void coverPage(tab.id, tab.windowId, address);
+}
+
+/**
+ * Arc's Ctrl-Tab (Chrome keeps Ctrl+Tab, so it's a shortcut of your own). A quick press,
+ * let go before the list shows, switches to the previous tab, as in Arc.
+ */
+export async function onRecentTabsShortcut(tab: Browser.tabs.Tab) {
+  if (tab.id === undefined) return;
+  if (!canCoverPage(tab.url)) return switchToPrevious(tab.windowId);
+  const token = crypto.randomUUID();
+  pending.set(tab.id, { token, sidebarOpen: false, switcher: true });
+  const message: CommandBarMessage = { kind: 'command-bar:overlay', token, switcher: true };
+  const ask = () => browser.tabs.sendMessage(tab.id!, message) as Promise<SwitcherReply>;
+  const reply = await ask().catch(() =>
+    browser.scripting
+      .executeScript({ target: { tabId: tab.id! }, files: ['/content-scripts/command-overlay.js'] })
+      .then(ask)
+      .catch(() => 'quick' as const),
+  );
+  if (reply !== 'opened') pending.delete(tab.id);
+  if (reply === 'quick') await switchToPrevious(tab.windowId);
+}
+
+async function switchToPrevious(windowId: number) {
+  const tabs = await browser.tabs.query({ windowId });
+  const [, previous] = tabs.sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0));
+  if (previous?.id !== undefined) await browser.tabs.update(previous.id, { active: true });
 }
 
 async function coverPage(tabId: number, windowId: number, address?: string) {
@@ -89,5 +124,6 @@ export function onCommandBarHello(
     windowId: sender.tab!.windowId,
     sidebarOpen: expected.sidebarOpen,
     address: expected.address,
+    switcher: expected.switcher,
   };
 }

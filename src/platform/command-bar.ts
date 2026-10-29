@@ -13,8 +13,28 @@ export type CommandBarMessage =
   | { kind: 'command-bar:run'; windowId: number; command: Command }
   /** Bar → background: the token it was opened with, to prove the page didn't frame it. */
   | { kind: 'command-bar:hello'; token: string }
-  /** Background → the page's overlay script: open or close the bar over the page. */
-  | { kind: 'command-bar:overlay'; token: string };
+  /**
+   * Background → the page's overlay script: open or close the bar over the page.
+   * With `switcher`, the recent tabs (or their next one); answered with a SwitcherReply.
+   */
+  | { kind: 'command-bar:overlay'; token: string; switcher?: boolean };
+
+/** The overlay script's answer to opening the recent tabs. */
+export type SwitcherReply =
+  | 'opened'
+  /** They were open: it stepped to the next one. */
+  | 'next'
+  /** The shortcut's keys were let go before they could show: switch to the previous tab now. */
+  | 'quick';
+
+/** Between the recent tabs' frame and the page around it, as window messages. */
+export type SwitcherPost =
+  /** Frame → page: drawn. Is the shortcut still held? */
+  | { arcSwitcher: 'ready' }
+  /** Page → frame: whether it is. Let go already, the frame switches at once. */
+  | { arcSwitcher: 'held'; held: boolean }
+  /** Page → frame: the shortcut again, so the next tab down. */
+  | { arcSwitcher: 'next' };
 
 export interface PingReply {
   focused: boolean;
@@ -26,6 +46,8 @@ export interface HelloReply {
   sidebarOpen?: boolean;
   /** Opened to edit the tab's address (Arc's ⌘L), starting from this. */
   address?: string;
+  /** Opened as the recent tabs (Arc's Ctrl-Tab), not the bar. */
+  switcher?: boolean;
 }
 
 export interface CommandBarRequest {

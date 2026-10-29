@@ -107,6 +107,12 @@ export const chromePlatform: Platform = {
     void browser.tabs.update(tabId, { muted });
   },
 
+  async recentTabs(windowId) {
+    return (await browser.tabs.query({ windowId }))
+      .sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0))
+      .flatMap((tab) => (tab.id === undefined ? [] : [tab.id]));
+  },
+
   async searchHistory(text) {
     const items = await browser.history.search({ text, startTime: 0, maxResults: 200 });
     return items.flatMap((item) =>

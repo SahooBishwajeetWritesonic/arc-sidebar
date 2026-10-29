@@ -313,6 +313,11 @@ export function openInSplit(tabId: number, url: string) {
   platform?.openInSplit(tabId, url);
 }
 
+export function recentTabs() {
+  const { windowId } = useTabs.getState();
+  return (windowId !== null && platform?.recentTabs(windowId)) || Promise.resolve([]);
+}
+
 export function searchHistory(text: string) {
   return platform?.searchHistory(text) ?? Promise.resolve([]);
 }

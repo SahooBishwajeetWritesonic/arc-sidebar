@@ -1,0 +1,81 @@
+/*
+ * Arc's Ctrl-Tab switcher, in the command bar's materials. No transitions: it's used many
+ * times a day (research/06).
+ */
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--command-scrim);
+  color: var(--ink);
+  font-family: var(--font-ui);
+}
+
+.card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(460px, 100% - 32px);
+  margin: 0;
+  padding: 8px;
+  border-radius: var(--command-radius);
+  background: var(--sheet);
+  box-shadow:
+    0 0 0 0.5px var(--command-edge),
+    0 2px 6px var(--command-shadow),
+    0 24px 64px var(--command-shadow);
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--command-row-height);
+  padding: 0 14px;
+  border-radius: var(--command-row-radius);
+  font-size: var(--title-size);
+  cursor: default;
+}
+
+.row[aria-selected='true'] {
+  background: var(--tint);
+  color: var(--on-accent);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.row[aria-selected='true'] .title {
+  font-weight: 500;
+}
+
+/* The tab's space, so tabs from several spaces can be told apart. */
+.space {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  max-width: 40%;
+  color: var(--ink-secondary);
+  font-size: var(--label-size);
+}
+
+.space span:last-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.row[aria-selected='true'] .space {
+  color: color-mix(in srgb, var(--on-accent) 85%, transparent);
+}
