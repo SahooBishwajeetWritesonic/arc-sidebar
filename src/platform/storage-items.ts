@@ -12,6 +12,7 @@ import {
   type SidebarModel,
   type TabDetails,
 } from '@/model/types';
+import type { CommandBarRequest } from './command-bar';
 
 /** Pins, folders, spaces and settings. Versioned so schema changes can migrate. */
 export const modelItem = storage.defineItem<SidebarModel>('local:sidebar', {
@@ -55,3 +56,12 @@ export const restoreSnapshotItem = storage.defineItem<RestoreSnapshot>('local:to
 export const tabDetailsItem = storage.defineItem<TabDetails>('session:tabDetails', {
   fallback: {},
 });
+
+/**
+ * A command bar asked for on a page Chrome protects, where it opens in the
+ * sidebar instead; a sidebar that was closed opens it once it starts.
+ */
+export const commandBarRequestItem = storage.defineItem<CommandBarRequest | null>(
+  'session:commandBarRequest',
+  { fallback: null },
+);

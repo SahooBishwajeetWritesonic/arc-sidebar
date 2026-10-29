@@ -15,8 +15,18 @@ export default defineConfig({
       'alarms',
       'history',
       'search',
+      'scripting',
     ],
+    // The command bar covers any page, as Arc's does.
+    host_permissions: ['<all_urls>'],
     action: { default_title: 'Toggle Arc Sidebar' },
+    commands: {
+      'command-bar': {
+        suggested_key: { default: 'Alt+T' },
+        description: 'Open the command bar',
+      },
+    },
+    web_accessible_resources: [{ resources: ['command.html'], matches: ['<all_urls>'] }],
   },
   // Load the unpacked build into the everyday Chrome profile instead of
   // launching a second browser (saves RAM on a 16 GB machine).

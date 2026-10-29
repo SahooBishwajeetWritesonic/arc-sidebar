@@ -1,6 +1,8 @@
 import { browser, type Browser } from 'wxt/browser';
+import { onCommandBarHello, onCommandBarShortcut } from '@/background/command-bar';
 import { SidebarService, type LiveTab } from '@/background/service';
 import type { Intent } from '@/model/types';
+import type { CommandBarMessage } from '@/platform/command-bar';
 import {
   archiveItem,
   backupsItem,
@@ -91,9 +93,17 @@ export default defineBackground(() => {
     if (!alarm) void browser.alarms.create(AUTO_ARCHIVE_ALARM, { periodInMinutes: 5 });
   });
 
+  browser.commands.onCommand.addListener((command, tab) => {
+    if (command === 'command-bar') onCommandBarShortcut(tab);
+  });
+
   browser.runtime.onMessage.addListener(
-    (message: { kind?: string; intent?: Intent }, _sender, sendResponse) => {
-      if (message?.kind !== 'intent' || !message.intent) return;
+    (message: { kind?: string; intent?: Intent } | CommandBarMessage, sender, sendResponse) => {
+      if (message?.kind === 'command-bar:hello' && 'token' in message) {
+        sendResponse(onCommandBarHello(message.token, sender));
+        return;
+      }
+      if (message?.kind !== 'intent' || !('intent' in message) || !message.intent) return;
       service
         .handleIntent(message.intent)
         .then(sendResponse, (error: unknown) => sendResponse({ error: String(error) }));

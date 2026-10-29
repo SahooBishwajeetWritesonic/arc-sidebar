@@ -1,0 +1,13 @@
+/*
+ * Chrome paints a frame opaque if its colour scheme differs from the embedder's (`normal`),
+ * so the root stays `normal` and the bar sets its own. Doubled selectors outrank global.css.
+ */
+html:root {
+  color-scheme: normal;
+}
+
+html:root,
+html:root body {
+  background: transparent;
+  overscroll-behavior: none;
+}
