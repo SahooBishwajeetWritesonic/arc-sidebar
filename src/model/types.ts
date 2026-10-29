@@ -126,6 +126,8 @@ export const ARCHIVE_LIMIT = 500;
 export interface Backup {
   savedAt: number;
   model: SidebarModel;
+  /** Taken before an import or a restore; hourly copies have none. */
+  reason?: 'import' | 'restore';
 }
 
 /**
@@ -230,6 +232,16 @@ export type Intent =
   | { type: 'restoreSpace'; space: Space; index: number; items: Item[] }
   /** Adds imported spaces (after the others) and items; anything already there is kept. */
   | { type: 'importSidebar'; spaces: Space[]; items: Item[] }
+  /**
+   * Replaces the sidebar with a backup or export. Tabs whose pin or space is gone go to Today;
+   * `bindings` (from Undo) gives pins back their tabs still in Today.
+   */
+  | {
+      type: 'restoreSidebar';
+      model: SidebarModel;
+      windowId: number;
+      bindings?: Record<string, number>;
+    }
   /** Moves a pinned item (and a folder's contents) to the top level of another space. */
   | { type: 'moveToSpace'; itemId: string; spaceId: string; order: string }
   | { type: 'moveTabToSpace'; tabId: number; spaceId: string }

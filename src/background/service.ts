@@ -1,4 +1,5 @@
 import { applyArchiveIntent, applyIntent, applySessionIntent } from '@/model/reducer';
+import { repairModel } from '@/model/backup';
 import { canPlace } from '@/model/tree';
 import {
   ARCHIVE_AFTER_MS,
@@ -62,8 +63,13 @@ export interface ServiceDeps {
 const RESTORE_WINDOW_MS = 10_000;
 /** How long a pin waits for the tab it asked Chrome to open. */
 const OPEN_TIMEOUT_MS = 5_000;
+/** Backups: at most one an hour, the last 20 kept, plus one before each import or restore. */
 const BACKUP_EVERY_MS = 3600_000;
 const BACKUPS_KEPT = 20;
+const BACKED_UP: Partial<Record<Intent['type'], Backup['reason']>> = {
+  importSidebar: 'import',
+  restoreSidebar: 'restore',
+};
 const SNAPSHOT_DELAY_MS = 2_000;
 /** Tab details are saved this long after the last change (the worker lives 30 s past an event). */
 const DETAILS_DELAY_MS = 1_000;
@@ -207,8 +213,8 @@ export class SidebarService {
 
     // State changes first, synchronously, so intents apply in arrival order; side effects after.
     const model = applyIntent(this.model, intent);
-    // An import is big enough to always keep a backup of what came before.
-    if (model !== this.model) this.writeModel(model, intent.type === 'importSidebar');
+    // Imports and restores always keep a backup of what came before.
+    if (model !== this.model) this.writeModel(model, BACKED_UP[intent.type]);
     const session = applySessionIntent(this.session, intent, (id) => this.details[id]?.windowId);
     if (session !== this.session) this.writeSession(session);
     const archive = applyArchiveIntent(this.archive, intent);
@@ -478,6 +484,11 @@ export class SidebarService {
         return this.hasSpace(intent.fallbackSpaceId) && intent.fallbackSpaceId !== intent.spaceId
           ? intent
           : undefined;
+      case 'restoreSidebar': {
+        // A file can hold anything; even a backup may be from an older version.
+        const model = repairModel(intent.model);
+        return model ? { ...intent, model } : undefined;
+      }
       default:
         return intent;
     }
@@ -562,20 +573,20 @@ export class SidebarService {
     });
   }
 
-  private writeModel(model: SidebarModel, alwaysBackUp = false) {
+  private writeModel(model: SidebarModel, reason?: Backup['reason']) {
     const previous = this.model;
     this.model = { ...model, rev: previous.rev + 1 };
     void this.deps.saveModel(this.model);
-    this.backUp(previous, alwaysBackUp);
+    this.backUp(previous, reason);
   }
 
-  /** Copies the model as it was before a change, at most hourly unless `always`. */
-  private backUp(model: SidebarModel, always = false) {
+  private backUp(model: SidebarModel, reason?: Backup['reason']) {
     const now = this.deps.now();
     const latest = this.backups[0];
     if (Object.keys(model.items).length === 0) return;
-    if (!always && latest && now - latest.savedAt < BACKUP_EVERY_MS) return;
-    this.backups = [{ savedAt: now, model }, ...this.backups].slice(0, BACKUPS_KEPT);
+    if (!reason && latest && now - latest.savedAt < BACKUP_EVERY_MS) return;
+    const backup: Backup = reason ? { savedAt: now, model, reason } : { savedAt: now, model };
+    this.backups = [backup, ...this.backups].slice(0, BACKUPS_KEPT);
     void this.deps.saveBackups(this.backups);
   }
 

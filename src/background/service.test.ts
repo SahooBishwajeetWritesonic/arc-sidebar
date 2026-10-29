@@ -301,7 +301,43 @@ describe('SidebarService', () => {
       items: [],
     });
     expect(saved.backups).toHaveLength(2); // within the hour, but kept anyway
+    expect(saved.backups[0]).toMatchObject({ reason: 'import' });
     expect(saved.backups[0]!.model.spaces).toHaveLength(1);
+  });
+
+  it('restores a copy of the sidebar, keeping open tabs open', async () => {
+    const { service, saved } = setup({
+      tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com'), tab(3, 'https://c.com')],
+    });
+    await service.handleIntent(pinIntent('p1', 1, 'https://a.com'));
+    const before = saved.model;
+    await service.handleIntent({ ...pinIntent('p2', 2, 'https://b.com'), order: 'a1' } as Intent);
+    await service.handleIntent({ type: 'createSpace', spaceId: 'w', name: 'Work', index: 1 });
+    await service.handleIntent({ type: 'setActiveSpace', windowId: 1, spaceId: 'w' });
+
+    await service.handleIntent({ type: 'restoreSidebar', model: before, windowId: 1 });
+    expect(Object.keys(saved.model.items)).toEqual(['p1']);
+    expect(saved.model.spaces.map((space) => space.id)).toEqual(['default']);
+    expect(saved.model.rev).toBeGreaterThan(before.rev);
+    // p1 is still open; p2's tab is back in Today, in the space the window now shows.
+    expect(saved.session.bindings).toEqual({ p1: 1 });
+    expect(saved.session.orders['1']).toEqual([2, 3]);
+    expect(saved.session.activeSpaces['1']).toBe('default');
+    expect(saved.session.tabSpaces[2]).toBe('default');
+    expect(saved.backups[0]).toMatchObject({ reason: 'restore' });
+    expect(Object.keys(saved.backups[0]!.model.items)).toEqual(['p1', 'p2']);
+  });
+
+  it('refuses a copy with no sidebar in it', async () => {
+    const { service, saved } = setup({ tabs: [tab(1, 'https://a.com')] });
+    await service.handleIntent(pinIntent('p1', 1, 'https://a.com'));
+    const model = saved.model;
+    await service.handleIntent({
+      type: 'restoreSidebar',
+      model: { ...model, spaces: [] },
+      windowId: 1,
+    });
+    expect(saved.model).toBe(model);
   });
 
   it('archives a Today tab closed in Chrome, with the page it was on', async () => {

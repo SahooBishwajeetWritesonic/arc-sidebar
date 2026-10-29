@@ -412,10 +412,26 @@ async function step(chrome: FakeChrome, rand: ReturnType<typeof random>) {
       itemIds,
       windowId,
     });
-  } else if (roll < 91) {
+  } else if (roll < 90) {
     const spaceId = rand.pick(spaces)!;
     log(`setActiveSpace ${windowId} ${spaceId}`);
     await service.handleIntent({ type: 'setActiveSpace', windowId, spaceId });
+  } else if (roll < 91) {
+    // Back to a backup, or to a muddled copy with items in spaces it lacks.
+    const backup = rand.pick(chrome.saved.backups)?.model ?? model;
+    const copy = rand.chance(0.3)
+      ? {
+          ...backup,
+          spaces: backup.spaces.slice(rand.int(backup.spaces.length)),
+          items: { ...backup.items, ...model.items },
+        }
+      : backup;
+    log(`restoreSidebar ${copy.spaces.length} spaces, ${Object.keys(copy.items).length} items`);
+    // Undo's bindings, some of them out of date.
+    const bindings = rand.chance(0.5)
+      ? { ...session.bindings, [rand.pick(pins)?.id ?? 'none']: rand.pick(todayTabs) ?? 99_999 }
+      : undefined;
+    await service.handleIntent({ type: 'restoreSidebar', model: copy, windowId, bindings });
   } else if (roll < 92) {
     // Favorite every Today tab at once, past the limit.
     log('favorite everything');

@@ -267,6 +267,9 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
       );
     }
 
+    case 'restoreSidebar':
+      return { ...intent.model, rev: model.rev };
+
     case 'openPin':
     case 'closePin':
     case 'resetPin':
@@ -394,6 +397,53 @@ export function applySessionIntent(
           Object.entries(session.activeSpaces).map(([w, space]) => [w, move(space)]),
         ),
       };
+    }
+    case 'restoreSidebar': {
+      const spaces = new Set(intent.model.spaces.map((space) => space.id));
+      const first = intent.model.spaces[0]!.id;
+      const activeSpaces = Object.fromEntries(
+        Object.entries(session.activeSpaces).map(([w, space]) => [
+          w,
+          spaces.has(space) ? space : first,
+        ]),
+      );
+      const shownIn = (windowKey: string) => activeSpaces[windowKey] ?? first;
+      // Today tabs whose space is gone go to the space their window shows.
+      const windowKeyOf = new Map(
+        Object.entries(session.orders).flatMap(([w, order]) => order.map((id) => [id, w] as const)),
+      );
+      const tabSpaces = Object.fromEntries(
+        Object.entries(session.tabSpaces).map(([tabId, space]) => [
+          tabId,
+          spaces.has(space)
+            ? space
+            : shownIn(windowKeyOf.get(Number(tabId)) ?? String(intent.windowId)),
+        ]),
+      );
+      // Tabs of pins the copy doesn't have stay open, on top of Today.
+      const bindings: Record<string, number> = {};
+      const orders = { ...session.orders };
+      for (const [itemId, tabId] of Object.entries(session.bindings)) {
+        if (intent.model.items[itemId]?.kind === 'pin') {
+          bindings[itemId] = tabId;
+          continue;
+        }
+        const key = String(windowOf(tabId) ?? intent.windowId);
+        orders[key] = withTabOnTop(orders[key] ?? [], tabId);
+        tabSpaces[tabId] = shownIn(key);
+      }
+      for (const [itemId, tabId] of Object.entries(intent.bindings ?? {})) {
+        const inToday = Object.values(orders).some((order) => order.includes(tabId));
+        if (!inToday || bindings[itemId] !== undefined) continue;
+        if (intent.model.items[itemId]?.kind !== 'pin') continue;
+        for (const [w, order] of Object.entries(orders)) orders[w] = withoutTab(order, tabId);
+        delete tabSpaces[tabId];
+        bindings[itemId] = tabId;
+      }
+      const lastActive = Object.fromEntries(
+        Object.entries(session.lastActive).filter(([space]) => spaces.has(space)),
+      );
+      return { ...session, bindings, orders, tabSpaces, activeSpaces, lastActive };
     }
     default:
       return session;
