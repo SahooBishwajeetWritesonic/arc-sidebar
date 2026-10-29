@@ -1,6 +1,8 @@
 import { generateNKeysBetween } from 'fractional-indexing';
 import { closePin, closeTodayTabs, moveItemToSpace, moveTabsToSpace } from '@/app/actions';
 import { copyText } from '@/app/command/run';
+import type { Ghost } from '@/app/drag/drag';
+import type { DragSource } from '@/app/drag/targets';
 import type { MenuEntry } from '@/app/rows/RowMenu';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
 import { showToast } from '@/app/toast/toast';
@@ -185,4 +187,28 @@ export function moveSelectionToSpace(spaceId: string) {
     tabs.map((tab) => tab.id),
     spaceId,
   );
+}
+
+/**
+ * Pressing a selected row drags the whole selection under a stacked ghost of the pressed row.
+ * Rows that can't move (a Live Folder's) stay behind.
+ */
+export function selectionDrag(pressed: { ghost: () => Omit<Ghost, 'width'> }): {
+  source: DragSource;
+  ghost: () => Omit<Ghost, 'width'>;
+} | null {
+  const { pins: all, tabs } = picked();
+  const pins = movable(all);
+  const moving = pins.length + tabs.length;
+  if (moving < 2) return null;
+  return {
+    source: {
+      kind: 'many',
+      itemIds: pins.map((pin) => pin.id),
+      tabIds: tabs.map((tab) => tab.id),
+      bound: pins.every((pin) => openTabOf(pin)),
+      pinnable: loose(tabs).length === tabs.length,
+    },
+    ghost: () => ({ ...pressed.ghost(), count: moving }),
+  };
 }

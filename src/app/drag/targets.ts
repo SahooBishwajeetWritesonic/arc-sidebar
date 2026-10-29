@@ -1,13 +1,18 @@
-import { generateKeyBetween } from 'fractional-indexing';
+import { generateNKeysBetween } from 'fractional-indexing';
 import { childrenOf } from '@/model/tree';
-import type { SidebarModel } from '@/model/types';
+import type { Item, SidebarModel } from '@/model/types';
 
 export type DragSource =
   | { kind: 'tab'; tabId: number }
   | { kind: 'pin'; itemId: string; bound: boolean }
   | { kind: 'favorite'; itemId: string; bound: boolean }
   | { kind: 'folder'; itemId: string }
-  | { kind: 'split'; tabIds: [number, number] };
+  | { kind: 'split'; tabIds: [number, number] }
+  /**
+   * Selected rows, pinned then Today, top first. `bound`: every pinned tab is open.
+   * `pinnable`: no Today tab is in a split, so all can be pinned.
+   */
+  | { kind: 'many'; itemIds: string[]; tabIds: number[]; bound: boolean; pinnable: boolean };
 
 /** The Favorites grid as measured when the drag starts, relative to the sidebar's content. */
 export interface FavoritesZone {
@@ -71,6 +76,12 @@ export function findTarget(
   const target = locate(slots, point, source);
   if (!target || target.section === 'favorites' || target.section === 'split') return target;
 
+  if (source.kind === 'many') {
+    if (target.section === 'today') return source.bound ? target : null;
+    if (!source.pinnable) return null;
+    return target.parentId !== null && cannotHold(target.parentId) ? null : target;
+  }
+
   if (source.kind === 'split') {
     if (target.section !== 'today') return null;
     return target.beforeTabId !== null && source.tabIds.includes(target.beforeTabId)
@@ -98,7 +109,7 @@ function favoritesTarget(
   point: { x: number; y: number },
   source: DragSource,
 ): DropTarget | null {
-  if (source.kind === 'folder' || source.kind === 'split') return null;
+  if (source.kind === 'folder' || source.kind === 'split' || source.kind === 'many') return null;
   if (source.kind !== 'favorite' && zone.full) return null;
   const cells = zone.cells.filter(
     (cell) => source.kind !== 'favorite' || cell.id !== source.itemId,
@@ -232,7 +243,21 @@ export function orderForDrop(
   afterId: string | null,
   sourceId: string | null,
 ): string {
-  const siblings = childrenOf(model, spaceId, parentId).filter((item) => item.id !== sourceId);
+  const moving = sourceId === null ? [] : [sourceId];
+  return ordersForDrop(model, spaceId, parentId, beforeId, afterId, moving, 1)[0]!;
+}
+
+/** As `orderForDrop` for `count` items; `movingIds` leave their places, so aren't neighbours. */
+export function ordersForDrop(
+  model: SidebarModel,
+  spaceId: string,
+  parentId: string | null,
+  beforeId: string | null,
+  afterId: string | null,
+  movingIds: readonly string[],
+  count: number,
+): string[] {
+  const siblings = childrenOf(model, spaceId, parentId);
   let index = siblings.length;
   if (beforeId) {
     const i = siblings.findIndex((item) => item.id === beforeId);
@@ -241,5 +266,8 @@ export function orderForDrop(
     const i = siblings.findIndex((item) => item.id === afterId);
     if (i !== -1) index = i + 1;
   }
-  return generateKeyBetween(siblings[index - 1]?.order ?? null, siblings[index]?.order ?? null);
+  const staying = (item: Item) => !movingIds.includes(item.id);
+  const previous = siblings.slice(0, index).filter(staying).at(-1);
+  const next = siblings.slice(index).find(staying);
+  return generateNKeysBetween(previous?.order ?? null, next?.order ?? null, count);
 }

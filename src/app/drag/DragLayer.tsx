@@ -27,6 +27,7 @@ export function DragLayer() {
             ref={setGhostElement}
             className={styles.ghost}
             data-tile={asTile || undefined}
+            data-count={ghost.count}
             style={{ width: asTile ? GHOST_TILE.width : ghost.width }}
             aria-hidden
           >
@@ -42,6 +43,7 @@ export function DragLayer() {
                 {ghost.title}
               </span>
             )}
+            {ghost.count && <span className={styles.count}>{ghost.count}</span>}
           </div>,
           document.body,
         )}

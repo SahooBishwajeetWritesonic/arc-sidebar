@@ -146,3 +146,59 @@ test('Delete closes every selected tab; pinned ones keep their pins', async ({ p
     0,
   );
 });
+
+test('dragging a selected row brings the others along, in order', async ({ page }) => {
+  await ready(page);
+  await row(page, 'Engineering Wiki').click();
+  await add(page, 'Lo-fi beats');
+  const source = (await row(page, 'Engineering Wiki').boundingBox())!;
+  const target = (await row(page, 'Google Calendar').boundingBox())!;
+  await page.mouse.move(source.x + 60, source.y + source.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(source.x + 60, source.y + source.height / 2 + 8, { steps: 4 });
+  await page.mouse.move(target.x + 60, target.y + target.height * 0.25, { steps: 12 });
+  // The ghost counts the rows it carries.
+  await expect(panel(page).locator('[data-count="2"]')).toHaveText(/Engineering Wiki\s*2/);
+  await page.mouse.up();
+  await expect
+    .poll(() => rows(page))
+    .toEqual([
+      'pin:0:Inbox (3) - Gmail',
+      'pin:0:Engineering Wiki',
+      'pin:0:Lo-fi beats to cod',
+      'pin:0:Google Calendar - ',
+      'folder:0:Dev',
+      'pin:1:My issues · Linear',
+      'pin:1:Pull requests · Gi',
+      'newtab:0:New Tab',
+      'tab:0:Sidebar exploratio',
+      'tab:0:chrome.sidePanel |',
+    ]);
+  await expect.poll(() => selected(page)).toEqual([]);
+});
+
+test('a selection with pinned tabs dragged into Today unpins them there', async ({ page }) => {
+  await ready(page);
+  await add(page, 'Google Calendar');
+  const source = (await row(page, 'Google Calendar').boundingBox())!;
+  const target = (await row(page, 'Lo-fi beats').boundingBox())!;
+  await page.mouse.move(source.x + 60, source.y + source.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(source.x + 60, source.y + source.height / 2 + 8, { steps: 4 });
+  await page.mouse.move(target.x + 60, target.y + target.height * 0.2, { steps: 16 });
+  await page.mouse.up();
+  await expect
+    .poll(() => rows(page))
+    .toEqual([
+      'folder:0:Dev',
+      'pin:1:My issues · Linear',
+      'pin:1:Pull requests · Gi',
+      'newtab:0:New Tab',
+      'tab:0:Engineering Wiki',
+      'tab:0:Sidebar exploratio',
+      'tab:0:chrome.sidePanel |',
+      'tab:0:Inbox (3) - Gmail',
+      'tab:0:Google Calendar - ',
+      'tab:0:Lo-fi beats to cod',
+    ]);
+});

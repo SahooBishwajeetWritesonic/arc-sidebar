@@ -27,8 +27,9 @@ import {
   unsplit,
   useTabs,
 } from '@/state/tabs';
+import { clearSelection } from '@/state/selection';
 import { startEditing } from '@/state/ui';
-import { orderForDrop, type DragSource, type DropTarget } from './drag/targets';
+import { orderForDrop, ordersForDrop, type DragSource, type DropTarget } from './drag/targets';
 import { showToast } from './toast/toast';
 
 /** What the user can do in the sidebar: mouse, keyboard and context menus all go through here. */
@@ -174,6 +175,7 @@ export function deleteLiveFolder(itemId: string) {
 export function dropOn(source: DragSource, target: DropTarget) {
   const { model, spaceId, windowId } = useSidebar.getState();
   if (windowId === null) return;
+  if (source.kind === 'many') return dropMany(source, target, windowId);
 
   if (target.section === 'split') {
     if (source.kind === 'tab') splitTodayTabs(source.tabId, target.withTabId, target.side);
@@ -254,6 +256,65 @@ export function dropOn(source: DragSource, target: DropTarget) {
     // A favorite dropped into Pinned joins the shown space.
     dispatch({ type: 'move', itemId: source.itemId, spaceId, parentId: target.parentId, order });
   }
+}
+
+/** A dragged selection lands together, in order: Today tabs get pinned, pins get unpinned. */
+function dropMany(
+  source: Extract<DragSource, { kind: 'many' }>,
+  target: DropTarget,
+  windowId: number,
+) {
+  const { model, spaceId } = useSidebar.getState();
+  const tabsState = useTabs.getState();
+  clearSelection();
+
+  if (target.section === 'today') {
+    // The first tab at or below the line that isn't itself moving.
+    const ids = selectTodayIds(tabsState);
+    const from = target.beforeTabId === null ? ids.length : ids.indexOf(target.beforeTabId);
+    const beforeTabId = ids.slice(Math.max(from, 0)).find((id) => !source.tabIds.includes(id));
+    for (const itemId of source.itemIds) {
+      dispatch({
+        type: 'unpin',
+        itemId,
+        windowId,
+        spaceId: homeSpaceOf(itemId),
+        todayBeforeTabId: beforeTabId ?? null,
+      });
+    }
+    for (const tabId of source.tabIds) {
+      dispatch({ type: 'reorderToday', windowId, tabId, beforeTabId: beforeTabId ?? null });
+    }
+    return;
+  }
+  if (target.section !== 'pinned') return;
+
+  const orders = ordersForDrop(
+    model,
+    spaceId,
+    target.parentId,
+    target.beforeId,
+    target.afterId,
+    source.itemIds,
+    source.itemIds.length + source.tabIds.length,
+  );
+  source.itemIds.forEach((itemId, i) =>
+    dispatch({ type: 'move', itemId, spaceId, parentId: target.parentId, order: orders[i]! }),
+  );
+  source.tabIds.forEach((tabId, i) => {
+    const tab = tabsState.tabs.get(tabId);
+    if (!tab) return;
+    dispatch({
+      type: 'pinTab',
+      itemId: newId(),
+      tabId,
+      spaceId,
+      parentId: target.parentId,
+      order: orders[source.itemIds.length + i]!,
+      url: tab.url,
+      title: tab.title,
+    });
+  });
 }
 
 /** Alt+Up/Down moves a row one place among its siblings: the keyboard's drag and drop. */

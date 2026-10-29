@@ -16,6 +16,8 @@ export interface Ghost {
   faviconUrl?: string;
   folder: boolean;
   width: number;
+  /** Rows moving together, when a selection is dragged. */
+  count?: number;
 }
 
 /** React-visible drag state. It changes only when the drop target changes. */
@@ -203,6 +205,8 @@ function placeGhost() {
   const x = tracking.x - (asTile ? GHOST_TILE.width / 2 : tracking.grabX);
   const y = tracking.y - (asTile ? GHOST_TILE.height / 2 : tracking.grabY);
   ghostElement.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  // A selection's count sits by the pointer, as in Finder, where the panel's edge can't cut it off.
+  ghostElement.style.setProperty('--grab-x', `${tracking.grabX}px`);
 }
 
 function autoScroll() {

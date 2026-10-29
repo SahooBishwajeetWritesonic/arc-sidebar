@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applyIntent } from '@/model/reducer';
 import { childrenOf } from '@/model/tree';
 import { emptyModel, type Intent } from '@/model/types';
-import { findTarget, orderForDrop, type DragSource, type Slot } from './targets';
+import { findTarget, orderForDrop, ordersForDrop, type DragSource, type Slot } from './targets';
 
 // Rows are 40 tall with a 1 pt gap, as in Arc's compact layout.
 const row = (kind: Slot['kind'], id: string, index: number, extra: Partial<Slot> = {}): Slot => ({
@@ -148,6 +148,51 @@ describe('findTarget', () => {
     expect(findTarget(slots, { x: 100, y: 5 }, split, nothingInside)).toBeNull();
   });
 
+  it('moves a selection together into Pinned or Today, but not into Favorites or a split', () => {
+    const many: DragSource = {
+      kind: 'many',
+      itemIds: ['p1'],
+      tabIds: [11],
+      bound: true,
+      pinnable: true,
+    };
+    const zone = { bottom: -20, cells: [], full: false };
+    expect(findTarget(slots, { x: 100, y: 5 }, many, nothingInside, zone)).toMatchObject({
+      section: 'pinned',
+      beforeId: 'p1',
+    });
+    expect(findTarget(slots, { x: 100, y: 205 }, many, nothingInside)).toMatchObject({
+      section: 'today',
+      beforeTabId: 11,
+    });
+    // The middle of a Today tab, which would split a single tab with it.
+    expect(findTarget(slots, { x: 100, y: 250 }, many, nothingInside)).toMatchObject({
+      section: 'today',
+    });
+    expect(findTarget(slots, { x: 100, y: -30 }, many, nothingInside, zone)).toBeNull();
+  });
+
+  it('keeps a selection out of Today if a pinned tab in it is closed, and out of Pinned with a split', () => {
+    const closed: DragSource = {
+      kind: 'many',
+      itemIds: ['p1'],
+      tabIds: [11],
+      bound: false,
+      pinnable: true,
+    };
+    expect(findTarget(slots, { x: 100, y: 205 }, closed, nothingInside)).toBeNull();
+    const split: DragSource = { ...closed, bound: true, pinnable: false };
+    expect(findTarget(slots, { x: 100, y: 5 }, split, nothingInside)).toBeNull();
+    expect(findTarget(slots, { x: 100, y: 205 }, split, nothingInside)).not.toBeNull();
+    const intoLive = findTarget(
+      slots,
+      { x: 100, y: 61 },
+      { ...closed, bound: true },
+      (id) => id === 'f1',
+    );
+    expect(intoLive).toBeNull();
+  });
+
   it('treats a drop next to the dragged item as no move', () => {
     expect(findTarget(slots, { x: 100, y: 220 }, tab, nothingInside)).toBeNull(); // 12 is the tab
     expect(
@@ -204,6 +249,25 @@ describe('orderForDrop', () => {
 
   it('ignores the dragged item when it is one of the siblings', () => {
     expect(place(orderForDrop(model, 'default', null, null, 'c', 'a'), 'a')).toBe('bca');
+  });
+
+  it('gives several dropped together keys in a row, fitting between the ones staying', () => {
+    const withX = applyIntent(model, pin('x', 'a3'));
+    const drop = (beforeId: string | null, afterId: string | null, moving: string[]) => {
+      const orders = ordersForDrop(withX, 'default', null, beforeId, afterId, moving, 2);
+      const moved = moving.reduce(
+        (next, itemId, i) =>
+          applyIntent(next, { type: 'move', itemId, parentId: null, order: orders[i]! }),
+        withX,
+      );
+      return childrenOf(moved, 'default', null)
+        .map((item) => item.id)
+        .join('');
+    };
+    expect(drop('b', null, ['x', 'a'])).toBe('xabc');
+    expect(drop(null, 'c', ['a', 'x'])).toBe('bcax');
+    // Dropped just after one of themselves: they close up where they were.
+    expect(drop(null, 'a', ['a', 'c'])).toBe('acbx');
   });
 });
 

@@ -50,6 +50,38 @@
   mask-image: linear-gradient(to left, #000 calc(100% - 24px), transparent);
 }
 
+/* A dragged selection: the other rows peek out beneath, and a badge counts them all. */
+.ghost[data-count] {
+  box-shadow:
+    0 2px 8px var(--ghost-shadow),
+    0 4px 0 -2px var(--ghost-stack);
+}
+
+.ghost[data-count]:not([data-count='2']) {
+  box-shadow:
+    0 2px 8px var(--ghost-shadow),
+    0 4px 0 -2px var(--ghost-stack),
+    0 8px 0 -4px var(--ghost-stack);
+}
+
+.count {
+  position: absolute;
+  top: -7px;
+  left: calc(var(--grab-x, 0px) + 10px);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--ghost-count);
+  color: var(--ghost-count-ink);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+  text-align: center;
+}
+
 /* Over Favorites the ghost is an icon-only tile. */
 .ghost[data-tile] {
   justify-content: center;

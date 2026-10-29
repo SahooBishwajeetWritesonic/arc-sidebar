@@ -14,7 +14,7 @@ import { dropOn } from '@/app/actions';
 import { beginPress, isPress, useDrag, type Ghost } from '@/app/drag/drag';
 import type { DragSource } from '@/app/drag/targets';
 import { fade, spring } from '@/app/motion';
-import { selectFrom, selectionMenu } from '@/app/selection/actions';
+import { selectFrom, selectionDrag, selectionMenu } from '@/app/selection/actions';
 import { clearSelection, isSelectable, rowKey, useSelection } from '@/state/selection';
 import { LayoutKey } from './layout-key';
 import { RowMenu, type MenuEntry } from './RowMenu';
@@ -98,9 +98,17 @@ export function Row({
       selectFrom(event.currentTarget, key, event.shiftKey);
       return;
     }
-    clearSelection();
+    const together = marked === 2 ? drag && selectionDrag(drag) : null;
+    if (!together) clearSelection();
     onPress?.();
-    if (drag) beginPress(event, { ...drag, onTap, onDrop: dropOn });
+    if (together) {
+      // A tap on one of them selects just it; a drag takes them all.
+      const tap = () => {
+        clearSelection();
+        onTap?.();
+      };
+      beginPress(event, { ...together, onTap: tap, onDrop: dropOn });
+    } else if (drag) beginPress(event, { ...drag, onTap, onDrop: dropOn });
     else onTap?.();
   };
 
