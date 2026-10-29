@@ -29,3 +29,28 @@ export const morePages: Fixture[] = [
   { title: 'Stack Overflow - Where Developers Learn', url: 'https://stackoverflow.com/' },
   { title: 'WXT – Next-gen Web Extension Framework', url: 'https://wxt.dev/' },
 ];
+
+const sites: Fixture[] = [
+  { title: 'Pull request review', url: 'https://github.com/' },
+  { title: 'Sprint board · Linear', url: 'https://linear.app/' },
+  { title: 'Design review notes', url: 'https://www.notion.so/' },
+  { title: 'Onboarding flow v3 – Figma', url: 'https://www.figma.com/' },
+  { title: 'Array.prototype.toSorted() - JavaScript | MDN', url: 'https://developer.mozilla.org/' },
+  { title: 'How do I debounce in React? - Stack Overflow', url: 'https://stackoverflow.com/' },
+  { title: 'Quarterly planning - Google Docs', url: 'https://docs.google.com/' },
+  { title: 'Metrics dashboard - Google Sheets', url: 'https://sheets.google.com/' },
+  { title: 'Incident #4821 · Datadog', url: 'https://app.datadoghq.com/' },
+  { title: 'Release checklist · Confluence', url: 'https://atlassian.net/' },
+  { title: 'Talk: Rendering at 120fps - YouTube', url: 'https://www.youtube.com/' },
+  { title: 'r/webdev - Reddit', url: 'https://www.reddit.com/' },
+  { title: 'Show HN: A tiny layout engine | Hacker News', url: 'https://news.ycombinator.com/' },
+  { title: 'Flights to Lisbon · Google Flights', url: 'https://www.google.com/travel/flights' },
+  { title: 'Order #112-4471 - Amazon.com', url: 'https://www.amazon.com/' },
+];
+
+/** `count` more tabs for performance runs (?tabs=200), each with its own URL. */
+export const manyTabs = (count: number): Fixture[] =>
+  Array.from({ length: count }, (_, i) => {
+    const site = sites[i % sites.length]!;
+    return { title: `${site.title} (${i + 1})`, url: `${site.url}?tab=${i + 1}` };
+  });

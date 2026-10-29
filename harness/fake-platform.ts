@@ -225,6 +225,11 @@ export class FakePlatform implements Platform {
     if (tab) this.simulateLoad(tab.id);
   }
 
+  /** Every tab loads at once: a storm of tab events, as after a restart. */
+  reloadAll() {
+    for (const tab of this.tabs) this.simulateLoad(tab.id);
+  }
+
   toggleAudibleRandom() {
     const tab = this.tabs.find((t) => t.audible) ?? this.randomTab();
     if (tab) this.patch(tab.id, { audible: !tab.audible, muted: false });
