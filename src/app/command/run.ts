@@ -22,6 +22,7 @@ import {
   unpinWithUndo,
 } from '@/app/actions';
 import { pinOf } from '@/command/actions';
+import { linksText } from '@/model/links';
 import type { Command } from '@/command/types';
 import { useSidebar } from '@/state/sidebar';
 import { activateTab, duplicateTab, openInSplit, openUrl, searchWeb, useTabs } from '@/state/tabs';
@@ -79,7 +80,9 @@ function runAction(command: Extract<Command, { type: 'action' }>) {
       if (pin) closePin(pin.id);
       break;
     case 'copyUrl':
-      if (tab) copyText(tab.url);
+    case 'copyMarkdown':
+      // Without tracking parameters, as Arc's Copy URL.
+      if (tab) copyText(linksText([tab], command.action === 'copyMarkdown'));
       break;
     case 'duplicateTab':
       if (tab) duplicateTab(tab.id);

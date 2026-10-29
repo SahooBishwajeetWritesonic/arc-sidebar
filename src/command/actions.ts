@@ -114,6 +114,7 @@ export function availableActions(ctx: CommandContext): (Result & { words: string
       });
     }
     add({ action: 'copyUrl', title: 'Copy Current URL', words: 'link address' });
+    add({ action: 'copyMarkdown', title: 'Copy URL as Markdown', words: 'link' });
     add({ action: 'duplicateTab', title: 'Duplicate Current Tab' });
   }
 

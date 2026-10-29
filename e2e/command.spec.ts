@@ -146,3 +146,21 @@ test('New Tab opens the bar inside the sidebar, and Escape gives focus back', as
   await expect(inSidebar).toHaveCount(0);
   await expect(newTab).toBeFocused();
 });
+
+test('Copy URL as Markdown puts the current tab’s link on the clipboard', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await ready(page);
+  await openBar(page);
+  await field(page).pressSequentially('/markdown');
+  await expect(selected(page)).toHaveText('Copy URL as Markdown');
+  await field(page).press('Enter');
+  await expect(panel(page).getByRole('status')).toContainText('Copied URL as Markdown');
+  // Only a focused page may read the clipboard.
+  await page.getByRole('heading', { name: 'Arc Sidebar harness' }).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    '[Inbox (3) - Gmail](https://mail.google.com/mail/u/0/#inbox)',
+  );
+});

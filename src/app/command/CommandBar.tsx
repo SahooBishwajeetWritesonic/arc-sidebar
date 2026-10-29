@@ -11,6 +11,7 @@ import {
   History,
   Import,
   Link,
+  Link2,
   ListX,
   Moon,
   Palette,
@@ -156,7 +157,9 @@ export function CommandBar({ host, sidebarOpen, placement }: CommandBarProps) {
   async function run(command: Command) {
     if (done.current) return;
     done.current = true;
-    const copy = command.type === 'action' && command.action === 'copyUrl';
+    const copy =
+      command.type === 'action' &&
+      (command.action === 'copyUrl' || command.action === 'copyMarkdown');
     // Only a focused page can write the clipboard, so the bar copies.
     if (copy) runCommand(command);
     const browserOnly =
@@ -323,6 +326,7 @@ const ACTION_ICONS: Record<ActionId, LucideIcon> = {
   archiveTab: Archive,
   closeTab: X,
   copyUrl: Link,
+  copyMarkdown: Link2,
   duplicateTab: Copy,
   resetTab: RotateCcw,
   replacePin: Replace,

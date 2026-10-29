@@ -10,6 +10,7 @@ export type ActionId =
   | 'archiveTab'
   | 'closeTab'
   | 'copyUrl'
+  | 'copyMarkdown'
   | 'duplicateTab'
   | 'resetTab'
   | 'replacePin'
