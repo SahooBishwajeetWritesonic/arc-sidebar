@@ -17,6 +17,7 @@ export interface ArcFolder {
   name: string;
   /** A live folder; its links come over as they were last fetched. */
   live: boolean;
+  icon?: SpaceIcon;
   children: ArcNode[];
 }
 
@@ -92,6 +93,7 @@ const ARC_SYMBOLS: Record<string, string> = {
   coffee: 'coffee',
 };
 
+/** A space's or a folder's icon: Arc keeps both in `customInfo.iconType`. */
 function iconOf(customInfo: unknown): SpaceIcon | undefined {
   const type = isObject(customInfo) && isObject(customInfo.iconType) ? customInfo.iconType : null;
   if (!type) return undefined;
@@ -169,14 +171,15 @@ export function parseArcSidebar(json: unknown): ArcSidebar {
       return tab ? [tab] : [];
     }
     if (isObject(data.list)) {
-      return [
-        {
-          kind: 'folder',
-          name: text(item.title) || 'Untitled',
-          live: 'automaticLiveFolderData' in data.list,
-          children: childIds(item).flatMap(walk),
-        },
-      ];
+      const folder: ArcFolder = {
+        kind: 'folder',
+        name: text(item.title) || 'Untitled',
+        live: 'automaticLiveFolderData' in data.list,
+        children: childIds(item).flatMap(walk),
+      };
+      const icon = iconOf(data.list.customInfo);
+      if (icon) folder.icon = icon;
+      return [folder];
     }
     // Containers, split views and other groups: their tabs, in place.
     const children = childIds(item);

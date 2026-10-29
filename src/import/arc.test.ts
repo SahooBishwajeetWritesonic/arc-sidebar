@@ -19,13 +19,14 @@ describe('parseArcSidebar', () => {
     expect(space('Home').profile).toBe('Profile 2');
   });
 
-  it('keeps the pinned tree, custom titles and live folders', () => {
+  it('keeps the pinned tree, custom titles, folder icons and live folders', () => {
     expect(space('Work').pinned).toEqual([
       { kind: 'tab', url: 'https://mail.example.com/inbox', title: 'Inbox' },
       {
         kind: 'folder',
         name: 'Docs',
         live: false,
+        icon: { type: 'emoji', char: '📚' },
         children: [
           {
             kind: 'tab',
@@ -37,6 +38,7 @@ describe('parseArcSidebar', () => {
             kind: 'folder',
             name: 'Old',
             live: false,
+            icon: { type: 'symbol', name: 'star' },
             children: [{ kind: 'tab', url: 'https://docs.example.com/archive', title: 'Archive' }],
           },
         ],

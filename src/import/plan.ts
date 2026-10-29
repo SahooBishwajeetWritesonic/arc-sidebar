@@ -87,7 +87,13 @@ export function planImport(
           plan.items.push(pinOf(base, node));
           summary.tabs++;
         } else {
-          plan.items.push({ ...base, kind: 'folder', name: node.name, collapsed: true });
+          plan.items.push({
+            ...base,
+            kind: 'folder',
+            name: node.name,
+            collapsed: true,
+            ...(node.icon && { icon: node.icon }),
+          });
           summary.folders++;
           add(node.children, base.id, true);
         }

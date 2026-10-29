@@ -81,7 +81,7 @@
           {
             "id": "F-DOCS",
             "parentID": "C-WORK-PIN",
-            "data": { "list": {} },
+            "data": { "list": { "customInfo": { "iconType": { "emoji_v2": "📚" } } } },
             "childrenIds": ["T-SPEC", "F-OLD"],
             "title": "Docs"
           },
@@ -99,7 +99,7 @@
           {
             "id": "F-OLD",
             "parentID": "F-DOCS",
-            "data": { "list": {} },
+            "data": { "list": { "customInfo": { "iconType": { "icon": "starFill" } } } },
             "childrenIds": ["T-ARCHIVE"],
             "title": "Old"
           },
@@ -117,7 +117,12 @@
           {
             "id": "F-PRS",
             "parentID": "C-WORK-PIN",
-            "data": { "list": { "automaticLiveFolderData": { "github": {} } } },
+            "data": {
+              "list": {
+                "automaticLiveFolderData": { "github": {} },
+                "customInfo": { "iconType": { "icon": "github" } }
+              }
+            },
             "childrenIds": ["T-PR"],
             "title": "Pull Requests"
           },

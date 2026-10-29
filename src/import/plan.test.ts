@@ -38,12 +38,16 @@ describe('planImport', () => {
     expect(model.spaces[4]!.icon).toBeUndefined();
   });
 
-  it('rebuilds the pinned tree in order, folders collapsed', () => {
+  it('rebuilds the pinned tree in order, folders collapsed with their icons', () => {
     const { model } = run(emptyModel());
     const work = model.spaces[1]!.id;
     expect(titles(model, work)).toEqual(['Inbox', '[Docs]', '[Pull Requests]']);
     const docs = childrenOf(model, work, null)[1]!;
-    expect(docs).toMatchObject({ kind: 'folder', collapsed: true });
+    expect(docs).toMatchObject({
+      kind: 'folder',
+      collapsed: true,
+      icon: { type: 'emoji', char: '📚' },
+    });
     expect(titles(model, work, docs.id)).toEqual(['Spec', '[Old]']);
   });
 
