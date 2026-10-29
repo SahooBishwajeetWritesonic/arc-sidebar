@@ -12,6 +12,15 @@ export type NoteMessage =
   /** Background → sidebars: show it as a toast instead. */
   | { kind: 'sidebar:note'; windowId: number; text: string };
 
+/**
+ * Background → sidebars: the rows selected together in that window, for the Copy URL shortcut.
+ * Answers their links, or null when fewer than two are selected.
+ */
+export interface SelectionMessage {
+  kind: 'sidebar:selection';
+  windowId: number;
+}
+
 /** The capture tool → background: a picture of this part of the page, as it is now. */
 export interface CaptureMessage {
   kind: 'capture:shot';

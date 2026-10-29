@@ -2,7 +2,7 @@ import { browser, type Browser } from 'wxt/browser';
 import type { Command } from '@/command/types';
 import type { CommandBarMessage } from '@/platform/command-bar';
 import { onCommandBarShortcut } from './command-bar';
-import { copyLinks, showNote } from './copy';
+import { copyFromShortcut, showNote } from './copy';
 import type { SidebarService } from './service';
 
 /**
@@ -26,7 +26,7 @@ async function run(command: string, tab: Browser.tabs.Tab, tabId: number, servic
   switch (command) {
     case 'copy-url':
     case 'copy-url-markdown':
-      return copyLinks(tab, command === 'copy-url-markdown');
+      return copyFromShortcut(tab, command === 'copy-url-markdown');
     case 'capture':
       return browser.scripting
         .executeScript({ target: { tabId }, files: ['/capture-tool.js'] })

@@ -5,12 +5,14 @@ import { chromePlatform } from '@/platform/chrome';
 import { connect } from '@/state/connect';
 import { serveCommandBar } from './command-bar';
 import { serveNotes } from './notes';
+import { serveSelection } from './selection';
 import '@/app/global.css';
 
 void connect(chromePlatform, { media: true });
 void chromePlatform.currentWindowId().then((windowId) => {
   serveCommandBar(windowId);
   serveNotes(windowId);
+  serveSelection(windowId);
 });
 
 createRoot(document.getElementById('root')!).render(
