@@ -16,6 +16,8 @@ export default defineConfig({
       'history',
       'search',
       'scripting',
+      'offscreen',
+      'clipboardWrite',
     ],
     // The command bar covers any page, as Arc's does.
     host_permissions: ['<all_urls>'],
@@ -25,6 +27,13 @@ export default defineConfig({
         suggested_key: { default: 'Alt+T' },
         description: 'Open the command bar',
       },
+      // Arc's ⌘⇧C is Chrome's DevTools shortcut, which extensions can't take
+      // by default; set it yourself in chrome://extensions/shortcuts.
+      'copy-url': {
+        suggested_key: { default: 'Alt+Shift+C' },
+        description: 'Copy URL',
+      },
+      'copy-url-markdown': { description: 'Copy URL as Markdown' },
     },
     web_accessible_resources: [{ resources: ['command.html'], matches: ['<all_urls>'] }],
   },

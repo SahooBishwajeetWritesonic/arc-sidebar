@@ -1,5 +1,6 @@
 import { browser, type Browser } from 'wxt/browser';
 import { onCommandBarHello, onCommandBarShortcut } from '@/background/command-bar';
+import { copyLinks } from '@/background/copy';
 import { fetchGitHubJson, fetchPullRequests } from '@/background/github';
 import { SidebarService, type LiveTab } from '@/background/service';
 import type { Intent } from '@/model/types';
@@ -103,6 +104,9 @@ export default defineBackground(() => {
 
   browser.commands.onCommand.addListener((command, tab) => {
     if (command === 'command-bar') onCommandBarShortcut(tab);
+    if (tab && (command === 'copy-url' || command === 'copy-url-markdown')) {
+      void copyLinks(tab, command === 'copy-url-markdown');
+    }
   });
 
   browser.runtime.onMessage.addListener(
