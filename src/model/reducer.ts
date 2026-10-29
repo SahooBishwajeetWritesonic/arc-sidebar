@@ -1,6 +1,6 @@
 import { generateNKeysBetween } from 'fractional-indexing';
 import { withTabBefore, withTabOnTop, withoutTab } from '@/platform/today-order';
-import { childrenOf, descendants, isWithin } from './tree';
+import { canPlace, childrenOf, descendants } from './tree';
 import {
   ARCHIVE_LIMIT,
   FAVORITES_ID,
@@ -14,6 +14,12 @@ import {
 } from './types';
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+/** The model with a folder about to be created, for checking what can go inside it. */
+const withFolder = (model: SidebarModel, folder: Item): SidebarModel => ({
+  ...model,
+  items: { ...model.items, [folder.id]: folder },
+});
 
 function updateSpace(model: SidebarModel, spaceId: string, change: (space: Space) => Space) {
   let changed = false;
@@ -40,7 +46,12 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
 
   switch (intent.type) {
     case 'pinTab':
-      if (item) return model;
+      if (
+        item ||
+        !canPlace(model, { id: intent.itemId, kind: 'pin' }, intent.spaceId, intent.parentId)
+      ) {
+        return model;
+      }
       return put({
         kind: 'pin',
         id: intent.itemId,
@@ -71,6 +82,11 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
 
     case 'createFolder': {
       if (item) return model;
+      if (
+        !canPlace(model, { id: intent.itemId, kind: 'folder' }, intent.spaceId, intent.parentId)
+      ) {
+        return model;
+      }
       const folder: Item = {
         kind: 'folder',
         id: intent.itemId,
@@ -80,9 +96,15 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
         name: intent.name,
         collapsed: false,
       };
+      // Items from this space that can go inside it: not its own parents.
       const moved = (intent.childIds ?? [])
         .map((id) => items[id])
-        .filter((child): child is Item => child !== undefined);
+        .filter(
+          (child): child is Item =>
+            child !== undefined &&
+            child.spaceId === intent.spaceId &&
+            canPlace(withFolder(model, folder), child, intent.spaceId, folder.id),
+        );
       const keys = generateNKeysBetween(null, null, moved.length);
       return put(
         folder,
@@ -94,15 +116,19 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
       if (item?.kind !== 'folder' || item.collapsed === intent.collapsed) return model;
       return put({ ...item, collapsed: intent.collapsed });
 
-    case 'move':
+    case 'move': {
       if (!item) return model;
-      if (intent.parentId && isWithin(model, intent.parentId, item.id)) return model;
-      return put({
-        ...item,
-        spaceId: intent.spaceId ?? item.spaceId,
-        parentId: intent.parentId,
-        order: intent.order,
-      });
+      // Into a folder means into its space; a folder can't go inside itself.
+      const parent = intent.parentId ? items[intent.parentId] : undefined;
+      const spaceId = parent?.spaceId ?? intent.spaceId ?? item.spaceId;
+      if (!canPlace(model, item, spaceId, intent.parentId)) return model;
+      const inside =
+        item.kind === 'folder' && spaceId !== item.spaceId ? descendants(model, item.id) : [];
+      return put(
+        { ...item, spaceId, parentId: intent.parentId, order: intent.order },
+        ...inside.map((child) => ({ ...child, spaceId })),
+      );
+    }
 
     case 'deleteFolder': {
       if (item?.kind !== 'folder') return model;
@@ -265,6 +291,11 @@ export function applySessionIntent(
 ): SessionState {
   switch (intent.type) {
     case 'pinTab': {
+      // Only a Today tab can be pinned: one that closed, or that another
+      // panel pinned first, leaves the new pin unopened.
+      if (!Object.values(session.orders).some((order) => order.includes(intent.tabId))) {
+        return session;
+      }
       const orders = Object.fromEntries(
         Object.entries(session.orders).map(([w, order]) => [w, withoutTab(order, intent.tabId)]),
       );

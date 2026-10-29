@@ -427,6 +427,71 @@ describe('importSidebar', () => {
 });
 
 describe('placement rules (found by the torture test)', () => {
+  const twoSpaces = (...intents: Intent[]) =>
+    build({ type: 'createSpace', spaceId: 'w', name: 'Work', index: 1 }, ...intents);
+
+  it('moving a folder to another space takes its contents along', () => {
+    const model = applyIntent(twoSpaces(pin('p1', 'a0'), folder('f', 'a1', ['p1'])), {
+      type: 'move',
+      itemId: 'f',
+      parentId: null,
+      spaceId: 'w',
+      order: 'a0',
+    });
+    expect(model.items.f!.spaceId).toBe('w');
+    expect(model.items.p1!.spaceId).toBe('w');
+  });
+
+  it('moving into a folder puts the item in that folder’s space', () => {
+    const model = applyIntent(
+      twoSpaces(pin('p1', 'a0'), {
+        type: 'createFolder',
+        itemId: 'wf',
+        spaceId: 'w',
+        parentId: null,
+        order: 'a0',
+        name: 'Work folder',
+      }),
+      { type: 'move', itemId: 'p1', parentId: 'wf', order: 'a0' },
+    );
+    expect(model.items.p1).toMatchObject({ spaceId: 'w', parentId: 'wf' });
+  });
+
+  it('a new folder takes neither its own parent nor another space’s items', () => {
+    let model = twoSpaces(folder('outer', 'a0'), pin('p1', 'a1'), {
+      ...(pin('p2', 'a0') as Extract<Intent, { type: 'pinTab' }>),
+      spaceId: 'w',
+    });
+    model = applyIntent(model, {
+      type: 'createFolder',
+      itemId: 'inner',
+      spaceId: S,
+      parentId: 'outer',
+      order: 'a0',
+      name: 'inner',
+      childIds: ['outer', 'p1', 'p2'],
+    });
+    expect(model.items.outer!.parentId).toBeNull(); // no cycle
+    expect(model.items.p1!.parentId).toBe('inner');
+    expect(model.items.p2!.parentId).toBeNull();
+  });
+
+  it('pins only into real places: no full Favorites, no folder in another space', () => {
+    let model = build(folder('f', 'a0'));
+    for (let i = 0; i < FAVORITES_LIMIT + 1; i++) {
+      model = applyIntent(model, {
+        ...(pin(`fav${i}`, 'a0') as Extract<Intent, { type: 'pinTab' }>),
+        spaceId: FAVORITES_ID,
+      });
+    }
+    expect(childrenOf(model, FAVORITES_ID, null)).toHaveLength(FAVORITES_LIMIT);
+    model = applyIntent(model, {
+      ...(pin('p9', 'a0') as Extract<Intent, { type: 'pinTab' }>),
+      spaceId: 'gone',
+    });
+    expect(model.items.p9).toBeUndefined();
+  });
+
   it('unpinning puts the tab back in its own window’s Today', () => {
     // Tab 7 lives in window 2; the unpin comes from window 1's panel.
     let session = applySessionIntent(

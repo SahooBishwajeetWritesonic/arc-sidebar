@@ -1,5 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
-import type { Item, SidebarModel } from './types';
+import { FAVORITES_ID, FAVORITES_LIMIT, type Item, type SidebarModel } from './types';
 
 const byOrder = (a: Item, b: Item) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0);
 
@@ -65,4 +65,28 @@ export function isWithin(model: SidebarModel, itemId: string, ancestorId: string
     if (id === ancestorId) return true;
   }
   return false;
+}
+
+/**
+ * Whether an item may go under `parentId`: a real space, a folder there that isn't
+ * inside the item itself, or the top of Favorites for a pinned tab while there's room.
+ */
+export function canPlace(
+  model: SidebarModel,
+  item: { id: string; kind: Item['kind'] },
+  spaceId: string,
+  parentId: string | null,
+): boolean {
+  if (spaceId === FAVORITES_ID) {
+    if (item.kind !== 'pin' || parentId !== null) return false;
+    if (model.items[item.id]?.spaceId === FAVORITES_ID) return true;
+    const count = Object.values(model.items).filter((i) => i.spaceId === FAVORITES_ID).length;
+    return count < FAVORITES_LIMIT;
+  }
+  if (!model.spaces.some((space) => space.id === spaceId)) return false;
+  if (parentId === null) return true;
+  const parent = model.items[parentId];
+  return (
+    parent?.kind === 'folder' && parent.spaceId === spaceId && !isWithin(model, parentId, item.id)
+  );
 }

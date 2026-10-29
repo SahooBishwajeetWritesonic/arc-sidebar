@@ -1,4 +1,5 @@
 import { applyArchiveIntent, applyIntent, applySessionIntent } from '@/model/reducer';
+import { canPlace } from '@/model/tree';
 import {
   ARCHIVE_AFTER_MS,
   DEFAULT_SPACE_ID,
@@ -193,8 +194,10 @@ export class SidebarService {
     };
   }
 
-  async handleIntent(intent: Intent): Promise<IntentResult> {
+  async handleIntent(received: Intent): Promise<IntentResult> {
     await this.ready;
+    const intent = this.checked(received);
+    if (!intent) return this.revisions();
     const tabId = 'itemId' in intent ? this.session.bindings[intent.itemId] : undefined;
     const item = 'itemId' in intent ? this.model.items[intent.itemId] : undefined;
     const restoring =
@@ -445,6 +448,39 @@ export class SidebarService {
     await this.ready;
     const { [String(windowId)]: _closed, ...orders } = this.session.orders;
     this.writeSession({ ...this.session, orders });
+  }
+
+  /** A panel can be a step behind and name a space just deleted, so intents are rechecked. */
+  private checked(intent: Intent): Intent | undefined {
+    switch (intent.type) {
+      case 'pinTab':
+        // A pin that can't go where it was dropped mustn't take the tab either.
+        return canPlace(
+          this.model,
+          { id: intent.itemId, kind: 'pin' },
+          intent.spaceId,
+          intent.parentId,
+        )
+          ? intent
+          : undefined;
+      case 'unpin': {
+        if (intent.spaceId && this.hasSpace(intent.spaceId)) return intent;
+        const tabId = this.session.bindings[intent.itemId];
+        const windowId = (tabId !== undefined && this.details[tabId]?.windowId) || intent.windowId;
+        const home = this.model.items[intent.itemId]?.spaceId;
+        const spaceId = home && this.hasSpace(home) ? home : this.activeSpaceOf(windowId);
+        return { ...intent, spaceId };
+      }
+      case 'moveTabToSpace':
+      case 'setActiveSpace':
+        return this.hasSpace(intent.spaceId) ? intent : undefined;
+      case 'deleteSpace':
+        return this.hasSpace(intent.fallbackSpaceId) && intent.fallbackSpaceId !== intent.spaceId
+          ? intent
+          : undefined;
+      default:
+        return intent;
+    }
   }
 
   private hasSpace(spaceId: string) {
