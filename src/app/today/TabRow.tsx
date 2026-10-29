@@ -9,7 +9,7 @@ import styles from '@/app/rows/rows.module.css';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
 import { FAVORITES_ID, FAVORITES_LIMIT } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
-import { activateTab, faviconFor, toggleMuted, useTabs } from '@/state/tabs';
+import { activateTab, faviconFor, openInLittleArc, toggleMuted, useTabs } from '@/state/tabs';
 
 const stop = (event: PointerEvent) => event.stopPropagation();
 
@@ -42,6 +42,7 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
       previous={previous}
       onPress={() => activateTab(id)}
       onMiddleClick={() => closeTodayTab(id)}
+      onLittleArc={() => openInLittleArc({ tabId: id })}
       drag={{
         source: { kind: 'tab', tabId: id },
         ghost: () => ({ title: tab.title, faviconUrl: faviconFor(tab.url), folder: false }),

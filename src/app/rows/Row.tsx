@@ -38,6 +38,8 @@ interface RowProps {
   onTap?: () => void;
   onMiddleClick?: () => void;
   onDoubleClick?: () => void;
+  /** ⌘⌥-click, as in Arc: open it in Little Arc. */
+  onLittleArc?: () => void;
   drag?: { source: DragSource; ghost: () => Omit<Ghost, 'width'> };
   /** Or worked out as the menu opens. */
   menu?: MenuEntry[] | (() => MenuEntry[]);
@@ -58,6 +60,7 @@ export function Row({
   onTap,
   onMiddleClick,
   onDoubleClick,
+  onLittleArc,
   drag,
   menu,
   children,
@@ -89,6 +92,12 @@ export function Row({
     // A right- or middle-click outside the selection is about that row alone.
     if (!isPress(event)) {
       if (marked !== 2) clearSelection();
+      return;
+    }
+    if (onLittleArc && event.metaKey && event.altKey) {
+      event.preventDefault();
+      clearSelection();
+      onLittleArc();
       return;
     }
     // ⌘-click adds or drops the row, ⇧-click takes the rows between; neither opens it.

@@ -3,6 +3,7 @@ import type { IntentResult } from '@/model/types';
 import { readMedia, runMedia } from './media-page';
 import { archiveItem, backupsItem, modelItem, sessionItem } from './storage-items';
 import { fullPage, SITE_PERMISSION_DEFAULTS } from './capture';
+import type { PeekMessage } from './peek';
 import type {
   MediaState,
   Platform,
@@ -125,6 +126,12 @@ export const chromePlatform: Platform = {
 
   openUrl(windowId, url) {
     void browser.tabs.create({ windowId, url, active: true });
+  },
+
+  openInLittleArc(windowId, what) {
+    void browser.runtime
+      .sendMessage({ kind: 'peek:little', windowId, ...what } satisfies PeekMessage)
+      .catch(() => {});
   },
 
   navigateTab(tabId, url) {

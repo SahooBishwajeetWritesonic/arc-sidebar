@@ -107,6 +107,8 @@ export interface Platform {
   /** Searches with Chrome's default search engine, in a new tab or in `tabId`. */
   searchWeb(text: string, tabId?: number): void;
   duplicateTab(tabId: number): void;
+  /** Arc's Little Arc: the tab, or a page, in a small window of its own. */
+  openInLittleArc(windowId: number, what: { tabId: number } | { url: string }): void;
 
   /** Shows two tabs side by side in Chrome's split view, `left` on the left. */
   splitTabs(left: number, right: number): void;

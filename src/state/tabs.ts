@@ -296,6 +296,11 @@ export function duplicateTab(id: number) {
   platform?.duplicateTab(id);
 }
 
+export function openInLittleArc(what: { tabId: number } | { url: string }) {
+  const { windowId } = useTabs.getState();
+  if (windowId !== null) platform?.openInLittleArc(windowId, what);
+}
+
 export function splitTabs(left: number, right: number) {
   platform?.splitTabs(left, right);
 }

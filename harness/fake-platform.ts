@@ -290,6 +290,20 @@ export class FakePlatform implements Platform {
     this.permissions.set(origin, [...others, { kind, setting }]);
   }
 
+  /** Chrome reports the tab as moved out, to a window of its own (one window here). */
+  openInLittleArc(_windowId: number, what: { tabId: number } | { url: string }) {
+    if (!('tabId' in what)) return;
+    const index = this.tabs.findIndex((tab) => tab.id === what.tabId);
+    if (index === -1) return;
+    const [moved] = this.tabs.splice(index, 1);
+    this.emit({ type: 'remove', tabId: what.tabId });
+    void this.service.onTabDetached(what.tabId, WINDOW_ID);
+    if (moved?.active) {
+      const next = this.tabs[index] ?? this.tabs[index - 1];
+      if (next) this.activateTab(next.id);
+    }
+  }
+
   duplicateTab(tabId: number) {
     const tab = this.tabs.find((t) => t.id === tabId);
     if (tab) this.openTab({ title: tab.title, url: tab.url });

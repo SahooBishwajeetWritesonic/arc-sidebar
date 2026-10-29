@@ -213,6 +213,9 @@ export function onPeekMessage(
     case 'peek:keep':
       if (tab) void keep(tab.windowId);
       return false;
+    case 'peek:little':
+      void openLittleArc(message.windowId, message);
+      return false;
   }
 }
 

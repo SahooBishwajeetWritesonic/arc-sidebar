@@ -18,7 +18,9 @@ export type PeekMessage =
   /** A Peek's page → background: Esc closes it. */
   | { kind: 'peek:close' }
   /** A Peek's or Little Arc's page → background: ⌘O keeps it, as a tab in the window. */
-  | { kind: 'peek:keep' };
+  | { kind: 'peek:keep' }
+  /** Sidebar → background: this tab, or a new one on this page, in a Little Arc. */
+  | ({ kind: 'peek:little'; windowId: number } & ({ tabId: number } | { url: string }));
 
 /** Background → a page: whether it's a pinned tab or Favorite, or in a Peek or Little Arc. */
 export interface PeekRole {

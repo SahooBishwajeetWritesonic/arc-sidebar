@@ -24,7 +24,7 @@ import { CiBadge } from './LiveIcons';
 import { FAVORITES_ID, FAVORITES_LIMIT, type PinItem } from '@/model/types';
 import { isSamePage } from '@/model/urls';
 import { useSidebar } from '@/state/sidebar';
-import { faviconFor, toggleMuted, useTabs } from '@/state/tabs';
+import { faviconFor, openInLittleArc, toggleMuted, useTabs } from '@/state/tabs';
 import { startEditing, stopEditing, useUi } from '@/state/ui';
 
 const stop = (event: PointerEvent) => event.stopPropagation();
@@ -100,6 +100,8 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
       previous={previous}
       onPress={tab ? () => pressPin(itemId) : undefined}
       onTap={tab ? undefined : () => pressPin(itemId)}
+      // The pinned tab stays: its page opens in a Little Arc of its own.
+      onLittleArc={() => openInLittleArc({ url: tab?.url ?? pin.url })}
       drag={
         pin.live
           ? undefined
