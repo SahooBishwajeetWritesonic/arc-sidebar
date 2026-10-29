@@ -1,4 +1,4 @@
-import { generateNKeysBetween } from 'fractional-indexing';
+import { generateKeyBetween, generateNKeysBetween } from 'fractional-indexing';
 import { withTabBefore, withTabOnTop, withoutTab } from '@/platform/today-order';
 import { filtersKey, githubFolderOf } from './live';
 import { canPlace, childrenOf, descendants } from './tree';
@@ -160,6 +160,26 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
       const { icon: _old, ...rest } = item;
       if (intent.icon) return put({ ...rest, icon: intent.icon });
       return item.icon ? put(rest) : model;
+    }
+
+    case 'duplicateFolder': {
+      if (item?.kind !== 'folder' || item.live) return model;
+      const copyId = intent.ids[item.id];
+      if (!copyId || items[copyId]) return model;
+      const siblings = childrenOf(model, item.spaceId, item.parentId);
+      const next = siblings[siblings.findIndex((s) => s.id === item.id) + 1];
+      const order = generateKeyBetween(item.order, next?.order ?? null);
+      // Parents come before their contents, so each copy's parent is copied first.
+      const copied = new Map([[item.id, copyId]]);
+      const copies: Item[] = [{ ...item, id: copyId, order }];
+      for (const child of descendants(model, item.id)) {
+        const id = intent.ids[child.id];
+        const parentId = copied.get(child.parentId ?? '');
+        if (!id || !parentId || items[id] || child.live) continue;
+        copied.set(child.id, id);
+        copies.push({ ...child, id, parentId });
+      }
+      return put(...copies);
     }
 
     case 'openPin':

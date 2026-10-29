@@ -3,6 +3,7 @@ import { Folder, FolderOpen } from 'lucide-react';
 import {
   deleteFolder,
   deleteLiveFolder,
+  duplicateFolder,
   moveItemToSpace,
   refreshLiveFolder,
   renameItem,
@@ -76,6 +77,7 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
                 label: 'Change Icon',
                 submenu: iconMenu(folder.icon, (icon) => setFolderIcon(itemId, icon)),
               },
+              { label: 'Duplicate', onSelect: () => duplicateFolder(itemId) },
             ]),
         ...moveToSpaceMenu(spaces, folder.spaceId, (target) => moveItemToSpace(itemId, target)),
         'separator',

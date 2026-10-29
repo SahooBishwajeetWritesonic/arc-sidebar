@@ -140,6 +140,17 @@ export function setFolderIcon(itemId: string, icon: SpaceIcon | null) {
   dispatch({ type: 'setFolderIcon', itemId, icon });
 }
 
+/** Arc's Duplicate: a copy of the folder and everything in it, just below it, closed. */
+export function duplicateFolder(itemId: string) {
+  const { model } = useSidebar.getState();
+  const copied = [itemId, ...descendants(model, itemId).map((item) => item.id)];
+  dispatch({
+    type: 'duplicateFolder',
+    itemId,
+    ids: Object.fromEntries(copied.map((id) => [id, newId()])),
+  });
+}
+
 /** The one GitHub Live Folder, at the end of the shown space's Pinned section. */
 export function newLiveFolder() {
   const { model, spaceId } = useSidebar.getState();

@@ -343,6 +343,11 @@ export type Intent =
     }
   | { type: 'setFolderCollapsed'; itemId: string; collapsed: boolean }
   | { type: 'setFolderIcon'; itemId: string; icon: SpaceIcon | null }
+  /**
+   * Copies a folder and its contents just below it; `ids` maps each original id to its copy's.
+   * Live Folders and their pull requests aren't copied.
+   */
+  | { type: 'duplicateFolder'; itemId: string; ids: Record<string, string> }
   | { type: 'move'; itemId: string; parentId: string | null; order: string; spaceId?: string }
   | { type: 'deleteFolder'; itemId: string }
   /** Makes the GitHub Live Folder, and lets Arc make it again after a delete. */

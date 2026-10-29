@@ -98,6 +98,38 @@ describe('applyIntent', () => {
     expect(applyIntent(removed, { type: 'setFolderIcon', itemId: 'f1', icon: null })).toBe(removed);
   });
 
+  it('duplicates a folder with its contents just below it, once', () => {
+    const model = build(
+      pin('p1', 'a0'),
+      pin('p2', 'a1'),
+      folder('f1', 'a2', ['p1', 'p2']),
+      folder('f2', 'a3'),
+      { type: 'move', itemId: 'p2', parentId: 'f2', order: 'a0' },
+      { type: 'move', itemId: 'f2', parentId: 'f1', order: 'a1' },
+      { type: 'rename', itemId: 'p1', title: 'Mail' },
+      pin('p3', 'a4'),
+    );
+    const intent: Intent = {
+      type: 'duplicateFolder',
+      itemId: 'f1',
+      ids: { f1: 'c1', p1: 'c2', f2: 'c3', p2: 'c4' },
+    };
+    const copied = applyIntent(model, intent);
+    expect(ids(copied)).toEqual(['f1', 'c1', 'p3']);
+    expect(ids(copied, 'c1')).toEqual(['c2', 'c3']);
+    expect(ids(copied, 'c3')).toEqual(['c4']);
+    expect(copied.items.c1).toMatchObject({ kind: 'folder', name: 'f1' });
+    expect(copied.items.c2).toMatchObject({ url: 'https://example.com/p1', customTitle: 'Mail' });
+    expect(ids(copied, 'f1')).toEqual(['p1', 'f2']);
+    expect(applyIntent(copied, intent)).toBe(copied);
+  });
+
+  it('doesn’t duplicate a Live Folder', () => {
+    const model = build({ type: 'createLiveFolder', itemId: 'l1', spaceId: S, order: 'a0' });
+    const intent: Intent = { type: 'duplicateFolder', itemId: 'l1', ids: { l1: 'c1' } };
+    expect(applyIntent(model, intent)).toBe(model);
+  });
+
   it('refuses to move a folder into itself', () => {
     const model = build(folder('f1', 'a0'), folder('f2', 'a1'));
     const nested = applyIntent(model, { type: 'move', itemId: 'f2', parentId: 'f1', order: 'a0' });
