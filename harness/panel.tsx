@@ -11,7 +11,7 @@ import '@/app/global.css';
 // Its colour scheme follows the Appearance setting, which the harness's Theme control sets.
 
 const platform = (window.parent as Window & { harnessPlatform: FakePlatform }).harnessPlatform;
-const connection = connect(platform);
+const connection = connect(platform, { media: true });
 // The frame reloads when the theme changes; stop the old one listening.
 addEventListener('pagehide', () => void connection.then((disconnect) => disconnect()));
 

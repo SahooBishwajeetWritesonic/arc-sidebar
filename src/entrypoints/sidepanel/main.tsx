@@ -6,7 +6,7 @@ import { connect } from '@/state/connect';
 import { serveCommandBar } from './command-bar';
 import '@/app/global.css';
 
-void connect(chromePlatform);
+void connect(chromePlatform, { media: true });
 void chromePlatform.currentWindowId().then(serveCommandBar);
 
 createRoot(document.getElementById('root')!).render(
