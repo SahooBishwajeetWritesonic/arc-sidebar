@@ -74,6 +74,9 @@ export function Harness({ platform }: { platform: FakePlatform }) {
         <button onClick={() => platform.reloadAll()}>Reload every tab</button>
         <button onClick={() => platform.toggleAudibleRandom()}>Toggle audio</button>
         <button onClick={() => platform.navigateActive()}>Follow a link in the active tab</button>
+        <button onClick={() => platform.splitActiveWithNext()}>
+          Split the active tab with the next one
+        </button>
 
         <h2>Archive</h2>
         <button onClick={() => platform.ageTabs(13)}>Make inactive tabs 13 hours old</button>

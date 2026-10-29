@@ -73,6 +73,7 @@ export class FakePlatform implements Platform {
   private sessionListeners = new Set<(session: SessionState) => void>();
   readonly service: SidebarService;
   private history: HistoryEntry[];
+  private nextSplit = 1;
 
   constructor(fixtures: Fixture[], history: HistoryEntry[] = []) {
     this.history = [...history];
@@ -187,6 +188,8 @@ export class FakePlatform implements Platform {
     if (index === -1) return;
     const [closed] = this.tabs.splice(index, 1);
     this.emit({ type: 'remove', tabId });
+    // Its split ends with it; the other tab stays.
+    if (closed?.splitViewId) this.unsplit(closed.splitViewId);
     void this.service.onTabRemoved(tabId, WINDOW_ID);
     if (closed?.active) {
       // Chrome picks its own next tab; the panel usually got there first.
@@ -224,6 +227,37 @@ export class FakePlatform implements Platform {
   duplicateTab(tabId: number) {
     const tab = this.tabs.find((t) => t.id === tabId);
     if (tab) this.openTab({ title: tab.title, url: tab.url });
+  }
+
+  /** As Chrome does: the right tab moves next to the left, then both get the split's id. */
+  splitTabs(left: number, right: number) {
+    const a = this.tabs.find((t) => t.id === left);
+    const b = this.tabs.find((t) => t.id === right);
+    if (!a || !b || a === b || a.splitViewId || b.splitViewId) return;
+    this.tabs.splice(this.tabs.indexOf(b), 1);
+    this.tabs.splice(this.tabs.indexOf(a) + 1, 0, b);
+    const splitViewId = this.nextSplit++;
+    this.later(8, () => {
+      this.patch(left, { splitViewId });
+      this.patch(right, { splitViewId });
+    });
+  }
+
+  unsplit(splitViewId: number) {
+    for (const tab of this.tabs) {
+      if (tab.splitViewId === splitViewId) this.patch(tab.id, { splitViewId: undefined });
+    }
+  }
+
+  openInSplit(tabId: number, url: string) {
+    this.openUrl(WINDOW_ID, url);
+    this.splitTabs(tabId, this.nextId - 1);
+  }
+
+  splitActiveWithNext() {
+    const index = this.tabs.findIndex((tab) => tab.active);
+    const next = this.tabs[index + 1];
+    if (index !== -1 && next) this.splitTabs(this.tabs[index]!.id, next.id);
   }
 
   faviconUrl(pageUrl: string) {

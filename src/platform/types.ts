@@ -19,6 +19,8 @@ export interface TabInfo {
   audible: boolean;
   muted: boolean;
   discarded: boolean;
+  /** Chrome's split view it's in (two tabs side by side), if any. */
+  splitViewId?: number;
 }
 
 /** A page from Chrome's history, as the command bar uses it. */
@@ -71,4 +73,10 @@ export interface Platform {
   /** Searches with Chrome's default search engine, in a new tab. */
   searchWeb(text: string): void;
   duplicateTab(tabId: number): void;
+
+  /** Shows two tabs side by side in Chrome's split view, `left` on the left. */
+  splitTabs(left: number, right: number): void;
+  unsplit(splitViewId: number): void;
+  /** Opens `url` in a new tab split with `tabId`, on its right. */
+  openInSplit(tabId: number, url: string): void;
 }

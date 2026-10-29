@@ -221,6 +221,18 @@ export function duplicateTab(id: number) {
   platform?.duplicateTab(id);
 }
 
+export function splitTabs(left: number, right: number) {
+  platform?.splitTabs(left, right);
+}
+
+export function unsplit(splitViewId: number) {
+  platform?.unsplit(splitViewId);
+}
+
+export function openInSplit(tabId: number, url: string) {
+  platform?.openInSplit(tabId, url);
+}
+
 export function searchHistory(text: string) {
   return platform?.searchHistory(text) ?? Promise.resolve([]);
 }

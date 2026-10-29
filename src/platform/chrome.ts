@@ -16,6 +16,9 @@ function toTabInfo(tab: Browser.tabs.Tab): TabInfo | undefined {
     audible: tab.audible ?? false,
     muted: tab.mutedInfo?.muted ?? false,
     discarded: tab.discarded,
+    // SPLIT_VIEW_ID_NONE is -1; Chrome before 140 has no split views at all.
+    splitViewId:
+      tab.splitViewId !== undefined && tab.splitViewId !== -1 ? tab.splitViewId : undefined,
   };
 }
 
@@ -121,6 +124,23 @@ export const chromePlatform: Platform = {
 
   duplicateTab(tabId) {
     void browser.tabs.duplicate(tabId);
+  },
+
+  splitTabs(left, right) {
+    void (async () => {
+      // Chrome splits two neighbouring tabs: move the right one next to the left.
+      const [a, b] = await Promise.all([browser.tabs.get(left), browser.tabs.get(right)]);
+      await browser.tabs.move(right, { index: b.index > a.index ? a.index + 1 : a.index });
+      await browser.tabs.createSplit([left, right]);
+    })().catch((error: unknown) => console.warn("Couldn't split the tabs", error));
+  },
+
+  unsplit(splitViewId) {
+    void browser.tabs.unsplit(splitViewId).catch(() => {});
+  },
+
+  openInSplit(tabId, url) {
+    void browser.tabs.create({ url, splitWithTabId: tabId, active: true });
   },
 
   faviconUrl(pageUrl) {
