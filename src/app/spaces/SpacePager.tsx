@@ -2,6 +2,7 @@ import { animate, LayoutGroup, motion, useReducedMotion, type MotionValue } from
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { WheelGestures } from 'wheel-gestures';
 import { switchSpace } from '@/app/actions';
+import { Boundary } from '@/app/chrome/Boundary';
 import { spring } from '@/app/motion';
 import { Pinned } from '@/app/pinned/Pinned';
 import type { ThemeLook } from '@/app/theme/engine';
@@ -92,11 +93,13 @@ export function SpacePager({ looks }: { looks: Record<string, ThemeLook> }) {
             aria-label={space.name}
           >
             {rendered(i) && (
-              <LayoutGroup id={space.id}>
-                <SpaceHeader spaceId={space.id} />
-                <Pinned spaceId={space.id} />
-                <Today spaceId={space.id} />
-              </LayoutGroup>
+              <Boundary region="space" what="This space">
+                <LayoutGroup id={space.id}>
+                  <SpaceHeader spaceId={space.id} />
+                  <Pinned spaceId={space.id} />
+                  <Today spaceId={space.id} />
+                </LayoutGroup>
+              </Boundary>
             )}
           </motion.section>
         ))}

@@ -14,6 +14,7 @@ import { useSidebar } from '@/state/sidebar';
 import { activateTab, openNewTab, useTabs } from '@/state/tabs';
 import { useUi } from '@/state/ui';
 import { ArchiveView } from './archive/ArchiveView';
+import { Boundary } from './chrome/Boundary';
 import { BottomBar } from './chrome/BottomBar';
 import { DragLayer } from './drag/DragLayer';
 import { Favorites } from './favorites/Favorites';
@@ -129,7 +130,11 @@ export function App() {
     <MotionConfig reducedMotion="user">
       {/* As in Arc, the sidebar scrolls above a transparent bottom bar. */}
       <div className={styles.shell} data-swipe-area>
-        {ready && <Backdrop looks={looks} />}
+        {ready && (
+          <Boundary region="backdrop">
+            <Backdrop looks={looks} />
+          </Boundary>
+        )}
         <main data-sidebar className={styles.sidebar} onKeyDown={onKeyDown}>
           {ready && (
             <AnimatePresence mode="wait" initial={false}>
@@ -141,7 +146,9 @@ export function App() {
                   exit={{ opacity: 0, x: -12 }}
                   transition={fade}
                 >
-                  <ArchiveView />
+                  <Boundary region="archive" what="The archive">
+                    <ArchiveView />
+                  </Boundary>
                 </motion.div>
               ) : (
                 <motion.div
@@ -151,20 +158,32 @@ export function App() {
                   exit={{ opacity: 0, x: 12 }}
                   transition={fade}
                 >
-                  <Favorites />
+                  <Boundary region="favorites" what="Favorites">
+                    <Favorites />
+                  </Boundary>
                   <SpacePager looks={looks} />
                 </motion.div>
               )}
             </AnimatePresence>
           )}
-          <DragLayer />
+          <Boundary region="drag">
+            <DragLayer />
+          </Boundary>
         </main>
-        <BottomBar />
+        <Boundary region="bottom bar">
+          <BottomBar />
+        </Boundary>
       </div>
-      <ToastLayer />
-      <ThemePicker />
-      <ImportDialog />
-      <RestoreDialog />
+      <Boundary region="toasts">
+        <ToastLayer />
+      </Boundary>
+      <Boundary region="theme picker">
+        <ThemePicker />
+      </Boundary>
+      <Boundary region="dialogs">
+        <ImportDialog />
+        <RestoreDialog />
+      </Boundary>
     </MotionConfig>
   );
 }
