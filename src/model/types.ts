@@ -33,6 +33,11 @@ export interface Settings {
    * Arc turns it on for local servers by itself.
    */
   developerSites: string[];
+  /**
+   * Arc's Back, Forward and Reload above the URL bar. Off at first: Chrome's
+   * toolbar has its own beside the panel.
+   */
+  navButtons: boolean;
 }
 
 export const defaultSettings = (): Settings => ({
@@ -40,6 +45,7 @@ export const defaultSettings = (): Settings => ({
   appearance: 'auto',
   githubFolder: true,
   developerSites: ['localhost', '127.0.0.1'],
+  navButtons: false,
 });
 
 export interface Space {
@@ -296,6 +302,7 @@ export type Intent =
   | { type: 'setSpaceTheme'; spaceId: string; theme: SpaceTheme | null }
   | { type: 'setAppearance'; appearance: Appearance }
   | { type: 'setDeveloperMode'; host: string; on: boolean }
+  | { type: 'setNavButtons'; on: boolean }
   | { type: 'moveSpace'; spaceId: string; index: number }
   /**
    * Removes a space and its pins and folders (`itemIds`). Its Today tabs, and

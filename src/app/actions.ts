@@ -609,6 +609,10 @@ export function setSpaceTheme(spaceId: string, theme: SpaceTheme | null) {
   dispatch({ type: 'setSpaceTheme', spaceId, theme });
 }
 
+export function setNavButtons(on: boolean) {
+  dispatch({ type: 'setNavButtons', on });
+}
+
 export function setAppearance(appearance: Appearance) {
   dispatch({ type: 'setAppearance', appearance });
 }

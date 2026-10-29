@@ -109,6 +109,13 @@ export interface Platform {
   /** Searches with Chrome's default search engine, in a new tab or in `tabId`. */
   searchWeb(text: string, tabId?: number): void;
   duplicateTab(tabId: number): void;
+  /**
+   * Back (-1) or forward (1) in the tab's history; `inNewTab` opens that page
+   * in a copy of the tab instead, history and all (Arc's ⌘-click).
+   */
+  historyStep(tabId: number, by: -1 | 1, inNewTab?: boolean): void;
+  reloadTab(tabId: number): void;
+  stopLoading(tabId: number): void;
   /** Arc's Little Arc: the tab, or a page, in a small window of its own. */
   openInLittleArc(windowId: number, what: { tabId: number } | { url: string }): void;
 

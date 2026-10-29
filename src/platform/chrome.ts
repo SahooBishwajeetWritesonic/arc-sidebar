@@ -134,6 +134,27 @@ export const chromePlatform: Platform = {
     void browser.tabs.create({ windowId, url, active: true });
   },
 
+  historyStep(tabId, by, inNewTab = false) {
+    const step = (id: number) => (by < 0 ? browser.tabs.goBack(id) : browser.tabs.goForward(id));
+    if (!inNewTab) return void step(tabId).catch(() => {});
+    void browser.tabs
+      .duplicate(tabId)
+      .then((copy) => (copy?.id === undefined ? undefined : step(copy.id)))
+      .catch(() => {});
+  },
+
+  reloadTab(tabId) {
+    void browser.tabs.reload(tabId).catch(() => {});
+  },
+
+  stopLoading(tabId) {
+    // Chrome has no tabs.stop, but a page that has arrived can stop loading the
+    // rest. One still waiting on its server can't be stopped from here.
+    void browser.scripting
+      .executeScript({ target: { tabId }, func: () => window.stop() })
+      .catch(() => {});
+  },
+
   openInLittleArc(windowId, what) {
     void browser.runtime
       .sendMessage({ kind: 'peek:little', windowId, ...what } satisfies PeekMessage)

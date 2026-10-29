@@ -210,6 +210,13 @@ describe('settings, undo and archive', () => {
     expect(off.settings.developerSites).toEqual(['127.0.0.1', 'app.example.com']);
   });
 
+  it('shows Back, Forward and Reload only once turned on', () => {
+    expect(emptyModel().settings.navButtons).toBe(false);
+    const on = build({ type: 'setNavButtons', on: true });
+    expect(on.settings.navButtons).toBe(true);
+    expect(applyIntent(on, { type: 'setNavButtons', on: true })).toBe(on);
+  });
+
   it('sets how long until Today tabs archive', () => {
     const model = applyIntent(emptyModel(), { type: 'setArchiveAfter', archiveAfter: '7d' });
     expect(model.settings.archiveAfter).toBe('7d');

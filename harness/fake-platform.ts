@@ -78,6 +78,8 @@ export class FakePlatform implements Platform {
   /** When each tab was last viewed, like Chrome's tab.lastAccessed. */
   private accessed = new Map<number, number>();
   private archiveListeners = new Set<(archive: ArchiveState) => void>();
+  /** Each tab's pages behind it and ahead of it, nearest last. */
+  private pages = new Map<number, { back: Fixture[]; forward: Fixture[] }>();
   /** Titles seen per URL, so a reopened tab gets its page title back. */
   private titles = new Map<string, string>([['chrome://newtab/', 'New Tab']]);
   private tabListeners = new Set<(event: TabEvent) => void>();
@@ -586,8 +588,42 @@ export class FakePlatform implements Platform {
   }
 
   private navigate(tabId: number, url: string, title?: string) {
+    const tab = this.tabs.find((t) => t.id === tabId);
+    if (tab) {
+      const { back } = this.historyOf(tabId);
+      this.pages.set(tabId, { back: [...back, { url: tab.url, title: tab.title }], forward: [] });
+    }
     this.patch(tabId, { url, title: title ?? new URL(url).hostname });
     this.simulateLoad(tabId);
+  }
+
+  private historyOf(tabId: number) {
+    return this.pages.get(tabId) ?? { back: [], forward: [] };
+  }
+
+  historyStep(tabId: number, by: -1 | 1, inNewTab = false) {
+    const tab = this.tabs.find((t) => t.id === tabId);
+    const { back, forward } = this.historyOf(tabId);
+    const to = by < 0 ? back.at(-1) : forward.at(-1);
+    if (!tab || !to) return;
+    if (inNewTab) return this.openTab(to);
+    const here = { url: tab.url, title: tab.title };
+    this.pages.set(
+      tabId,
+      by < 0
+        ? { back: back.slice(0, -1), forward: [...forward, here] }
+        : { back: [...back, here], forward: forward.slice(0, -1) },
+    );
+    this.patch(tabId, to);
+    this.simulateLoad(tabId);
+  }
+
+  reloadTab(tabId: number) {
+    this.simulateLoad(tabId);
+  }
+
+  stopLoading(tabId: number) {
+    this.patch(tabId, { loading: false });
   }
 
   private simulateLoad(tabId: number) {

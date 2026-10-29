@@ -62,6 +62,7 @@ describe('repairModel', () => {
         appearance: 'dark',
         githubFolder: false,
         developerSites: ['localhost', 'app.example.com'],
+        navButtons: true,
       },
     };
     expect(repairModel(structuredClone(model))).toEqual(model);

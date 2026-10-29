@@ -5,19 +5,21 @@ import { addressLabel, isDeveloperSite } from '@/model/urls';
 import { useSidebar } from '@/state/sidebar';
 import { useTabs } from '@/state/tabs';
 import { editAddress } from '@/state/ui';
+import { NavButtons } from './NavButtons';
 import { copyPageUrl } from './page-actions';
 import { SiteMenu } from './SiteMenu';
 import styles from './url-bar.module.css';
 
 /**
- * Arc's URL bar: the page's site (its whole address in Developer Mode). Clicking it
- * edits the address in the command bar, as ⌘L does.
+ * Arc's URL bar: the page's site, or its whole address in Developer Mode.
+ * Clicking it edits the address in the command bar, as ⌘L does.
  */
 export function UrlBar() {
   const tab = useTabs((state) =>
     state.activeId === null ? undefined : state.tabs.get(state.activeId),
   );
   const developerSites = useSidebar((state) => state.model.settings.developerSites);
+  const navButtons = useSidebar((state) => state.model.settings.navButtons);
   const [menuOpen, setMenuOpen] = useState(false);
   // The copy button shows a tick for a moment after it copies.
   const [copied, setCopied] = useState(0);
@@ -32,6 +34,7 @@ export function UrlBar() {
 
   return (
     <header className={styles.bar} data-menu-open={menuOpen || undefined}>
+      {navButtons && <NavButtons />}
       <div className={styles.pill}>
         <button
           type="button"

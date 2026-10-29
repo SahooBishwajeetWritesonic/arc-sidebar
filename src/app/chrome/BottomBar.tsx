@@ -6,6 +6,7 @@ import {
   newFolder,
   newLiveFolder,
   setArchiveAfter,
+  setNavButtons,
   switchSpace,
 } from '@/app/actions';
 import { useBesideMenu } from '@/app/rows/beside';
@@ -76,6 +77,7 @@ function SpaceSwitcher() {
 function AddMenu() {
   const archiveAfter = useSidebar((state) => state.model.settings?.archiveAfter ?? '12h');
   const hasLiveFolder = useSidebar((state) => githubFolderOf(state.model) !== undefined);
+  const navButtons = useSidebar((state) => state.model.settings.navButtons);
   const beside = useBesideMenu();
   return (
     <Menu.Root>
@@ -132,6 +134,9 @@ function AddMenu() {
                 </Menu.Positioner>
               </Menu.Portal>
             </Menu.SubmenuRoot>
+            <Menu.Item className={menu.item} onClick={() => setNavButtons(!navButtons)}>
+              {navButtons ? 'Hide' : 'Show'} Back, Forward and Reload
+            </Menu.Item>
             <Menu.Separator className={menu.separator} />
             <Menu.Item className={menu.item} onClick={() => setImporting(true)}>
               Import from Arc…

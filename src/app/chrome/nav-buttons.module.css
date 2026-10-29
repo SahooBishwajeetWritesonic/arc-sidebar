@@ -1,0 +1,53 @@
+/*
+ * Arc's top-row navigation (research/07): 32 pt buttons 2 pt apart, Reload's centre 22 pt
+ * in from the edge. The arrows nudge the way they go as they're pressed.
+ */
+.nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  height: 32px;
+  margin: 0 calc(6px - var(--pad-side)) 6px 0;
+}
+
+.button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  background: none;
+  color: var(--ink-secondary);
+  transition: scale var(--press-time) linear;
+}
+
+.button:active {
+  scale: var(--press-scale-icon);
+}
+
+.button svg {
+  transition: translate var(--press-time) linear;
+}
+
+.button[data-nudge='back']:active svg {
+  translate: -2px 0;
+}
+
+.button[data-nudge='forward']:active svg {
+  translate: 2px 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button:hover {
+    background: var(--bar-hover);
+    color: var(--ink);
+  }
+}
+
+.button:focus-visible {
+  outline: 2px dashed var(--focus-ring);
+  outline-offset: -2px;
+}

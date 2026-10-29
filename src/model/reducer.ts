@@ -326,6 +326,10 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
       return { ...model, settings: { ...model.settings, developerSites } };
     }
 
+    case 'setNavButtons':
+      if (model.settings.navButtons === intent.on) return model;
+      return { ...model, settings: { ...model.settings, navButtons: intent.on } };
+
     case 'moveSpace': {
       const from = model.spaces.findIndex((space) => space.id === intent.spaceId);
       if (from === -1) return model;

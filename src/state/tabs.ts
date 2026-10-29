@@ -296,6 +296,18 @@ export function duplicateTab(id: number) {
   platform?.duplicateTab(id);
 }
 
+export function historyStep(id: number, by: -1 | 1, inNewTab = false) {
+  platform?.historyStep(id, by, inNewTab);
+}
+
+export function reloadTab(id: number) {
+  platform?.reloadTab(id);
+}
+
+export function stopLoading(id: number) {
+  platform?.stopLoading(id);
+}
+
 export function openInLittleArc(what: { tabId: number } | { url: string }) {
   const { windowId } = useTabs.getState();
   if (windowId !== null) platform?.openInLittleArc(windowId, what);
