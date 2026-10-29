@@ -21,6 +21,16 @@ export interface TabInfo {
   discarded: boolean;
 }
 
+/** A page from Chrome's history, as the command bar uses it. */
+export interface HistoryEntry {
+  url: string;
+  title: string;
+  visitCount: number;
+  /** Times the address was typed rather than clicked to; drives inline completion. */
+  typedCount: number;
+  lastVisitTime: number;
+}
+
 /** Chrome's tab events, normalised to the few shapes the panel cares about. */
 export type TabEvent =
   | { type: 'upsert'; tab: TabInfo }
