@@ -340,6 +340,21 @@ describe('SidebarService', () => {
     expect(saved.model).toBe(model);
   });
 
+  it('puts a split’s two tabs together in Today, left pane first, in one space', async () => {
+    const { service, saved, tabs } = setup({
+      tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com'), tab(3, 'https://c.com')],
+    });
+    await service.ready;
+    await service.handleIntent({ type: 'moveTabToSpace', tabId: 1, spaceId: 'work' });
+    expect(saved.session.orders['1']).toEqual([1, 2, 3]);
+    // Chrome splits 3 (left) with 1 (right): 1 moves next to 3.
+    tabs[0] = { ...tabs[0]!, index: 3, splitViewId: 7 };
+    tabs[2] = { ...tabs[2]!, index: 2, splitViewId: 7 };
+    await service.onTabSplit(7);
+    expect(saved.session.orders['1']).toEqual([2, 3, 1]);
+    expect(saved.session.tabSpaces['1']).toBe(saved.session.tabSpaces['3']);
+  });
+
   it('archives a Today tab closed in Chrome, with the page it was on', async () => {
     const { service, saved } = setup({ tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')] });
     await service.onTabUpdated(1, { url: 'https://a.com/next' });

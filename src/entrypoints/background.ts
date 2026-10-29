@@ -25,6 +25,8 @@ function toLiveTab(tab: Browser.tabs.Tab): LiveTab | undefined {
     active: tab.active,
     audible: tab.audible ?? false,
     lastAccessed: tab.lastAccessed,
+    splitViewId:
+      tab.splitViewId !== undefined && tab.splitViewId !== -1 ? tab.splitViewId : undefined,
   };
 }
 
@@ -65,6 +67,9 @@ export default defineBackground(() => {
     ({ tabId, windowId }) => void service.onTabActivated(tabId, windowId),
   );
   browser.tabs.onUpdated.addListener((tabId, change) => {
+    if (change.splitViewId !== undefined && change.splitViewId !== -1) {
+      void service.onTabSplit(change.splitViewId);
+    }
     if (change.url === undefined && change.title === undefined) return;
     void service.onTabUpdated(tabId, { url: change.url, title: change.title });
   });

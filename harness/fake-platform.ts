@@ -240,6 +240,7 @@ export class FakePlatform implements Platform {
     this.later(8, () => {
       this.patch(left, { splitViewId });
       this.patch(right, { splitViewId });
+      void this.service.onTabSplit(splitViewId);
     });
   }
 
@@ -403,6 +404,7 @@ export class FakePlatform implements Platform {
       active: tab.active,
       audible: tab.audible,
       lastAccessed: this.accessed.get(tab.id),
+      splitViewId: tab.splitViewId,
     };
   }
 

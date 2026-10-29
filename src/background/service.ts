@@ -32,6 +32,7 @@ export interface LiveTab {
   audible: boolean;
   /** When the tab was last viewed (Chrome 121+). */
   lastAccessed?: number;
+  splitViewId?: number;
 }
 
 /** What the service needs from Chrome. The harness passes in-memory fakes. */
@@ -448,6 +449,35 @@ export class SidebarService {
   async onTabDetached(tabId: number, oldWindowId: number) {
     await this.ready;
     this.updateOrder(oldWindowId, (order) => withoutTab(order, tabId));
+  }
+
+  /**
+   * A split view's tabs sit together in Today, left pane first, in the left one's space, so the
+   * sidebar shows them as one row the way they look.
+   */
+  async onTabSplit(splitViewId: number) {
+    await this.ready;
+    const pair = (await this.deps.queryTabs())
+      .filter((tab) => tab.splitViewId === splitViewId)
+      .sort((a, b) => a.index - b.index);
+    const [left, right] = pair;
+    if (pair.length !== 2 || !left || !right || left.windowId !== right.windowId) return;
+    const key = String(left.windowId);
+    const order = this.session.orders[key] ?? [];
+    if (!order.includes(left.id) || !order.includes(right.id)) return;
+    const without = order.filter((id) => id !== right.id);
+    const at = without.indexOf(left.id) + 1;
+    const aligned = [...without.slice(0, at), right.id, ...without.slice(at)];
+    const space = this.session.tabSpaces[left.id];
+    const sameSpace = space === undefined || this.session.tabSpaces[right.id] === space;
+    if (aligned.join() === order.join() && sameSpace) return;
+    this.writeSession({
+      ...this.session,
+      orders: { ...this.session.orders, [key]: aligned },
+      tabSpaces: sameSpace
+        ? this.session.tabSpaces
+        : { ...this.session.tabSpaces, [right.id]: space },
+    });
   }
 
   async onWindowRemoved(windowId: number) {
