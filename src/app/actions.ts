@@ -29,6 +29,7 @@ import {
   forgetTab,
   forgetTabs,
   leaveTabs,
+  openInSplit,
   openNewTab,
   selectTodayIds,
   splitTabs,
@@ -860,6 +861,20 @@ export function splitTodayTabs(tabId: number, withTabId: number, side: 'left' | 
 /** Arc's "Separate All Tabs": the two go back to being rows of their own. */
 export function separateSplit(splitViewId: number) {
   unsplit(splitViewId);
+}
+
+/**
+ * Arc's Option-click: splits a Today tab with the current one, on its right (the current tab
+ * with a copy of itself). Chrome splits only two, so a tab already split is just selected.
+ */
+export function optionClickTab(tabId: number) {
+  const { tabs, activeId, bound } = useTabs.getState();
+  const current = activeId === null ? undefined : tabs.get(activeId);
+  const tab = tabs.get(tabId);
+  const free = (t: TabInfo | undefined) => t && t.splitViewId === undefined && !bound.has(t.id);
+  if (!tab || !current || !free(tab) || !free(current)) return activateTab(tabId);
+  if (tab.id === current.id) openInSplit(tab.id, tab.url);
+  else splitTodayTabs(tab.id, current.id, 'right');
 }
 
 export function splitOf(tabId: number): number[] {

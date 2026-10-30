@@ -5,6 +5,7 @@ import {
   closeTodayTab,
   favoriteTab,
   moveTabToSpace,
+  optionClickTab,
   pinTab,
   renameTab,
   tabsBelow,
@@ -65,6 +66,7 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
       onPress={() => activateTab(id)}
       onMiddleClick={() => closeTodayTab(id)}
       onLittleArc={() => openInLittleArc({ tabId: id })}
+      onOptionClick={() => optionClickTab(id)}
       onDoubleClick={() => startEditing(editKey)}
       drag={{
         source: { kind: 'tab', tabId: id },

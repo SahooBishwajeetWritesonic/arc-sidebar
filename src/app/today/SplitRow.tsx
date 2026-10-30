@@ -96,6 +96,7 @@ export const SplitRow = memo(function SplitRow({ ids, splitViewId, ref }: SplitR
         pressed.current = leftId;
       }}
       onMiddleClick={() => closeTodayTabs(ids)}
+      onOptionClick={() => separateSplit(splitViewId)}
       drag={{
         source: { kind: 'split', tabIds: ids },
         ghost: () => ({

@@ -40,6 +40,8 @@ interface RowProps {
   onDoubleClick?: () => void;
   /** ⌘⌥-click, as in Arc: open it in Little Arc. */
   onLittleArc?: () => void;
+  /** Option-click, as in Arc: split a tab with the current one, or separate a split. */
+  onOptionClick?: () => void;
   drag?: { source: DragSource; ghost: () => Omit<Ghost, 'width'> };
   /** Or worked out as the menu opens. */
   menu?: MenuEntry[] | (() => MenuEntry[]);
@@ -61,6 +63,7 @@ export function Row({
   onMiddleClick,
   onDoubleClick,
   onLittleArc,
+  onOptionClick,
   drag,
   menu,
   children,
@@ -98,6 +101,13 @@ export function Row({
       event.preventDefault();
       clearSelection();
       onLittleArc();
+      return;
+    }
+    // A tap, not a press: dragging with Option held still moves the row.
+    if (onOptionClick && event.altKey && !event.metaKey && !event.shiftKey) {
+      clearSelection();
+      if (drag) beginPress(event, { ...drag, onTap: onOptionClick, onDrop: dropOn });
+      else onOptionClick();
       return;
     }
     // ⌘-click adds or drops the row, ⇧-click takes the rows between; neither opens it.

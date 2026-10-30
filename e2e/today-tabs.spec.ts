@@ -106,3 +106,22 @@ test('Archive Tabs Below archives what’s under the tab except audio, with Undo
   await panel(page).getByRole('status').getByRole('button', { name: 'Undo' }).click();
   await expect(today(page)).toHaveCount(4);
 });
+
+test('Option-click splits a tab with the current one; on the split, separates it', async ({
+  page,
+}) => {
+  await ready(page);
+  await today(page).filter({ hasText: 'Engineering Wiki' }).click();
+  await today(page)
+    .filter({ hasText: 'chrome.sidePanel' })
+    .click({ modifiers: ['Alt'] });
+  const split = panel(page).locator('[data-active-page] [data-nav-row="split"]');
+  await expect(split).toHaveCount(1);
+  await expect(split.locator('[data-pane]').first()).toContainText('Engineering Wiki');
+  await expect(split.locator('[data-pane]').last()).toContainText('chrome.sidePanel');
+  await expect(split.locator('[data-pane]').last()).toHaveAttribute('data-active', 'true');
+
+  await split.click({ modifiers: ['Alt'] });
+  await expect(split).toHaveCount(0);
+  await expect(today(page)).toHaveCount(4);
+});
