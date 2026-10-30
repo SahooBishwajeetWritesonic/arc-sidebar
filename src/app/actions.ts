@@ -34,6 +34,7 @@ import {
   leaveTabs,
   openInSplit,
   openNewTab,
+  openUrl,
   selectTodayIds,
   splitTabs,
   unsplit,
@@ -41,6 +42,7 @@ import {
 } from '@/state/tabs';
 import { clearSelection } from '@/state/selection';
 import { startEditing } from '@/state/ui';
+import type { DropHow } from './drag/drag';
 import { orderForDrop, ordersForDrop, type DragSource, type DropTarget } from './drag/targets';
 import { showToast, showUndoToast } from './toast/toast';
 import { followReopened, pushUndo, undoable } from './undo';
@@ -371,10 +373,95 @@ export function deleteLiveFolder(itemId: string) {
   );
 }
 
-/** ⌘Z puts it back. (A split made by a drop is undone by separating it.) */
-export function dropOn(source: DragSource, target: DropTarget) {
+/**
+ * Commits a drag, or with Option held leaves a copy; ⌘Z puts it back.
+ * A split made by a drop skips undo: separating it undoes it.
+ */
+export function dropOn(source: DragSource, target: DropTarget, how?: DropHow) {
   if (target.section === 'split') drop(source, target);
+  else if (how?.copy) undoable(() => copyOn(source, target));
   else undoable(() => drop(source, target));
+}
+
+function copiedPage(source: DragSource) {
+  const { model, session } = useSidebar.getState();
+  if (source.kind === 'tab') {
+    const tab = useTabs.getState().tabs.get(source.tabId);
+    const customTitle = session.tabTitles[source.tabId];
+    return tab && { url: tab.url, title: tab.title, ...(customTitle && { customTitle }) };
+  }
+  if (source.kind !== 'pin' && source.kind !== 'favorite') return undefined;
+  const pin = model.items[source.itemId];
+  if (pin?.kind !== 'pin') return undefined;
+  const { url, title, customTitle, icon } = pin;
+  return { url, title, ...(customTitle && { customTitle }), ...(icon && { icon }) };
+}
+
+/**
+ * Arc's Option-drag: the original stays and a copy lands (a pin in Pinned or Favorites,
+ * a tab in Today, a folder with its contents). Splits and selections just move.
+ */
+function copyOn(source: DragSource, target: DropTarget) {
+  const { model, spaceId, windowId } = useSidebar.getState();
+  if (windowId === null) return;
+  if (source.kind === 'folder') {
+    if (target.section !== 'pinned') return;
+    const copied = [source.itemId, ...descendants(model, source.itemId).map((item) => item.id)];
+    const ids = Object.fromEntries(copied.map((id) => [id, newId()]));
+    const { parentId, beforeId, afterId } = target;
+    const order = orderForDrop(model, spaceId, parentId, beforeId, afterId, null);
+    dispatch({ type: 'duplicateFolder', itemId: source.itemId, ids });
+    dispatch({ type: 'move', itemId: ids[source.itemId]!, spaceId, parentId, order });
+    return;
+  }
+  // A favorited split is one tile: it moves as one, as a pinned split does.
+  const paired = source.kind === 'favorite' && pairOf(source.itemId);
+  const page = paired ? undefined : copiedPage(source);
+  if (!page || target.section === 'split') return drop(source, target);
+  if (target.section === 'today') {
+    const { beforeTabId } = target;
+    whenPlaced(page.url, (tabId) =>
+      dispatch({ type: 'reorderToday', windowId, tabId, beforeTabId }),
+    );
+    if (source.kind === 'tab') void duplicateTab(source.tabId);
+    else openUrl(page.url);
+    return;
+  }
+  const favorites = target.section === 'favorites';
+  if (favorites && favoriteCount() >= FAVORITES_LIMIT) return;
+  dispatch({
+    type: 'addPin',
+    itemId: newId(),
+    spaceId: favorites ? FAVORITES_ID : spaceId,
+    parentId: favorites ? null : target.parentId,
+    order: favorites
+      ? orderForDrop(model, FAVORITES_ID, null, target.beforeId, null, null)
+      : orderForDrop(model, spaceId, target.parentId, target.beforeId, target.afterId, null),
+    ...page,
+  });
+}
+
+/**
+ * Calls `then` with the next new tab at `url` once the service has put it in
+ * Today (moving it before then would be undone), for a few seconds.
+ */
+function whenPlaced(url: string, then: (tabId: number) => void) {
+  const seen = new Set(useTabs.getState().tabs.keys());
+  let found: number | undefined;
+  const stop = useTabs.subscribe(({ tabs, order }) => {
+    if (found === undefined) {
+      for (const tab of tabs.values()) {
+        if (seen.has(tab.id) || !isSamePage(tab.url, url)) continue;
+        found = tab.id;
+        break;
+      }
+    }
+    if (found === undefined || !order.includes(found)) return;
+    stop();
+    clearTimeout(timer);
+    then(found);
+  });
+  const timer = setTimeout(stop, 5000);
 }
 
 function drop(source: DragSource, target: DropTarget) {

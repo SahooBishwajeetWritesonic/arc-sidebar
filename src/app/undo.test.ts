@@ -88,6 +88,18 @@ describe('inverseOf', () => {
     expect(undone.session.orders['1']).toEqual(before.session.orders['1']);
   });
 
+  it('removes a pin added with no tab (an Option-drag copy)', () => {
+    const { undone } = roundTrip({
+      type: 'addPin',
+      itemId: 'copy',
+      spaceId: S,
+      parentId: null,
+      order: 'a5',
+      url: 'https://example.com/',
+    });
+    expect(undone.model.items.copy).toBeUndefined();
+  });
+
   it('has nothing to undo when nothing changed', () => {
     expect(inverseOf(start(), start(), 1)).toEqual([]);
   });

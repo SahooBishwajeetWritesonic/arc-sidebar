@@ -28,7 +28,14 @@ export const useDrag = create<{
   source: DragSource | null;
   target: DropTarget | null;
   ghost: Ghost | null;
-}>()(() => ({ source: null, target: null, ghost: null }));
+  /** Option is held: the drop leaves a copy (Arc's Option-drag). */
+  copying: boolean;
+}>()(() => ({ source: null, target: null, ghost: null, copying: false }));
+
+/** How a drop ends: `copy` when Option was held as it was let go. */
+export interface DropHow {
+  copy: boolean;
+}
 
 /** Movement before a press becomes a drag (Arc: about 3–4 pt). */
 const THRESHOLD = 4;
@@ -43,7 +50,7 @@ interface Tracking {
   source: DragSource;
   ghost: () => GhostContent;
   onTap?: () => void;
-  onDrop: (source: DragSource, target: DropTarget) => void;
+  onDrop: (source: DragSource, target: DropTarget, how: DropHow) => void;
   sidebar: HTMLElement;
   row: HTMLElement;
   startX: number;
@@ -81,7 +88,7 @@ export function beginPress(
     source: DragSource;
     ghost: () => GhostContent;
     onTap?: () => void;
-    onDrop: (source: DragSource, target: DropTarget) => void;
+    onDrop: (source: DragSource, target: DropTarget, how: DropHow) => void;
   },
 ) {
   const sidebar = event.currentTarget.closest<HTMLElement>('[data-sidebar]');
@@ -105,6 +112,7 @@ export function beginPress(
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointercancel', cancel);
   window.addEventListener('keydown', onKey, true);
+  window.addEventListener('keyup', onKey, true);
 }
 
 function onMove(event: PointerEvent) {
@@ -119,6 +127,13 @@ function onMove(event: PointerEvent) {
   updateTarget();
   placeGhost();
   autoScroll();
+  copyWhile(event.altKey);
+}
+
+function copyWhile(altKey: boolean) {
+  if (tracking?.started && useDrag.getState().copying !== altKey) {
+    useDrag.setState({ copying: altKey });
+  }
 }
 
 function start(t: Tracking) {
@@ -278,17 +293,18 @@ function autoScroll() {
   tracking.scrollFrame = requestAnimationFrame(step);
 }
 
-function onUp() {
+function onUp(event: PointerEvent) {
   const t = tracking;
   if (!t) return;
   const { target } = useDrag.getState();
   finish();
   if (!t.started) t.onTap?.();
-  else if (target) t.onDrop(t.source, target);
+  else if (target) t.onDrop(t.source, target, { copy: event.altKey });
 }
 
 function onKey(event: KeyboardEvent) {
-  if (event.key !== 'Escape' || !tracking?.started) return;
+  if (event.key === 'Alt') return copyWhile(event.type === 'keydown');
+  if (event.type !== 'keydown' || event.key !== 'Escape' || !tracking?.started) return;
   event.preventDefault();
   event.stopPropagation();
   cancel();
@@ -309,5 +325,6 @@ function finish() {
   window.removeEventListener('pointerup', onUp);
   window.removeEventListener('pointercancel', cancel);
   window.removeEventListener('keydown', onKey, true);
-  useDrag.setState({ source: null, target: null, ghost: null });
+  window.removeEventListener('keyup', onKey, true);
+  useDrag.setState({ source: null, target: null, ghost: null, copying: false });
 }

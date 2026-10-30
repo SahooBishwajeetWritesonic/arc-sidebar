@@ -87,6 +87,7 @@
   --field: light-dark(rgb(0 0 0 / 0.05), rgb(255 255 255 / 0.06));
   --danger: light-dark(#d70015, #ff6961);
   --badge: light-dark(#ff3b30, #ff453a); /* a Mac's red notification badge */
+  --copy-badge: light-dark(#28a745, #30d158); /* a Mac's green copy badge */
   --command-width: 764px;
   --command-input-height: 64px;
   --command-input-size: 18px;

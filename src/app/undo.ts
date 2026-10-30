@@ -161,7 +161,12 @@ export function inverseOf(before: State, after: State, windowId: number): Intent
   for (const added of Object.values(after.model.items)) {
     if (before.model.items[added.id] || added.kind !== 'pin') continue;
     const tabId = after.session.bindings[added.id];
-    if (tabId === undefined || !oldToday.includes(tabId)) continue;
+    // A pin with no tab (a copy left by Option-drag): unpinning removes it.
+    if (tabId === undefined) {
+      steps.push({ type: 'unpin', itemId: added.id, windowId });
+      continue;
+    }
+    if (!oldToday.includes(tabId)) continue;
     steps.push({
       type: 'unpin',
       itemId: added.id,

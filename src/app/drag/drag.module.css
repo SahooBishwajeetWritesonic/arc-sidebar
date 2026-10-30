@@ -84,6 +84,20 @@
   text-align: center;
 }
 
+/* Option held: a copy will be left, as a Mac's copy cursor shows with its green +. */
+.copy {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--copy-badge);
+  color: var(--on-accent);
+}
+
 /* Over Favorites the ghost is an icon-only tile. */
 .ghost[data-tile] {
   justify-content: center;

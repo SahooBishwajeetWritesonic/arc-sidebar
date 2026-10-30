@@ -194,3 +194,43 @@ test('a drag ends when Chrome closes the tab being dragged', async ({ page }) =>
   await page.mouse.up();
   await expect(panel(page).locator('[data-active-page] [data-nav-row="pin"]')).toHaveCount(4);
 });
+
+/** Arc's Option-drag leaves a copy. */
+async function copyDrag(page: Page, from: string, to: string, fraction: number) {
+  await page.keyboard.down('Alt');
+  await drag(page, from, to, fraction);
+  await page.keyboard.up('Alt');
+}
+
+test('Option-dragging a Today tab into Pinned pins a copy and keeps the tab', async ({ page }) => {
+  await ready(page);
+  await copyDrag(page, 'Engineering Wiki', 'Google Calendar', 0.25);
+  await expect.poll(() => rows(page)).toContain('pin:0:Engineering Wiki');
+  expect(await rows(page)).toContain('tab:0:Engineering Wiki');
+  await row(page, 'Lo-fi').focus();
+  await page.keyboard.press('Meta+z');
+  await expect.poll(() => rows(page)).not.toContain('pin:0:Engineering Wiki');
+});
+
+test('Option-dragging a pinned tab leaves a copy where it’s dropped', async ({ page }) => {
+  await ready(page);
+  await copyDrag(page, 'Google Calendar', 'Inbox (3) - Gmail', 0.25);
+  await expect
+    .poll(async () => (await rows(page)).filter((r) => r.includes('Google Calendar')))
+    .toEqual(['pin:0:Google Calendar - ', 'pin:0:Google Calendar - ']);
+  expect((await rows(page))[0]).toBe('pin:0:Google Calendar - ');
+});
+
+test('Option-dragging a Today tab within Today drops a copy of it there', async ({ page }) => {
+  await ready(page);
+  await copyDrag(page, 'Engineering Wiki', 'Lo-fi', 0.1);
+  await expect
+    .poll(async () => (await rows(page)).filter((r) => r.startsWith('tab:')))
+    .toEqual([
+      'tab:0:Engineering Wiki',
+      'tab:0:Sidebar exploratio',
+      'tab:0:chrome.sidePanel |',
+      'tab:0:Engineering Wiki',
+      'tab:0:Lo-fi beats to cod',
+    ]);
+});

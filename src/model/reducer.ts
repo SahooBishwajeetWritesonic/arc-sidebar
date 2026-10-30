@@ -129,8 +129,18 @@ export function applyIntent(
     case 'addPin': {
       const placed = { id: intent.itemId, kind: 'pin' } as const;
       if (item || !canPlace(model, placed, intent.spaceId, intent.parentId)) return model;
-      const { itemId: id, url, spaceId, parentId, order } = intent;
-      return put({ kind: 'pin', id, spaceId, parentId, order, url, title: url });
+      const { itemId: id, url, spaceId, parentId, order, title, customTitle, icon } = intent;
+      return put({
+        kind: 'pin',
+        id,
+        spaceId,
+        parentId,
+        order,
+        url,
+        title: title ?? url,
+        ...(customTitle && { customTitle }),
+        ...(icon && { icon }),
+      });
     }
 
     case 'rename': {

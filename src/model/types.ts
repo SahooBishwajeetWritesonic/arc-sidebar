@@ -378,8 +378,8 @@ export type Intent =
   | { type: 'unpairPins'; itemIds: [string, string] }
   | { type: 'replacePinUrl'; itemId: string; url: string; title: string }
   /**
-   * Pins a page that isn't open (Arc's Paste URL as New Tab in a folder). Its title
-   * is its address until it's opened and its page names itself.
+   * Pins a page that isn't open (Paste URL as New Tab in a folder, or an Option-drag copy).
+   * Without a title, its address is its title until the page is opened.
    */
   | {
       type: 'addPin';
@@ -388,6 +388,9 @@ export type Intent =
       parentId: string | null;
       order: string;
       url: string;
+      title?: string;
+      customTitle?: string;
+      icon?: SpaceIcon;
     }
   | { type: 'rename'; itemId: string; title: string | null }
   | {
