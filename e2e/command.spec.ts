@@ -164,3 +164,24 @@ test('Copy URL as Markdown puts the current tab’s link on the clipboard', asyn
     '[Inbox (3) - Gmail](https://mail.google.com/mail/u/0/#inbox)',
   );
 });
+
+test('Reset Space sends every pinned tab back to its pinned page', async ({ page }) => {
+  await ready(page);
+  await page.getByRole('button', { name: 'Follow a link in the active tab' }).click();
+  const gmail = panel(page).locator('[data-active-page] [data-nav-row="pin"]').first();
+  await expect(gmail).toContainText('Another page');
+  await openBar(page);
+  await field(page).pressSequentially('/reset space');
+  await expect(selected(page)).toHaveText('Reset Space');
+  await field(page).press('Enter');
+  await expect(gmail).not.toContainText('Another page');
+});
+
+test('Reveal Tab in Sidebar scrolls to the selected tab and focuses it', async ({ page }) => {
+  await ready(page);
+  await openBar(page);
+  await field(page).pressSequentially('/reveal');
+  await expect(selected(page)).toHaveText('Reveal Tab in Sidebar');
+  await field(page).press('Enter');
+  await expect(selectedRow(page)).toBeFocused();
+});

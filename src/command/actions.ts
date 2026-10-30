@@ -129,6 +129,9 @@ export function availableActions(ctx: CommandContext): (Result & { words: string
   }
   const space = model.spaces.find((s) => s.id === spaceId);
   const inSpace = Object.values(model.items).filter((item) => item.spaceId === spaceId);
+  if (inSpace.some((item) => item.kind === 'pin' && awayFromPin(ctx, item))) {
+    add({ action: 'resetSpace', title: 'Reset Space', words: 'pinned tabs urls back' });
+  }
   if (inSpace.length) {
     add({
       action: 'togglePinned',
@@ -177,6 +180,9 @@ export function availableActions(ctx: CommandContext): (Result & { words: string
 
   // These open something in the sidebar, so they need it open.
   if (sidebarOpen) {
+    if (tab) {
+      add({ action: 'revealTab', title: 'Reveal Tab in Sidebar', words: 'show find scroll' });
+    }
     add({ action: 'viewArchive', title: 'View Archive', words: 'library archived closed' });
     if (ctx.archiveCount) {
       add({ action: 'clearArchive', title: 'Clear Archive…', words: 'library archived empty' });
@@ -187,4 +193,11 @@ export function availableActions(ctx: CommandContext): (Result & { words: string
     add({ action: 'importArc', title: 'Import from Arc…', words: 'arc' });
   }
   return list;
+}
+
+/** Whether a pinned tab is open on another page than the one it's pinned to. */
+function awayFromPin(ctx: CommandContext, pin: PinItem): boolean {
+  const tabId = ctx.session.bindings[pin.id];
+  const tab = tabId === undefined ? undefined : ctx.tabs.get(tabId);
+  return tab !== undefined && !isSamePage(tab.url, pin.url);
 }

@@ -22,6 +22,7 @@ import {
   type SpaceIcon,
   type SpaceTheme,
 } from '@/model/types';
+import { isSamePage } from '@/model/urls';
 import type { TabInfo } from '@/platform/types';
 import { dispatch, newId, useSidebar } from '@/state/sidebar';
 import {
@@ -809,6 +810,18 @@ export function renameSpace(spaceId: string, name: string) {
 
 export function setSpaceIcon(spaceId: string, icon: SpaceIcon | null) {
   dispatch({ type: 'setSpaceIcon', spaceId, icon });
+}
+
+/** Arc's Reset Space: every pinned tab in the space that's on another page goes back. */
+export function resetSpace(spaceId = useSidebar.getState().spaceId) {
+  const { model, session } = useSidebar.getState();
+  const { tabs } = useTabs.getState();
+  for (const item of Object.values(model.items)) {
+    if (item.kind !== 'pin' || item.spaceId !== spaceId) continue;
+    const tabId = session.bindings[item.id];
+    const tab = tabId === undefined ? undefined : tabs.get(tabId);
+    if (tab && !isSamePage(tab.url, item.url)) dispatch({ type: 'resetPin', itemId: item.id });
+  }
 }
 
 /** Arc's caret on a space's name: folds its Pinned section away, or opens it. */

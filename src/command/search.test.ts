@@ -143,6 +143,22 @@ describe('searchCommands', () => {
     ]);
   });
 
+  it('offers Reset Space only when a pinned tab is away, and folds Pinned', () => {
+    const actions = (ctx: CommandContext) =>
+      keys(searchCommands('', ctx, [], { actionsOnly: true }));
+    // Linear's tab is on its issues, away from the pinned page.
+    expect(actions(context())).toContain('action:resetSpace:');
+    expect(actions(context())).toContain('action:togglePinned:');
+    const home = new Map(context().tabs);
+    home.set(2, { ...home.get(2)!, url: 'https://linear.app/' });
+    expect(actions(context({ tabs: home }))).not.toContain('action:resetSpace:');
+    const folded = context();
+    folded.model.spaces[0] = { ...folded.model.spaces[0]!, pinnedCollapsed: true };
+    expect(searchCommands('expand pinned', folded, [], { actionsOnly: true })[0]?.title).toBe(
+      'Expand Pinned',
+    );
+  });
+
   it('offers pin actions for a pinned tab, and reset once it has navigated away', () => {
     const ctx = context({ activeId: 2, todayIds: [4, 1] });
     const pinned = keys(searchCommands('', ctx, [], { actionsOnly: true }));

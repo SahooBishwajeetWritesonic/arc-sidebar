@@ -14,6 +14,7 @@ import {
   renameTab,
   replacePinUrl,
   resetPin,
+  resetSpace,
   separateSplit,
   setAppearance,
   setPinnedCollapsed,
@@ -122,6 +123,9 @@ function runAction(command: Extract<Command, { type: 'action' }>) {
       break;
     case 'clearToday':
       clearToday();
+      break;
+    case 'resetSpace':
+      resetSpace();
       break;
     case 'togglePinned': {
       const { model, spaceId } = useSidebar.getState();

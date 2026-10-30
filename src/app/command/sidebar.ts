@@ -7,6 +7,17 @@ import { loadBackups, useSidebar } from '@/state/sidebar';
 import { setClearingArchive, setImporting, setRestoring, showView } from '@/state/ui';
 import { runCommand } from './run';
 
+/** Arc's Reveal Tab in Sidebar: scrolls the selected row into view and gives it focus. */
+function revealSelected() {
+  requestAnimationFrame(() => {
+    const row = document.querySelector<HTMLElement>(
+      '[data-active-page] [data-nav-row][data-selected]',
+    );
+    row?.scrollIntoView({ block: 'nearest' });
+    row?.focus({ preventScroll: true });
+  });
+}
+
 /**
  * Runs a row chosen in the command bar, here in the sidebar, so it gets the
  * sidebar's toasts and Undo and can open the sidebar's own views.
@@ -25,6 +36,9 @@ export function runInSidebar(command: Command) {
     case 'clearArchive':
       showView('archive');
       return setClearingArchive(true);
+    case 'revealTab':
+      showView('sidebar');
+      return revealSelected();
     case 'editTheme':
       showView('sidebar');
       return openThemePicker(useSidebar.getState().spaceId);
