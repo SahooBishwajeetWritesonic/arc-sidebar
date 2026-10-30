@@ -1009,6 +1009,11 @@ export function setSync(on: boolean) {
   if (on) showToast('Spaces now sync through Chrome');
 }
 
+/** How ⌘1–9 count: with or without Favorites, ⌘9 the last or the ninth. */
+export function setNumbering(change: { favorites?: boolean; nineIsLast?: boolean }) {
+  dispatch({ type: 'setNumbering', ...change });
+}
+
 export function setAppearance(appearance: Appearance) {
   dispatch({ type: 'setAppearance', appearance });
 }

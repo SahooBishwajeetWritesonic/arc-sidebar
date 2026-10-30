@@ -10,6 +10,7 @@ import {
   newLiveFolder,
   setArchiveAfter,
   setNavButtons,
+  setNumbering,
   setSync,
   switchSpace,
 } from '@/app/actions';
@@ -139,6 +140,8 @@ function AddMenu() {
   const hasLiveFolder = useSidebar((state) => githubFolderOf(state.model) !== undefined);
   const navButtons = useSidebar((state) => state.model.settings.navButtons);
   const sync = useSidebar((state) => state.model.settings.sync);
+  const favorites = useSidebar((state) => state.model.settings.numberFavorites);
+  const nineIsLast = useSidebar((state) => state.model.settings.nineIsLast);
   const [syncProblem, setSyncProblem] = useState<string>();
   const beside = useBesideMenu();
   return (
@@ -201,6 +204,18 @@ function AddMenu() {
             </Menu.Item>
             <Menu.Item className={menu.item} onClick={() => setNavButtons(!navButtons)}>
               {navButtons ? 'Hide' : 'Show'} Back, Forward and Reload
+            </Menu.Item>
+            <Menu.Item
+              className={menu.item}
+              onClick={() => setNumbering({ favorites: !favorites })}
+            >
+              {favorites ? 'Leave Favorites Out of ⌘1–9' : 'Include Favorites in ⌘1–9'}
+            </Menu.Item>
+            <Menu.Item
+              className={menu.item}
+              onClick={() => setNumbering({ nineIsLast: !nineIsLast })}
+            >
+              Use ⌘9 for the {nineIsLast ? 'Ninth' : 'Last'} Tab
             </Menu.Item>
             <Menu.Separator className={menu.separator} />
             <Menu.Item className={menu.item} onClick={() => setImporting(true)}>

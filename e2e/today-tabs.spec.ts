@@ -188,6 +188,27 @@ test('⌘1–9 select the sidebar’s tabs top to bottom, ⌘9 the last', async 
   await expect(today(page).last()).toHaveAttribute('data-selected');
 });
 
+test('⌘1–9 can leave Favorites out, and ⌘9 can be the ninth', async ({ page }) => {
+  await ready(page);
+  await today(page).filter({ hasText: 'Engineering Wiki' }).click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Add to Favorites' }).click();
+  async function choose(name: string) {
+    await panel(page).getByRole('button', { name: 'More' }).click();
+    await panel(page).getByRole('menuitem', { name }).click();
+    await today(page).first().focus();
+  }
+
+  await choose('Leave Favorites Out of ⌘1–9');
+  await page.keyboard.press('Meta+1');
+  await expect(pins(page).first()).toHaveAttribute('data-selected');
+  // Four pins and three Today tabs: there's no ninth.
+  await choose('Use ⌘9 for the Ninth Tab');
+  await page.keyboard.press('Meta+9');
+  await expect(today(page).last()).not.toHaveAttribute('data-selected');
+  await page.keyboard.press('Meta+7');
+  await expect(today(page).last()).toHaveAttribute('data-selected');
+});
+
 test('a tab using the mic or camera shows it, in Today and as a favorite', async ({ page }) => {
   await ready(page);
   const wiki = today(page).filter({ hasText: 'Engineering Wiki' });
