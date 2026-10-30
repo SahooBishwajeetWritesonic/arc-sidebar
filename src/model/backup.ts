@@ -9,6 +9,7 @@ import {
   type Item,
   type LiveFolder,
   type LivePin,
+  type Route,
   type Settings,
   type SidebarModel,
   type Space,
@@ -241,6 +242,17 @@ function repairSettings(raw: unknown): Settings {
   if (raw.navButtons === true) settings.navButtons = true;
   if (Array.isArray(raw.developerSites))
     settings.developerSites = raw.developerSites.filter(isString);
+  if (Array.isArray(raw.routes)) {
+    settings.routes = raw.routes.filter(
+      (route): route is Route =>
+        isRecord(route) &&
+        isString(route.id) &&
+        (route.match === 'contains' || route.match === 'is') &&
+        isString(route.text) &&
+        route.text.trim() !== '' &&
+        isString(route.spaceId),
+    );
+  }
   return settings;
 }
 

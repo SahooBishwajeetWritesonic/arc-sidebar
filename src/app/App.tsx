@@ -30,6 +30,7 @@ import { Favorites } from './favorites/Favorites';
 import { ImportDialog } from './import/ImportDialog';
 import { MediaTray } from './media/MediaTray';
 import { RestoreDialog } from './restore/RestoreDialog';
+import { RoutesDialog } from './routes/RoutesDialog';
 import { fade } from './motion';
 import styles from './app.module.css';
 import { SpacePager } from './spaces/SpacePager';
@@ -270,6 +271,7 @@ export function App() {
         <ImportDialog />
         <RestoreDialog />
         <ClearArchiveDialog />
+        <RoutesDialog />
       </Boundary>
       <Boundary region="command bar">
         <SidebarCommandBar />

@@ -508,6 +508,21 @@ describe('SidebarService', () => {
       expect(saved.session.lastActive).toMatchObject({ home: 1 });
     });
 
+    it('sends new tabs to the space Air Traffic Control names, even links from another space', async () => {
+      const model = twoSpaces();
+      model.settings = {
+        ...model.settings,
+        routes: [{ id: 'r', match: 'contains', text: 'figma.com', spaceId: 'work' }],
+      };
+      const { service, saved } = setup({ tabs: [tab(1, 'https://a.com')], model });
+      await service.ready;
+      await service.onTabCreated(tab(2, 'https://www.figma.com/file/x', 2, { openerTabId: 1 }));
+      expect(saved.session.tabSpaces[2]).toBe('work');
+      await service.onTabCreated(tab(3, 'https://b.com', 3, { openerTabId: 1 }));
+      expect(saved.session.tabSpaces[3]).toBe('home');
+      expect(saved.session.orders['1']).toEqual([2, 1, 3]);
+    });
+
     it('a tab moved to a window of its own keeps its space, which that window shows', async () => {
       const { service, saved } = setup({
         tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')],

@@ -20,7 +20,7 @@ import spaces from '@/app/spaces/spaces.module.css';
 import { githubFolderOf } from '@/model/live';
 import type { ArchiveAfter } from '@/model/types';
 import { loadBackups, useSidebar } from '@/state/sidebar';
-import { setImporting, setRestoring, showView, useUi } from '@/state/ui';
+import { setEditingRoutes, setImporting, setRestoring, showView, useUi } from '@/state/ui';
 import styles from './bottom-bar.module.css';
 
 const ARCHIVE_CHOICES: { value: ArchiveAfter; label: string }[] = [
@@ -193,6 +193,9 @@ function AddMenu() {
                 </Menu.Positioner>
               </Menu.Portal>
             </Menu.SubmenuRoot>
+            <Menu.Item className={menu.item} onClick={() => setEditingRoutes(true)}>
+              Air Traffic Control…
+            </Menu.Item>
             <Menu.Item className={menu.item} onClick={() => setNavButtons(!navButtons)}>
               {navButtons ? 'Hide' : 'Show'} Back, Forward and Reload
             </Menu.Item>

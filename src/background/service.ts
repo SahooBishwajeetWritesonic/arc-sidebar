@@ -28,6 +28,7 @@ import {
   type SidebarModel,
   type TabDetails,
 } from '@/model/types';
+import { routeFor } from '@/model/routes';
 import { isSamePage, isSamePath } from '@/model/urls';
 import {
   reconcileOrder,
@@ -628,11 +629,15 @@ export class SidebarService {
     this.placing = this.placing.filter((p) => p.expires > now);
     const placed = this.placing.findIndex((p) => isSamePage(p.url, tab.url));
     const before = placed === -1 ? undefined : this.placing.splice(placed, 1)[0]!.beforeTabId;
-    // A link opened from a Today tab goes just below it, in its space.
-    const opener = restored ? undefined : tab.openerTabId;
-    if (opener !== undefined) this.openers.set(tab.id, opener);
-    const openerSpace =
-      opener !== undefined && order.includes(opener) && this.session.tabSpaces[opener];
+    // Air Traffic Control sends a new tab at a matching address to its space.
+    const route = restored ? undefined : routeFor(this.model.settings.routes, tab.url);
+    const routed = route && this.hasSpace(route.spaceId) ? route.spaceId : undefined;
+    // A link opened from a Today tab goes just below it, in its space (unless routed elsewhere).
+    const from = restored ? undefined : tab.openerTabId;
+    if (from !== undefined) this.openers.set(tab.id, from);
+    const fromSpace = from !== undefined && order.includes(from) && this.session.tabSpaces[from];
+    const opener = routed && routed !== fromSpace ? undefined : from;
+    const openerSpace = opener !== undefined && fromSpace;
     this.writeSession({
       ...this.session,
       orders: {
@@ -644,7 +649,7 @@ export class SidebarService {
       },
       tabSpaces: {
         ...this.session.tabSpaces,
-        [tab.id]: restored?.spaceId || openerSpace || this.activeSpaceOf(tab.windowId),
+        [tab.id]: restored?.spaceId || routed || openerSpace || this.activeSpaceOf(tab.windowId),
       },
       tabTitles: restored?.title
         ? { ...this.session.tabTitles, [tab.id]: restored.title }

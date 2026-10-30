@@ -369,6 +369,13 @@ export function applyIntent(
       if (model.settings.navButtons === intent.on) return model;
       return { ...model, settings: { ...model.settings, navButtons: intent.on } };
 
+    case 'setRoutes': {
+      const routes = intent.routes
+        .map((route) => ({ ...route, text: route.text.trim() }))
+        .filter((route) => route.text);
+      return { ...model, settings: { ...model.settings, routes } };
+    }
+
     case 'moveSpace': {
       const from = model.spaces.findIndex((space) => space.id === intent.spaceId);
       if (from === -1) return model;

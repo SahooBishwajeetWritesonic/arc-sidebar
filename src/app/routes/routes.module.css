@@ -1,0 +1,56 @@
+.rules {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.rule {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--field);
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.line > button {
+  margin-top: 0;
+}
+
+.label {
+  flex: none;
+  padding-left: 6px;
+  color: var(--ink-secondary);
+}
+
+.field {
+  flex: none;
+  height: 26px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  background: var(--row-hover);
+  color: var(--ink);
+  font: inherit;
+}
+
+.field:focus-visible {
+  box-shadow: inset 0 0 0 1.5px var(--ink-secondary);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  user-select: text;
+}

@@ -63,6 +63,7 @@ describe('repairModel', () => {
         githubFolder: false,
         developerSites: ['localhost', 'app.example.com'],
         navButtons: true,
+        routes: [{ id: 'r1', match: 'contains', text: 'figma.com', spaceId: 'default' }],
       },
     };
     expect(repairModel(structuredClone(model))).toEqual(model);

@@ -18,6 +18,7 @@ import {
   type ArchiveAfter,
   type ArchiveEntry,
   type GitHubFilters,
+  type Route,
   type SidebarModel,
   type SpaceIcon,
   type SpaceTheme,
@@ -882,6 +883,10 @@ export function moveItemToSpace(itemId: string, spaceId: string) {
 
 export function setSpaceTheme(spaceId: string, theme: SpaceTheme | null) {
   dispatch({ type: 'setSpaceTheme', spaceId, theme });
+}
+
+export function setRoutes(routes: Route[]) {
+  dispatch({ type: 'setRoutes', routes });
 }
 
 export function setNavButtons(on: boolean) {

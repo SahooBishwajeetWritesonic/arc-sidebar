@@ -38,6 +38,17 @@ export interface Settings {
    * toolbar has its own beside the panel.
    */
   navButtons: boolean;
+  /** Arc's Air Traffic Control: new tabs at matching addresses open in a chosen space. */
+  routes: Route[];
+}
+
+/** One of Air Traffic Control's rules. The first that matches a new tab decides its space. */
+export interface Route {
+  id: string;
+  /** "contains": the address has the text in it; "is": it's that page. */
+  match: 'contains' | 'is';
+  text: string;
+  spaceId: string;
 }
 
 export const defaultSettings = (): Settings => ({
@@ -46,6 +57,7 @@ export const defaultSettings = (): Settings => ({
   githubFolder: true,
   developerSites: ['localhost', '127.0.0.1'],
   navButtons: false,
+  routes: [],
 });
 
 export interface Space {
@@ -328,6 +340,8 @@ export type Intent =
   | { type: 'setAppearance'; appearance: Appearance }
   | { type: 'setDeveloperMode'; host: string; on: boolean }
   | { type: 'setNavButtons'; on: boolean }
+  /** Air Traffic Control's rules, as edited; ones with no text are dropped. */
+  | { type: 'setRoutes'; routes: Route[] }
   | { type: 'moveSpace'; spaceId: string; index: number }
   /**
    * Removes a space and its pins and folders (`itemIds`). Its Today tabs, and
