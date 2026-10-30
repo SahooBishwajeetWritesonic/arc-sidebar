@@ -52,6 +52,7 @@ import { themeAccent } from '@/app/theme/engine';
 import { usePreferredScheme } from '@/app/theme/looks';
 import type { CommandContext } from '@/command/actions';
 import { completeAddress, searchCommands } from '@/command/search';
+import { siteFor, type Site } from '@/command/sites';
 import type { ActionId, Command, Result } from '@/command/types';
 import type { Typed } from '@/platform/command-bar';
 import type { HistoryEntry } from '@/platform/types';
@@ -129,18 +130,22 @@ export function CommandBar({
   const [prompt, setPrompt] = useState<{ result: Result; value: string } | null>(null);
   // An action waiting for a tab or address ("Add Split View…").
   const [picking, setPicking] = useState<Result | null>(null);
+  // Arc's Site Search: the site being searched, after its keyword and Tab.
+  const [site, setSite] = useState<Site | null>(null);
 
-  const slash = typed.startsWith('/') && !picking && !pagesOnly;
-  const actionsMode = (actionsOnly || slash) && !picking && !pagesOnly;
+  const slash = typed.startsWith('/') && !picking && !pagesOnly && !site;
+  const actionsMode = (actionsOnly || slash) && !picking && !pagesOnly && !site;
   const query = slash ? typed.slice(1) : typed;
-  const history = useHistory(actionsMode ? '' : query);
+  // What's typed is a site's keyword: Tab searches that site.
+  const keyword = !site && !actionsMode && !prompt && !picking ? siteFor(query) : undefined;
+  const history = useHistory(actionsMode || site ? '' : query);
   const typedAddresses = useTypedAddresses();
   const completion = useMemo(
     () =>
-      completing && !actionsMode && !prompt && !picking
+      completing && !actionsMode && !prompt && !picking && !site
         ? completeAddress(query, [...typedAddresses, ...history])
         : null,
-    [completing, actionsMode, prompt, picking, query, typedAddresses, history],
+    [completing, actionsMode, prompt, picking, site, query, typedAddresses, history],
   );
   const results = useMemo(() => {
     if (prompt) return [];
@@ -148,18 +153,19 @@ export function CommandBar({
       actionsOnly: actionsMode,
       pickSplit: picking !== null,
       completion,
+      site,
     });
     return pagesOnly
       ? found.filter(({ command }) => command.type === 'openUrl' || command.type === 'search')
       : found;
-  }, [prompt, picking, query, ctx, history, actionsMode, completion, pagesOnly]);
+  }, [prompt, picking, query, ctx, history, actionsMode, completion, site, pagesOnly]);
 
   // For the stand-in's Return, which picks the top result once its text is in.
   const latestResults = useRef(results);
   latestResults.current = results;
 
   // The selection goes back to the top whenever what's typed changes.
-  const listKey = `${actionsMode}:${picking?.key}:${query}`;
+  const listKey = `${actionsMode}:${picking?.key}:${site?.name}:${query}`;
   const [selection, setSelection] = useState({ listKey, index: 0 });
   const index = Math.min(selection.listKey === listKey ? selection.index : 0, results.length - 1);
   const select = (next: number) =>
@@ -280,15 +286,21 @@ export function CommandBar({
       }
     } else if (event.key === 'Escape') {
       if (prompt) setPrompt(null);
-      else if (picking) {
+      else if (picking || site) {
         setPicking(null);
+        setSite(null);
         setTyped('');
       } else host.close();
     } else if (event.key === 'Tab') {
-      // Tab toggles searching actions only (Arc), and goes back.
-      if (!prompt && !picking) setActionsOnly(!actionsOnly);
-    } else if (event.key === 'Backspace' && actionsOnly && !value) {
+      // After a site's keyword, Tab searches that site; otherwise it toggles actions-only (Arc).
+      if (keyword) {
+        setSite(keyword);
+        setTyped('');
+        setCompleting(false);
+      } else if (!prompt && !picking && !site) setActionsOnly(!actionsOnly);
+    } else if (event.key === 'Backspace' && (actionsOnly || site) && !value) {
       setActionsOnly(false);
+      setSite(null);
     } else {
       if ((event.key === 'ArrowRight' || event.key === 'End') && completion) {
         // Accept the completion; the caret moves to its end by itself.
@@ -304,14 +316,18 @@ export function CommandBar({
     ? prompt.result.prompt!.label
     : picking
       ? picking.pick!.label
-      : actionsMode
-        ? 'Actions'
-        : null;
+      : site
+        ? site.name
+        : actionsMode
+          ? 'Actions'
+          : null;
   const placeholder = picking
     ? 'Search tabs or enter URL…'
-    : actionsMode
-      ? 'Search actions…'
-      : 'Search or Enter URL…';
+    : site
+      ? `Search ${site.name}…`
+      : actionsMode
+        ? 'Search actions…'
+        : 'Search or Enter URL…';
   const layerStyle = {
     colorScheme: scheme,
     '--command-accent': themeAccent(theme),
@@ -346,6 +362,7 @@ export function CommandBar({
             onChange={onChange}
             onKeyDown={onKeyDown}
           />
+          {keyword && <span className={styles.keyHint}>Tab to search {keyword.name}</span>}
         </div>
         {results.length > 0 && (
           <ul ref={list} id="command-results" className={styles.list} role="listbox">

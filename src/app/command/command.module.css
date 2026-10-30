@@ -90,6 +90,14 @@
   color: var(--ink-secondary);
 }
 
+/* "Tab to search YouTube", after a site's keyword. */
+.keyHint {
+  flex: none;
+  color: var(--ink-secondary);
+  font-size: var(--label-size);
+  white-space: nowrap;
+}
+
 /* About eight rows, with half of the next showing so it reads as scrollable. */
 .list {
   flex: 1 1 auto;

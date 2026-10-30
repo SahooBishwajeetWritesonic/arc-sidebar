@@ -185,3 +185,28 @@ test('Reveal Tab in Sidebar scrolls to the selected tab and focuses it', async (
   await field(page).press('Enter');
   await expect(selectedRow(page)).toBeFocused();
 });
+
+test('a site’s keyword and Tab search that site', async ({ page }) => {
+  await ready(page);
+  await openBar(page);
+  await field(page).pressSequentially('yt');
+  await expect(bar(page).getByText('Tab to search YouTube')).toBeVisible();
+  await field(page).press('Tab');
+  await expect(bar(page).getByText('YouTube', { exact: true })).toBeVisible();
+  await expect(field(page)).toHaveValue('');
+  await field(page).pressSequentially('lofi beats');
+  await expect(selected(page)).toContainText('lofi beats');
+  await field(page).press('Enter');
+  await expect.poll(async () => (await todayTitles(page))[0]).toContain('youtube.com');
+});
+
+test('Backspace in an empty site search goes back to searching everything', async ({ page }) => {
+  await ready(page);
+  await openBar(page);
+  await field(page).pressSequentially('gh');
+  await field(page).press('Tab');
+  await expect(bar(page).getByText('GitHub', { exact: true })).toBeVisible();
+  await field(page).press('Backspace');
+  await expect(bar(page).getByText('GitHub', { exact: true })).toHaveCount(0);
+  await expect(field(page)).toHaveAttribute('placeholder', 'Search or Enter URL…');
+});

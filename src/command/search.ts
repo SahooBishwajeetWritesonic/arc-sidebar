@@ -2,6 +2,7 @@ import { FAVORITES_ID } from '@/model/types';
 import { hostname, isSamePage } from '@/model/urls';
 import { availableActions, type CommandContext } from './actions';
 import type { HistoryEntry } from '@/platform/types';
+import { siteSearchUrl, type Site } from './sites';
 import type { Result } from './types';
 import { displayUrl, typedUrl } from './url';
 
@@ -161,6 +162,8 @@ export interface SearchOptions {
   pickSplit?: boolean;
   /** The address the input is completing to, which becomes the first row. */
   completion?: { text: string; url: string } | null;
+  /** The site being searched (after its keyword and Tab). */
+  site?: Site | null;
 }
 
 /**
@@ -171,10 +174,17 @@ export function searchCommands(
   query: string,
   ctx: CommandContext,
   history: readonly HistoryEntry[],
-  { actionsOnly = false, pickSplit = false, completion = null }: SearchOptions = {},
+  { actionsOnly = false, pickSplit = false, completion = null, site = null }: SearchOptions = {},
 ): Result[] {
   const text = query.trim();
   if (pickSplit) return splitChoices(text, ctx, history);
+  if (site) {
+    if (!text) return [];
+    const url = siteSearchUrl(site, text);
+    return [
+      { key: 'site-search', command: { type: 'openUrl', url }, title: text, url, hint: 'Search' },
+    ];
+  }
   const actions = availableActions(ctx);
   const plain = ({ words: _words, ...result }: Result & { words: string }): Result => result;
 
