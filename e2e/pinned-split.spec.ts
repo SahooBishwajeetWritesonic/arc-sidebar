@@ -100,3 +100,62 @@ test('Separate All Tabs leaves two pins of their own', async ({ page }) => {
   await expect(pins(page).filter({ hasText: 'Sidebar explorations' })).toHaveCount(1);
   await expect.poll(() => splitInChrome(page)).toBe(false);
 });
+
+const splitTile = (page: Page) => panel(page).locator('[data-favorite-id][data-split]');
+
+async function favoriteTheSplit(page: Page) {
+  await split(page);
+  await todaySplits(page).click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Add Split to Favorites' }).click();
+  await expect(splitTile(page)).toHaveCount(1);
+}
+
+test('Add Split to Favorites makes one tile with both icons', async ({ page }) => {
+  await favoriteTheSplit(page);
+  await expect(splitTile(page).locator('img')).toHaveCount(2);
+  await expect(splitTile(page)).toHaveAttribute('aria-label', /^Engineering Wiki \| Sidebar/);
+  await expect(splitTile(page)).toHaveAttribute('data-selected');
+  await expect(todaySplits(page)).toHaveCount(0);
+  expect(await splitInChrome(page)).toBe(true);
+});
+
+test('a closed favorited split opens both, side by side', async ({ page }) => {
+  await favoriteTheSplit(page);
+  await splitTile(page).click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Close Split' }).click();
+  await expect(splitTile(page)).not.toHaveAttribute('data-selected');
+  await splitTile(page).click();
+  await expect(splitTile(page)).toHaveAttribute('data-selected');
+  await expect.poll(() => splitInChrome(page)).toBe(true);
+  await expect(today(page)).toHaveCount(2);
+});
+
+test('a favorited split moves to Pinned, or back to Today with Undo, as one', async ({ page }) => {
+  await favoriteTheSplit(page);
+  await splitTile(page).click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Move to Pinned' }).click();
+  await expect(splitTile(page)).toHaveCount(0);
+  await expect(pinnedSplit(page)).toHaveCount(1);
+
+  await pinnedSplit(page).click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Add to Favorites' }).click();
+  await expect(splitTile(page)).toHaveCount(1);
+  await splitTile(page).click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Remove from Favorites' }).click();
+  await expect(todaySplits(page)).toHaveCount(1);
+  await panel(page).getByRole('status').getByRole('button', { name: 'Undo' }).click();
+  await expect(splitTile(page)).toHaveCount(1);
+});
+
+test('dragging a favorited split into Today unpins both, side by side', async ({ page }) => {
+  await favoriteTheSplit(page);
+  const tile = (await splitTile(page).boundingBox())!;
+  const lofi = (await today(page).filter({ hasText: 'Lo-fi' }).boundingBox())!;
+  await page.mouse.move(tile.x + tile.width / 2, tile.y + tile.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(tile.x + tile.width / 2, tile.y + tile.height / 2 + 8, { steps: 4 });
+  await page.mouse.move(lofi.x + 60, lofi.y + lofi.height * 0.15, { steps: 14 });
+  await page.mouse.up();
+  await expect(splitTile(page)).toHaveCount(0);
+  await expect(todaySplits(page)).toHaveCount(1);
+});

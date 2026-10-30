@@ -107,10 +107,11 @@ function whenOpen(pair: readonly [string, string], then: (left: number, right: n
 /** Two pins naming each other, left first; at the end of Pinned unless `at` says where. */
 export function pinSplit(
   tabIds: readonly number[],
-  at?: { parentId: string | null; orders: string[] },
+  at?: { spaceId?: string; parentId: string | null; orders: string[] },
 ) {
   const { tabs } = useTabs.getState();
-  const { model, spaceId } = useSidebar.getState();
+  const { model } = useSidebar.getState();
+  const spaceId = at?.spaceId ?? useSidebar.getState().spaceId;
   const pair = tabIds.map((id) => tabs.get(id));
   if (pair.length !== 2 || pair.some((tab) => !tab)) return;
   const ids = [newId(), newId()];
@@ -147,6 +148,57 @@ export function unpinSplit(pair: readonly [string, string]) {
 
 export function closePinnedSplit(pair: readonly [string, string]) {
   for (const itemId of pair) if (openTabOf(itemId) !== undefined) closePin(itemId);
+}
+
+export const canFavoriteSplit = () => favoriteCount() + 2 <= FAVORITES_LIMIT;
+
+/** Adds a Today split to the end of Favorites, as one tile. */
+export function favoriteSplit(tabIds: readonly number[]) {
+  if (!canFavoriteSplit()) return;
+  const { model } = useSidebar.getState();
+  const last = childrenOf(model, FAVORITES_ID, null).at(-1);
+  const orders = generateNKeysBetween(last?.order ?? null, null, 2);
+  pinSplit(tabIds, { spaceId: FAVORITES_ID, parentId: null, orders });
+}
+
+/** Both pins of a split move together, in order. */
+export function favoritePair(pair: readonly [string, string]) {
+  if (!canFavoriteSplit()) return;
+  for (const itemId of pair) moveItemToSpace(itemId, FAVORITES_ID);
+}
+
+export function unfavoritePair(pair: readonly [string, string]) {
+  for (const itemId of pair) unfavoriteToPinned(itemId);
+}
+
+/** A favorited split dropped somewhere: both go there together, left first. */
+function dropPair(pair: readonly [string, string], target: DropTarget, windowId: number) {
+  const { model, spaceId } = useSidebar.getState();
+  if (target.section === 'today') {
+    for (const itemId of pair) {
+      dispatch({
+        type: 'unpin',
+        itemId,
+        windowId,
+        spaceId: homeSpaceOf(itemId),
+        todayBeforeTabId: target.beforeTabId,
+      });
+    }
+    return;
+  }
+  if (target.section === 'favorites') {
+    const orders = ordersForDrop(model, FAVORITES_ID, null, target.beforeId, null, pair, 2);
+    pair.forEach((itemId, i) =>
+      dispatch({ type: 'moveToSpace', itemId, spaceId: FAVORITES_ID, order: orders[i]! }),
+    );
+    return;
+  }
+  if (target.section !== 'pinned') return;
+  const { parentId, beforeId, afterId } = target;
+  const orders = ordersForDrop(model, spaceId, parentId, beforeId, afterId, pair, 2);
+  pair.forEach((itemId, i) =>
+    dispatch({ type: 'move', itemId, spaceId, parentId, order: orders[i]! }),
+  );
 }
 
 /** Closes the pinned tab but keeps the pin, as in Arc. */
@@ -295,6 +347,8 @@ export function dropOn(source: DragSource, target: DropTarget) {
   const { model, spaceId, windowId } = useSidebar.getState();
   if (windowId === null) return;
   if (source.kind === 'many') return dropMany(source, target, windowId);
+  const pair = source.kind === 'favorite' ? pairOf(source.itemId) : undefined;
+  if (pair) return dropPair(pair, target, windowId);
 
   if (target.section === 'split') {
     if (source.kind === 'tab') splitTodayTabs(source.tabId, target.withTabId, target.side);

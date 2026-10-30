@@ -3,6 +3,7 @@ import { Volume2, VolumeX, X } from 'lucide-react';
 import {
   closeTodayTab,
   closeTodayTabs,
+  favoriteSplit,
   moveTabsToSpace,
   pinSplit,
   separateSplit,
@@ -13,6 +14,7 @@ import { Row } from '@/app/rows/Row';
 import { Title } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
+import { FAVORITES_ID, FAVORITES_LIMIT } from '@/model/types';
 import type { TabInfo } from '@/platform/types';
 import { useSidebar } from '@/state/sidebar';
 import { activateTab, faviconFor, toggleMuted, useTabs } from '@/state/tabs';
@@ -36,6 +38,12 @@ export const SplitRow = memo(function SplitRow({ ids, splitViewId, ref }: SplitR
   const previous = useTabs((state) => state.previousId !== null && ids.includes(state.previousId));
   const spaceId = useTabs((state) => state.tabSpaces[leftId] ?? state.spaceId);
   const spaces = useSidebar((state) => state.model.spaces);
+  // A split takes two of Favorites' twelve.
+  const canFavorite = useSidebar(
+    (state) =>
+      Object.values(state.model.items).filter((item) => item.spaceId === FAVORITES_ID).length + 2 <=
+      FAVORITES_LIMIT,
+  );
   // The pane under the pointer, set as the press reaches the row.
   const pressed = useRef(leftId);
   if (!left || !right) return null;
@@ -97,6 +105,9 @@ export const SplitRow = memo(function SplitRow({ ids, splitViewId, ref }: SplitR
       menu={[
         // Arc pins a split as one: it stays side by side in Pinned.
         { label: 'Pin Split', onSelect: () => pinSplit(ids) },
+        ...(canFavorite
+          ? [{ label: 'Add Split to Favorites', onSelect: () => favoriteSplit(ids) }]
+          : []),
         { label: 'Separate All Tabs', onSelect: () => separateSplit(splitViewId) },
         ...moveToSpaceMenu(spaces, spaceId, (target) => moveTabsToSpace(ids, target)),
         'separator',

@@ -3,6 +3,7 @@ import { Volume2, VolumeX, X } from 'lucide-react';
 import {
   closePin,
   closePinnedSplit,
+  favoritePair,
   moveItemToSpace,
   pressPinnedSplit,
   separatePinnedSplit,
@@ -14,7 +15,7 @@ import { Row } from '@/app/rows/Row';
 import { Title } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
-import type { PinItem } from '@/model/types';
+import { FAVORITES_ID, FAVORITES_LIMIT, type PinItem } from '@/model/types';
 import type { TabInfo } from '@/platform/types';
 import { useSidebar } from '@/state/sidebar';
 import { faviconFor, toggleMuted, useTabs } from '@/state/tabs';
@@ -48,6 +49,12 @@ export const PinnedSplitRow = memo(function PinnedSplitRow({
     (state) => state.previousId !== null && tabIds.includes(state.previousId),
   );
   const spaces = useSidebar((state) => state.model.spaces);
+  // A split takes two of Favorites' twelve.
+  const canFavorite = useSidebar(
+    (state) =>
+      Object.values(state.model.items).filter((item) => item.spaceId === FAVORITES_ID).length + 2 <=
+      FAVORITES_LIMIT,
+  );
   // The pane under the pointer, set as the press reaches the row.
   const pressed = useRef(leftId);
   if (!left.pin || !right.pin) return null;
@@ -120,6 +127,7 @@ export const PinnedSplitRow = memo(function PinnedSplitRow({
       }}
       menu={[
         { label: 'Separate All Tabs', onSelect: () => separatePinnedSplit(pair) },
+        ...(canFavorite ? [{ label: 'Add to Favorites', onSelect: () => favoritePair(pair) }] : []),
         ...moveToSpaceMenu(spaces, left.pin.spaceId, (target) => {
           moveItemToSpace(leftId, target);
           moveItemToSpace(rightId, target);

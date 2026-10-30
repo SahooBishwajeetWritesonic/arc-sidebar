@@ -3,27 +3,37 @@ import { useMemo, type PointerEvent } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 import {
   closePin,
+  closePinnedSplit,
   dropOn,
   pressPin,
   replacePinUrl,
   resetPin,
+  separatePinnedSplit,
+  unfavoritePair,
   unfavoriteToPinned,
+  unpinSplit,
   unpinWithUndo,
 } from '@/app/actions';
 import { beginPress, isPress, useDrag } from '@/app/drag/drag';
 import { fade, spring } from '@/app/motion';
 import { Favicon } from '@/app/rows/Favicon';
 import { RowMenu, type MenuEntry } from '@/app/rows/RowMenu';
-import { childrenOf } from '@/model/tree';
+import { childrenOf, partnerOf } from '@/model/tree';
 import { FAVORITES_ID, type PinItem } from '@/model/types';
 import { isSamePage } from '@/model/urls';
 import { useSidebar } from '@/state/sidebar';
 import { faviconFor, toggleMuted, useTabs } from '@/state/tabs';
 import styles from './favorites.module.css';
 
+/** A favorite's tile: one pin, or a favorited split's two (left, then `partner`). */
+interface TileItem {
+  favorite: PinItem;
+  partner?: PinItem;
+}
+
 /**
- * Arc's Favorites: icon-only tiles above every space. One tile fills the width,
- * two and three share it, four or more go four to a row.
+ * Arc's Favorites: one tile fills the width, two and three share it, four or more go four
+ * to a row. A favorited split is one tile with both icons.
  */
 export function Favorites() {
   const model = useSidebar((state) => state.model);
@@ -40,7 +50,9 @@ export function Favorites() {
   // While something is dragged over the grid the tiles make room where it
   // would land; a favorite being rearranged lifts out of its own slot.
   const lifted = target ? dragged : null;
-  const shown: (PinItem | 'gap')[] = favorites.filter((favorite) => favorite.id !== lifted);
+  const shown: (TileItem | 'gap')[] = tilesOf(model, favorites).filter(
+    ({ favorite }) => favorite.id !== lifted,
+  );
   if (target) shown.splice(target.index, 0, 'gap');
   if (!shown.length) return null;
 
@@ -53,12 +65,30 @@ export function Favorites() {
       data-favorites-grid
     >
       <AnimatePresence initial={false} mode="popLayout">
-        {shown.map((favorite) =>
-          favorite === 'gap' ? <Gap key="gap" /> : <Tile key={favorite.id} favorite={favorite} />,
+        {shown.map((tile) =>
+          tile === 'gap' ? (
+            <Gap key="gap" />
+          ) : (
+            <Tile key={tile.favorite.id} favorite={tile.favorite} partner={tile.partner} />
+          ),
         )}
       </AnimatePresence>
     </ul>
   );
+}
+
+/** Favorites as tiles: a favorited split's right pin goes on its left one's tile. */
+function tilesOf(model: Parameters<typeof partnerOf>[0], favorites: PinItem[]): TileItem[] {
+  const tiles: TileItem[] = [];
+  for (let i = 0; i < favorites.length; i++) {
+    const favorite = favorites[i]!;
+    const partner = partnerOf(model, favorite);
+    if (partner && favorites[i + 1]?.id === partner.id) {
+      tiles.push({ favorite, partner });
+      i++;
+    } else tiles.push({ favorite });
+  }
+  return tiles;
 }
 
 /** The slot a drop would fill. */
@@ -79,28 +109,57 @@ function Gap({ ref }: { ref?: React.Ref<HTMLLIElement> }) {
 
 const stop = (event: PointerEvent) => event.stopPropagation();
 
-function Tile({ favorite, ref }: { favorite: PinItem; ref?: React.Ref<HTMLLIElement> }) {
-  const tabId = useSidebar((state) => state.session.bindings[favorite.id]);
-  const tab = useTabs((state) => (tabId === undefined ? undefined : state.tabs.get(tabId)));
-  const selected = useTabs((state) => tabId !== undefined && state.activeId === tabId);
-  const awayFromPin = tab !== undefined && !isSamePage(tab.url, favorite.url);
-  const title = awayFromPin ? tab.title : (favorite.customTitle ?? tab?.title ?? favorite.title);
+function useFavoriteTab(favorite: PinItem | undefined) {
+  const tabId = useSidebar((state) => (favorite ? state.session.bindings[favorite.id] : undefined));
+  return useTabs((state) => (tabId === undefined ? undefined : state.tabs.get(tabId)));
+}
 
-  const menu: MenuEntry[] = [
-    ...(awayFromPin
-      ? [
-          { label: 'Back to Favorite URL', onSelect: () => resetPin(favorite.id) },
-          {
-            label: 'Replace Favorite URL with Current',
-            onSelect: () => replacePinUrl(favorite.id),
-          },
-        ]
-      : []),
-    { label: 'Move to Pinned', onSelect: () => unfavoriteToPinned(favorite.id) },
-    'separator',
-    ...(tab ? [{ label: 'Close Tab', onSelect: () => closePin(favorite.id) }] : []),
-    { label: 'Remove from Favorites', onSelect: () => unpinWithUndo(favorite.id), danger: true },
-  ];
+function Tile({ favorite, partner, ref }: TileItem & { ref?: React.Ref<HTMLLIElement> }) {
+  const tab = useFavoriteTab(favorite);
+  const partnerTab = useFavoriteTab(partner);
+  const selected = useTabs(
+    (state) =>
+      state.activeId !== null && (state.activeId === tab?.id || state.activeId === partnerTab?.id),
+  );
+  const awayFromPin = !partner && tab !== undefined && !isSamePage(tab.url, favorite.url);
+  const titleOf = (pin: PinItem, open: typeof tab) => pin.customTitle ?? open?.title ?? pin.title;
+  const title = partner
+    ? `${titleOf(favorite, tab)} | ${titleOf(partner, partnerTab)}`
+    : awayFromPin
+      ? tab.title
+      : titleOf(favorite, tab);
+  const pair = partner ? ([favorite.id, partner.id] as [string, string]) : undefined;
+  const open = tab !== undefined || partnerTab !== undefined;
+  // The one whose sound shows on the badge: the left tab's, else the right's.
+  const sounding = [tab, partnerTab].find((each) => each && (each.audible || each.muted));
+
+  const menu: MenuEntry[] = pair
+    ? [
+        { label: 'Move to Pinned', onSelect: () => unfavoritePair(pair) },
+        { label: 'Separate All Tabs', onSelect: () => separatePinnedSplit(pair) },
+        'separator',
+        ...(open ? [{ label: 'Close Split', onSelect: () => closePinnedSplit(pair) }] : []),
+        { label: 'Remove from Favorites', onSelect: () => unpinSplit(pair), danger: true },
+      ]
+    : [
+        ...(awayFromPin
+          ? [
+              { label: 'Back to Favorite URL', onSelect: () => resetPin(favorite.id) },
+              {
+                label: 'Replace Favorite URL with Current',
+                onSelect: () => replacePinUrl(favorite.id),
+              },
+            ]
+          : []),
+        { label: 'Move to Pinned', onSelect: () => unfavoriteToPinned(favorite.id) },
+        'separator',
+        ...(tab ? [{ label: 'Close Tab', onSelect: () => closePin(favorite.id) }] : []),
+        {
+          label: 'Remove from Favorites',
+          onSelect: () => unpinWithUndo(favorite.id),
+          danger: true,
+        },
+      ];
 
   return (
     <motion.li
@@ -118,41 +177,57 @@ function Tile({ favorite, ref }: { favorite: PinItem; ref?: React.Ref<HTMLLIElem
           className={styles.tile}
           data-selected={selected || undefined}
           data-favorite-id={favorite.id}
+          data-split={pair ? true : undefined}
           aria-label={title}
           aria-pressed={selected}
           title={title}
-          // Open tabs select on press; an unloaded one opens on a tap, so a drag never opens it.
+          // Open tabs select on press; an unloaded favorite opens on a tap, so a
+          // drag never opens it. A split opens both, side by side.
           onPointerDown={(event) => {
             if (!isPress(event)) return;
-            if (tab) pressPin(favorite.id);
+            const ready = pair ? tab !== undefined && partnerTab !== undefined : tab !== undefined;
+            if (ready) pressPin(favorite.id);
             beginPress(event, {
-              source: { kind: 'favorite', itemId: favorite.id, bound: tab !== undefined },
+              source: { kind: 'favorite', itemId: favorite.id, bound: ready },
               ghost: () => ({
                 title,
                 faviconUrl: faviconFor(tab?.url ?? favorite.url),
                 folder: false,
               }),
-              onTap: tab ? undefined : () => pressPin(favorite.id),
+              onTap: ready ? undefined : () => pressPin(favorite.id),
               onDrop: dropOn,
             });
           }}
           onMouseDown={(event) => event.button === 1 && event.preventDefault()}
-          onAuxClick={(event) => event.button === 1 && closePin(favorite.id)}
+          onAuxClick={(event) =>
+            event.button === 1 && (pair ? closePinnedSplit(pair) : closePin(favorite.id))
+          }
           onDoubleClick={() => awayFromPin && resetPin(favorite.id)}
         >
-          <Favicon url={tab?.url ?? favorite.url} loading={!!tab?.loading && !tab.favIconUrl} />
-          {tab && (tab.audible || tab.muted) && (
+          {partner ? (
+            <span className={styles.split}>
+              <Favicon url={tab?.url ?? favorite.url} loading={!!tab?.loading && !tab.favIconUrl} />
+              <span className={styles.splitLine} aria-hidden />
+              <Favicon
+                url={partnerTab?.url ?? partner.url}
+                loading={!!partnerTab?.loading && !partnerTab.favIconUrl}
+              />
+            </span>
+          ) : (
+            <Favicon url={tab?.url ?? favorite.url} loading={!!tab?.loading && !tab.favIconUrl} />
+          )}
+          {sounding && (
             <span
               className={styles.badge}
               role="button"
-              aria-label={tab.muted ? 'Unmute' : 'Mute'}
+              aria-label={sounding.muted ? 'Unmute' : 'Mute'}
               onPointerDown={stop}
               onClick={(event) => {
                 event.stopPropagation();
-                toggleMuted(tab.id);
+                toggleMuted(sounding.id);
               }}
             >
-              {tab.muted ? <VolumeX size={10} /> : <Volume2 size={10} />}
+              {sounding.muted ? <VolumeX size={10} /> : <Volume2 size={10} />}
             </span>
           )}
         </button>
