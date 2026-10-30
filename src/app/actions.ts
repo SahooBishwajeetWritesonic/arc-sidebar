@@ -40,7 +40,8 @@ import {
 import { clearSelection } from '@/state/selection';
 import { startEditing } from '@/state/ui';
 import { orderForDrop, ordersForDrop, type DragSource, type DropTarget } from './drag/targets';
-import { showToast } from './toast/toast';
+import { showToast, showUndoToast } from './toast/toast';
+import { followReopened, pushUndo, undoable } from './undo';
 
 /** What the user can do in the sidebar: mouse, keyboard and context menus all go through here. */
 
@@ -249,16 +250,18 @@ export function pinTab(tabId: number) {
   const tab = useTabs.getState().tabs.get(tabId);
   const { model, spaceId } = useSidebar.getState();
   if (!tab) return;
-  dispatch({
-    type: 'pinTab',
-    itemId: newId(),
-    tabId,
-    spaceId,
-    parentId: null,
-    order: orderAtEnd(model, spaceId, null),
-    url: tab.url,
-    title: tab.title,
-  });
+  undoable(() =>
+    dispatch({
+      type: 'pinTab',
+      itemId: newId(),
+      tabId,
+      spaceId,
+      parentId: null,
+      order: orderAtEnd(model, spaceId, null),
+      url: tab.url,
+      title: tab.title,
+    }),
+  );
 }
 
 export function setFolderCollapsed(itemId: string, collapsed: boolean) {
@@ -356,13 +359,18 @@ export function deleteLiveFolder(itemId: string) {
     spaceId: folder.spaceId,
     windowId,
   });
-  showToast(`Deleted “${folder.name}”`, {
-    label: 'Undo',
-    run: () => dispatch({ type: 'restoreItems', items: [folder, ...inside] }),
-  });
+  showUndoToast(`Deleted “${folder.name}”`, () =>
+    dispatch({ type: 'restoreItems', items: [folder, ...inside] }),
+  );
 }
 
+/** ⌘Z puts it back. (A split made by a drop is undone by separating it.) */
 export function dropOn(source: DragSource, target: DropTarget) {
+  if (target.section === 'split') drop(source, target);
+  else undoable(() => drop(source, target));
+}
+
+function drop(source: DragSource, target: DropTarget) {
   const { model, spaceId, windowId } = useSidebar.getState();
   if (windowId === null) return;
   if (source.kind === 'many') return dropMany(source, target, windowId);
@@ -516,6 +524,10 @@ function dropMany(
 
 /** Alt+Up/Down moves a row one place among its siblings: the keyboard's drag and drop. */
 export function moveByKeyboard(kind: string, id: string, delta: -1 | 1) {
+  undoable(() => moveOneStep(kind, id, delta));
+}
+
+function moveOneStep(kind: string, id: string, delta: -1 | 1) {
   const { model, windowId } = useSidebar.getState();
   if (windowId === null) return;
 
@@ -567,15 +579,22 @@ export function closeTodayTabs(tabIds: readonly number[]) {
   const { tabs } = useTabs.getState();
   const { windowId } = useSidebar.getState();
   if (windowId === null) return;
+  // Must run before they leave the panel's list.
+  const below = stayingBelow(tabIds);
   const closing = leaveTabs(tabIds)
     .map((id) => tabs.get(id))
     .filter((tab): tab is TabInfo => tab !== undefined);
   if (!closing.length) return;
   const batchId = newId();
-  dispatch({
-    type: 'archiveTabs',
-    windowId,
-    tabs: closing.map((tab) => ({ tabId: tab.id, entry: archiveEntry(tab, 'closed', batchId) })),
+  const archived = closing.map((tab) => ({
+    tabId: tab.id,
+    entry: archiveEntry(tab, 'closed', batchId),
+  }));
+  dispatch({ type: 'archiveTabs', windowId, tabs: archived });
+  const entryIds = archived.map(({ entry }) => entry.id);
+  pushUndo(() => {
+    followReopened(closing);
+    restoreArchived(entryIds, below);
   });
 }
 
@@ -597,12 +616,18 @@ function archiveWithUndo(tabs: TabInfo[], verb: 'Cleared' | 'Archived') {
     tabId: tab.id,
     entry: archiveEntry(tab, 'cleared', batchId),
   }));
+  // Undo puts tabs archived from below a tab back there; cleared ones go on top.
+  const below = verb === 'Archived' ? stayingBelow(tabs.map((tab) => tab.id)) : undefined;
   forgetTabs(tabs.map((tab) => tab.id));
   dispatch({ type: 'archiveTabs', windowId, tabs: archived });
   const count = (n: number) => `${n} ${n === 1 ? 'tab' : 'tabs'}`;
-  showToast(
+  const entryIds = archived.map(({ entry }) => entry.id);
+  showUndoToast(
     `${verb} ${count(tabs.length)}`,
-    { label: 'Undo', run: () => restoreArchived(archived.map(({ entry }) => entry.id)) },
+    () => {
+      followReopened(tabs);
+      restoreArchived(entryIds, below);
+    },
     { key: verb, amount: tabs.length, message: (total) => `${verb} ${count(total)}` },
   );
 }
@@ -625,9 +650,24 @@ export function archiveTabsBelow(tabIds: readonly number[]) {
   archiveWithUndo(tabsBelow(tabIds), 'Archived');
 }
 
-export function restoreArchived(entryIds: string[]) {
+/** Reopens archived tabs: at the top of Today, or above `beforeTabId` (null: at the end). */
+export function restoreArchived(entryIds: string[], beforeTabId?: number | null) {
   const { windowId } = useSidebar.getState();
-  if (windowId !== null) dispatch({ type: 'restoreArchived', windowId, entryIds });
+  if (windowId === null) return;
+  dispatch({
+    type: 'restoreArchived',
+    windowId,
+    entryIds,
+    ...(beforeTabId !== undefined && { beforeTabId }),
+  });
+}
+
+/** The Today tab below the last of these that stays (null: they were at the end). */
+function stayingBelow(tabIds: readonly number[]): number | null {
+  const ids = selectTodayIds(useTabs.getState());
+  const leaving = new Set(tabIds);
+  const last = Math.max(...tabIds.map((id) => ids.indexOf(id)));
+  return ids.slice(last + 1).find((id) => !leaving.has(id)) ?? null;
 }
 
 export function forgetArchived(entryIds: string[]) {
@@ -648,28 +688,25 @@ export function unpinWithUndo(itemId: string) {
   if (item?.kind !== 'pin') return;
   const tabId = session.bindings[itemId];
   unpin(itemId);
-  showToast(
+  showUndoToast(
     `Unpinned “${item.customTitle ?? item.title}”`,
-    {
-      label: 'Undo',
-      run: () => {
-        if (tabId === undefined || !useTabs.getState().tabs.has(tabId)) {
-          dispatch({ type: 'restoreItems', items: [item] });
-          return;
-        }
-        dispatch({
-          type: 'pinTab',
-          itemId: item.id,
-          tabId,
-          spaceId: item.spaceId,
-          parentId: item.parentId,
-          order: item.order,
-          url: item.url,
-          title: item.title,
-          ...(item.pair && { pair: item.pair }),
-        });
-        if (item.customTitle) renameItem(item.id, item.customTitle);
-      },
+    () => {
+      if (tabId === undefined || !useTabs.getState().tabs.has(tabId)) {
+        dispatch({ type: 'restoreItems', items: [item] });
+        return;
+      }
+      dispatch({
+        type: 'pinTab',
+        itemId: item.id,
+        tabId,
+        spaceId: item.spaceId,
+        parentId: item.parentId,
+        order: item.order,
+        url: item.url,
+        title: item.title,
+        ...(item.pair && { pair: item.pair }),
+      });
+      if (item.customTitle) renameItem(item.id, item.customTitle);
     },
     { key: 'unpin', amount: 1, message: (total) => `Unpinned ${total} tabs` },
   );
@@ -692,16 +729,14 @@ export function exportSidebar() {
 export function restoreSidebar(model: SidebarModel) {
   const { model: current, session, windowId } = useSidebar.getState();
   dispatch({ type: 'restoreSidebar', model, windowId: windowId! });
-  showToast('Sidebar restored', {
-    label: 'Undo',
-    run: () =>
-      dispatch({
-        type: 'restoreSidebar',
-        model: current,
-        windowId: windowId!,
-        bindings: session.bindings,
-      }),
-  });
+  showUndoToast('Sidebar restored', () =>
+    dispatch({
+      type: 'restoreSidebar',
+      model: current,
+      windowId: windowId!,
+      bindings: session.bindings,
+    }),
+  );
 }
 
 /** Adds the chosen part of Arc's sidebar. */
@@ -791,9 +826,9 @@ export function deleteSpace(spaceId: string) {
     itemIds: items.map((item) => item.id),
     windowId,
   });
-  showToast(
+  showUndoToast(
     `Deleted “${space.name}”`,
-    { label: 'Undo', run: () => dispatch({ type: 'restoreSpace', space, index, items }) },
+    () => dispatch({ type: 'restoreSpace', space, index, items }),
     { key: 'deleteSpace', amount: 1, message: (total) => `Deleted ${total} spaces` },
   );
 }
@@ -807,12 +842,13 @@ export function moveTabToSpace(tabId: number, spaceId: string) {
     const next = ids[index + 1] ?? ids[index - 1];
     if (next !== undefined) activateTab(next);
   }
-  dispatch({ type: 'moveTabToSpace', tabId, spaceId });
+  undoable(() => dispatch({ type: 'moveTabToSpace', tabId, spaceId }));
 }
 
 export function moveItemToSpace(itemId: string, spaceId: string) {
   const { model } = useSidebar.getState();
-  dispatch({ type: 'moveToSpace', itemId, spaceId, order: orderAtEnd(model, spaceId, null) });
+  const order = orderAtEnd(model, spaceId, null);
+  undoable(() => dispatch({ type: 'moveToSpace', itemId, spaceId, order }));
 }
 
 export function setSpaceTheme(spaceId: string, theme: SpaceTheme | null) {
@@ -836,16 +872,18 @@ export function favoriteTab(tabId: number) {
   const tab = useTabs.getState().tabs.get(tabId);
   const { model } = useSidebar.getState();
   if (!tab || favoriteCount() >= FAVORITES_LIMIT) return;
-  dispatch({
-    type: 'pinTab',
-    itemId: newId(),
-    tabId,
-    spaceId: FAVORITES_ID,
-    parentId: null,
-    order: orderAtEnd(model, FAVORITES_ID, null),
-    url: tab.url,
-    title: tab.title,
-  });
+  undoable(() =>
+    dispatch({
+      type: 'pinTab',
+      itemId: newId(),
+      tabId,
+      spaceId: FAVORITES_ID,
+      parentId: null,
+      order: orderAtEnd(model, FAVORITES_ID, null),
+      url: tab.url,
+      title: tab.title,
+    }),
+  );
 }
 
 export function favoriteItem(itemId: string) {

@@ -35,7 +35,9 @@ import { SpacePager } from './spaces/SpacePager';
 import { Backdrop } from './theme/Backdrop';
 import { useRootScheme, useSpaceLooks } from './theme/looks';
 import { ThemePicker } from './theme/ThemePicker';
+import { dismissUndone } from './toast/toast';
 import { ToastLayer } from './toast/ToastLayer';
+import { undoLast } from './undo';
 
 /** Enter on a row does what a click does. */
 function press(kind: string, id: string) {
@@ -73,6 +75,15 @@ function onKeyDown(event: KeyboardEvent<HTMLElement>) {
   if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'k') {
     event.preventDefault();
     clearToday();
+    return;
+  }
+
+  // Arc's ⌘Z: undoes the latest sidebar change; a field being typed in keeps its own.
+  const typing =
+    event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
+  if (event.metaKey && !event.shiftKey && event.key.toLowerCase() === 'z' && !typing) {
+    event.preventDefault();
+    if (undoLast()) dismissUndone();
     return;
   }
 

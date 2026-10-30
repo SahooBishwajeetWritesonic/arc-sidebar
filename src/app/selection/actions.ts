@@ -6,6 +6,7 @@ import type { DragSource } from '@/app/drag/targets';
 import type { MenuEntry } from '@/app/rows/RowMenu';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
 import { showToast } from '@/app/toast/toast';
+import { undoable } from '@/app/undo';
 import { copiedText, linksText, type Link } from '@/model/links';
 import { childrenOf, flattenSpace, orderAtEnd, orderBefore } from '@/model/tree';
 import type { PinItem } from '@/model/types';
@@ -134,7 +135,7 @@ export function pinSelection() {
   const last = childrenOf(model, spaceId, null).at(-1);
   const orders = generateNKeysBetween(last?.order ?? null, null, tabs.length);
   clearSelection();
-  tabs.forEach((tab, i) => pinInto(tab, null, orders[i]!));
+  undoable(() => tabs.forEach((tab, i) => pinInto(tab, null, orders[i]!)));
 }
 
 /**
@@ -182,11 +183,14 @@ function pinInto(tab: TabInfo, parentId: string | null, order: string) {
 export function moveSelectionToSpace(spaceId: string) {
   const { pins, tabs } = picked();
   clearSelection();
-  for (const pin of movable(pins)) moveItemToSpace(pin.id, spaceId);
-  moveTabsToSpace(
-    tabs.map((tab) => tab.id),
-    spaceId,
-  );
+  // One ⌘Z puts them all back.
+  undoable(() => {
+    for (const pin of movable(pins)) moveItemToSpace(pin.id, spaceId);
+    moveTabsToSpace(
+      tabs.map((tab) => tab.id),
+      spaceId,
+    );
+  });
 }
 
 /**

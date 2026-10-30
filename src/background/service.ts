@@ -32,6 +32,7 @@ import { isSamePage, isSamePath } from '@/model/urls';
 import {
   reconcileOrder,
   withNewTab,
+  withTabBefore,
   withTabOnTop,
   withTabReplaced,
   withoutTab,
@@ -118,6 +119,8 @@ export class SidebarService {
   private opening: { itemId: string; url: string; expires: number }[] = [];
   /** Tab id → the tab it was opened from, for placing the next one opened from it. */
   private openers = new Map<number, number>();
+  /** Archived tabs being reopened where they were, rather than on top of Today. */
+  private placing: { url: string; beforeTabId: number | null; expires: number }[] = [];
   private liveRefresh: Promise<void> | null = null;
   private liveRefreshedAt = -Infinity;
   /** The filters changed while GitHub was being asked: ask again after. */
@@ -289,13 +292,24 @@ export class SidebarService {
       case 'archiveTabs':
         await Promise.all(intent.tabs.map(({ tabId: id }) => this.deps.closeTab(id)));
         break;
-      case 'restoreArchived':
+      case 'restoreArchived': {
+        const { beforeTabId } = intent;
+        if (beforeTabId !== undefined) {
+          // A batch is stored top-down: each above the same tab keeps that order.
+          for (const entry of restoring) {
+            const expires = this.deps.now() + OPEN_TIMEOUT_MS;
+            this.placing.push({ url: entry.url, beforeTabId, expires });
+            await this.deps.createTab(intent.windowId, entry.url, false);
+          }
+          break;
+        }
         // Entries are newest first and a batch is stored top-down. Opening
         // bottom-up, each on top of Today, recreates the original order.
         for (const entry of [...restoring].reverse()) {
           await this.deps.createTab(intent.windowId, entry.url, false);
         }
         break;
+      }
       case 'setActiveSpace':
         if (intent.openNewTab) await this.deps.createTab(intent.windowId, 'chrome://newtab/', true);
         break;
@@ -610,6 +624,10 @@ export class SidebarService {
       this.deps.now() <= this.restoringUntil ? this.matchSnapshot(tab.url) : undefined;
     const key = String(tab.windowId);
     const order = this.session.orders[key] ?? [];
+    // An archived tab reopened by ⌘Z goes back where it was.
+    this.placing = this.placing.filter((p) => p.expires > now);
+    const placed = this.placing.findIndex((p) => isSamePage(p.url, tab.url));
+    const before = placed === -1 ? undefined : this.placing.splice(placed, 1)[0]!.beforeTabId;
     // A link opened from a Today tab goes just below it, in its space.
     const opener = restored ? undefined : tab.openerTabId;
     if (opener !== undefined) this.openers.set(tab.id, opener);
@@ -619,7 +637,10 @@ export class SidebarService {
       ...this.session,
       orders: {
         ...this.session.orders,
-        [key]: withNewTab(order, tab.id, opener, (id) => this.openers.get(id)),
+        [key]:
+          before === undefined
+            ? withNewTab(order, tab.id, opener, (id) => this.openers.get(id))
+            : withTabBefore(order, tab.id, before),
       },
       tabSpaces: {
         ...this.session.tabSpaces,

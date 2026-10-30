@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { pushUndo, type Undo } from '@/app/undo';
 
 export interface Toast {
   id: number;
@@ -6,6 +7,8 @@ export interface Toast {
   action?: { label: string; run: () => void };
   /** Undos of one kind, merged while the toast showed, and how much they add up to. */
   merge?: { key: string; total: number };
+  /** What its Undo undoes, which ⌘Z can undo too. */
+  undos?: Undo[];
 }
 
 /**
@@ -23,8 +26,9 @@ export const useToast = create<{ toast: Toast | null }>()(() => ({ toast: null }
 
 let nextId = 1;
 
-export function showToast(message: string, action?: Toast['action'], merge?: Merge) {
+export function showToast(message: string, action?: Toast['action'], merge?: Merge, undo?: Undo) {
   const current = useToast.getState().toast;
+  const undos = undo ? [undo] : [];
   if (merge && action && current?.action && current.merge?.key === merge.key) {
     // The same toast, so it stays put; its time starts again.
     const earlier = current.action.run;
@@ -41,6 +45,7 @@ export function showToast(message: string, action?: Toast['action'], merge?: Mer
           },
         },
         merge: { key: merge.key, total },
+        undos: [...(current.undos ?? []), ...undos],
       },
     });
     return;
@@ -51,8 +56,21 @@ export function showToast(message: string, action?: Toast['action'], merge?: Mer
       message,
       action,
       ...(merge && { merge: { key: merge.key, total: merge.amount } }),
+      ...(undo && { undos }),
     },
   });
+}
+
+/** A toast whose Undo undoes `change`; ⌘Z can undo it too. */
+export function showUndoToast(message: string, change: () => void, merge?: Merge) {
+  const undo = pushUndo(change);
+  showToast(message, { label: 'Undo', run: undo.run }, merge, undo);
+}
+
+/** After ⌘Z: a toast with nothing left to undo goes. */
+export function dismissUndone() {
+  const undos = useToast.getState().toast?.undos;
+  if (undos?.length && undos.every((undo) => undo.done)) useToast.setState({ toast: null });
 }
 
 export function dismissToast(id: number) {

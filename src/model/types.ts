@@ -307,8 +307,11 @@ export type Intent =
   | { type: 'renameTab'; tabId: number; title: string | null }
   /** Closes Today tabs and records them in the archive (entries made by the panel). */
   | { type: 'archiveTabs'; windowId: number; tabs: { tabId: number; entry: ArchiveEntry }[] }
-  /** Reopens archived tabs at the top of Today, in their original order. */
-  | { type: 'restoreArchived'; windowId: number; entryIds: string[] }
+  /**
+   * Reopens archived tabs in Today, in their original order: at the top, or
+   * above `beforeTabId` (null: at the end) to put them back where they were.
+   */
+  | { type: 'restoreArchived'; windowId: number; entryIds: string[]; beforeTabId?: number | null }
   | { type: 'forgetArchived'; entryIds: string[] }
   | { type: 'setArchiveAfter'; archiveAfter: ArchiveAfter }
   /** Puts back items that were removed (undo). */
