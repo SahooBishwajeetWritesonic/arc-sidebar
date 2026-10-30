@@ -301,6 +301,11 @@ export function dropOn(source: DragSource, target: DropTarget) {
     return;
   }
   if (source.kind === 'split') {
+    if (target.section === 'pinned') {
+      const { parentId, beforeId, afterId } = target;
+      const orders = ordersForDrop(model, spaceId, parentId, beforeId, afterId, [], 2);
+      return pinSplit(source.tabIds, { parentId, orders });
+    }
     if (target.section !== 'today') return;
     for (const tabId of source.tabIds) {
       dispatch({ type: 'reorderToday', windowId, tabId, beforeTabId: target.beforeTabId });

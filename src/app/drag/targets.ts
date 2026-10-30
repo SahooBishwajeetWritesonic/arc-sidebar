@@ -83,7 +83,10 @@ export function findTarget(
   }
 
   if (source.kind === 'split') {
-    if (target.section !== 'today') return null;
+    // Within Today, or into Pinned as a pinned split (not into a Live Folder).
+    if (target.section === 'pinned') {
+      return target.parentId !== null && cannotHold(target.parentId) ? null : target;
+    }
     return target.beforeTabId !== null && source.tabIds.includes(target.beforeTabId)
       ? null
       : target;

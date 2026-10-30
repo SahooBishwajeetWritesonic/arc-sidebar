@@ -137,15 +137,20 @@ describe('findTarget', () => {
     expect(findTarget(slots, { x: 100, y: 205 }, pin, nothingInside)?.section).toBe('today');
   });
 
-  it('moves a split row within Today only, and never onto another tab', () => {
+  it('moves a split row within Today, or into Pinned, and never onto another tab', () => {
     const split: DragSource = { kind: 'split', tabIds: [12, 13] };
     // Tab 11's middle reorders by half instead of splitting.
     expect(findTarget(slots, { x: 100, y: 205 }, split, nothingInside)).toMatchObject({
       section: 'today',
       beforeTabId: 11,
     });
-    expect(findTarget(slots, { x: 100, y: 225 }, split, nothingInside)).toBeNull(); // next to itself
-    expect(findTarget(slots, { x: 100, y: 5 }, split, nothingInside)).toBeNull();
+    expect(findTarget(slots, { x: 100, y: 225 }, split, nothingInside)).toBeNull(); // beside itself
+    // Into Pinned, where it's pinned as a split; never into a Live Folder.
+    expect(findTarget(slots, { x: 100, y: 5 }, split, nothingInside)).toMatchObject({
+      section: 'pinned',
+      beforeId: 'p1',
+    });
+    expect(findTarget(slots, { x: 100, y: 61 }, split, (id) => id === 'f1')).toBeNull();
   });
 
   it('moves a selection together into Pinned or Today, but not into Favorites or a split', () => {

@@ -76,6 +76,21 @@ test('Unpin Split puts the split back in Today, with one Undo for both', async (
   await expect(todaySplits(page)).toHaveCount(0);
 });
 
+test('dragging a Today split into Pinned pins it there as one', async ({ page }) => {
+  await split(page);
+  const source = (await todaySplits(page).boundingBox())!;
+  const gmail = (await pins(page).filter({ hasText: 'Gmail' }).boundingBox())!;
+  await page.mouse.move(source.x + 60, source.y + source.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(source.x + 60, source.y + source.height / 2 - 8, { steps: 4 });
+  await page.mouse.move(gmail.x + 60, gmail.y + gmail.height * 0.2, { steps: 12 });
+  await page.mouse.up();
+  await expect(pinnedSplit(page)).toHaveCount(1);
+  const first = panel(page).locator('[data-active-page] [data-nav-row]').first();
+  await expect(first).toContainText('Engineering Wiki');
+  await expect(todaySplits(page)).toHaveCount(0);
+});
+
 test('Separate All Tabs leaves two pins of their own', async ({ page }) => {
   await pinTheSplit(page);
   await pinnedSplit(page).click({ button: 'right' });
