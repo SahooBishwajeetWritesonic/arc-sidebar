@@ -25,6 +25,7 @@ import type {
   MediaAction,
   MediaState,
   Platform,
+  Recording,
   SitePermission,
   SitePermissionKind,
   TabEvent,
@@ -79,6 +80,9 @@ export class FakePlatform implements Platform {
   /** When each tab was last viewed, like Chrome's tab.lastAccessed. */
   private accessed = new Map<number, number>();
   private archiveListeners = new Set<(archive: ArchiveState) => void>();
+  /** Tabs a test says are using the mic or camera (no page here asks for them). */
+  private recording: Record<number, Recording> = {};
+  private recordingListeners = new Set<(recording: Record<number, Recording>) => void>();
   /** Each tab's pages behind it and ahead of it, nearest last. */
   private pages = new Map<number, { back: Fixture[]; forward: Fixture[] }>();
   /** Titles seen per URL, so a reopened tab gets its page title back. */
@@ -210,6 +214,19 @@ export class FakePlatform implements Platform {
   onArchiveChange(listener: (archive: ArchiveState) => void) {
     this.archiveListeners.add(listener);
     return () => void this.archiveListeners.delete(listener);
+  }
+
+  onRecordingChange(listener: (recording: Record<number, Recording>) => void) {
+    listener(this.recording);
+    this.recordingListeners.add(listener);
+    return () => void this.recordingListeners.delete(listener);
+  }
+
+  /** As a page starting or stopping its mic or camera would, for tests. */
+  setRecording(tabId: number, recording: Recording | null) {
+    const { [tabId]: _old, ...rest } = this.recording;
+    this.recording = recording ? { ...rest, [tabId]: recording } : rest;
+    this.recordingListeners.forEach((listener) => listener(this.recording));
   }
 
   async loadBackups() {

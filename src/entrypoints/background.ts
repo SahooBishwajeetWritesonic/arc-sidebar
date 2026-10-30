@@ -12,12 +12,14 @@ import {
   onWindowRemoved,
   syncKeepItem,
 } from '@/background/peek';
+import { noteRecording } from '@/background/recording';
 import { onShortcut } from '@/background/shortcuts';
 import { chromeSyncStore } from '@/background/sync-storage';
 import { buildTabMenu, onTabMenuClick } from '@/background/tab-menu';
 import type { Intent } from '@/model/types';
 import type { CommandBarMessage } from '@/platform/command-bar';
 import type { CaptureMessage, CaptureReply } from '@/platform/messages';
+import type { RecordingMessage } from '@/platform/recording';
 import {
   archiveItem,
   backupsItem,
@@ -97,10 +99,10 @@ export default defineBackground(() => {
     if (change.url === undefined && change.title === undefined) return;
     void service.onTabUpdated(tabId, { url: change.url, title: change.title });
   });
-  browser.tabs.onRemoved.addListener(
-    (tabId, { windowId, isWindowClosing }) =>
-      void service.onTabRemoved(tabId, windowId, isWindowClosing),
-  );
+  browser.tabs.onRemoved.addListener((tabId, { windowId, isWindowClosing }) => {
+    void service.onTabRemoved(tabId, windowId, isWindowClosing);
+    noteRecording(tabId, null);
+  });
   browser.tabs.onReplaced.addListener(
     (added, removed) => void service.onTabReplaced(added, removed),
   );
@@ -143,7 +145,8 @@ export default defineBackground(() => {
 
   browser.runtime.onMessage.addListener(
     (
-      message: { kind?: string; intent?: Intent } | CommandBarMessage | CaptureMessage,
+      message:
+        { kind?: string; intent?: Intent } | CommandBarMessage | CaptureMessage | RecordingMessage,
       sender,
       sendResponse,
     ) => {
@@ -154,6 +157,11 @@ export default defineBackground(() => {
       }
       if (message?.kind === 'command-bar:hello' && 'token' in message) {
         sendResponse(onCommandBarHello(message.token, sender));
+        return;
+      }
+      if (message?.kind === 'recording' && 'mic' in message) {
+        const { mic, camera } = message;
+        if (sender.tab?.id !== undefined) noteRecording(sender.tab.id, { mic, camera });
         return;
       }
       if (message?.kind === 'capture:shot' && 'area' in message) {

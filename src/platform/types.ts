@@ -24,6 +24,12 @@ export interface TabInfo {
   openerTabId?: number;
 }
 
+/** What a tab is using, as a script in its page sees it: Chrome doesn't tell extensions. */
+export interface Recording {
+  mic: boolean;
+  camera: boolean;
+}
+
 /** A page from Chrome's history, as the command bar uses it. */
 export interface HistoryEntry {
   url: string;
@@ -91,6 +97,8 @@ export interface Platform {
   onArchiveChange(listener: (archive: ArchiveState) => void): () => void;
   /** The service's rolling copies of the model, newest first. */
   loadBackups(): Promise<Backup[]>;
+  /** Tabs using the microphone or camera, by id; told now and on each change. */
+  onRecordingChange(listener: (recording: Record<number, Recording>) => void): () => void;
   /** Why Arc Sync's last try didn't go through, if it didn't. */
   loadSyncProblem(): Promise<string | undefined>;
   /** Resolves once the service has applied the intent; rejects if it failed. */

@@ -14,6 +14,7 @@ import {
 } from '@/model/types';
 import type { SyncState } from '@/model/sync';
 import type { CommandBarRequest } from './command-bar';
+import type { Recording } from './types';
 import type { FloatingKind } from './peek';
 
 /** Pins, folders, spaces and settings. Versioned so schema changes can migrate. */
@@ -57,6 +58,11 @@ export const restoreSnapshotItem = storage.defineItem<RestoreSnapshot>('local:to
     // v2 added open pins; v1 was the Today URLs alone.
     2: (today: Record<string, string[]>): RestoreSnapshot => ({ ...emptySnapshot(), today }),
   },
+});
+
+/** Tabs using the microphone or camera (only those that are), by id. */
+export const recordingItem = storage.defineItem<Record<string, Recording>>('session:recording', {
+  fallback: {},
 });
 
 /** Each tab's latest URL and title, for archiving tabs closed in Chrome. */
