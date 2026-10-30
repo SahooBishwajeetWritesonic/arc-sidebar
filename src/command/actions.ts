@@ -24,6 +24,7 @@ export interface CommandContext {
   todayIds: readonly number[];
   /** Whether this window's sidebar is open; some actions only work there. */
   sidebarOpen: boolean;
+  archiveCount: number;
 }
 
 /** The pinned item (or favorite) the tab belongs to, if any. */
@@ -168,6 +169,9 @@ export function availableActions(ctx: CommandContext): (Result & { words: string
   // These open something in the sidebar, so they need it open.
   if (sidebarOpen) {
     add({ action: 'viewArchive', title: 'View Archive', words: 'library archived closed' });
+    if (ctx.archiveCount) {
+      add({ action: 'clearArchive', title: 'Clear Archive…', words: 'library archived empty' });
+    }
     add({ action: 'editTheme', title: 'Edit Theme…', words: 'colour color gradient' });
     add({ action: 'restoreSidebar', title: 'Restore Sidebar…', words: 'backup data' });
     add({ action: 'exportSidebar', title: 'Export Sidebar…', words: 'backup save download' });

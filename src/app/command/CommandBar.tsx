@@ -1,5 +1,6 @@
 import {
   Archive,
+  ArchiveX,
   ArrowRight,
   Columns2,
   ArrowRightLeft,
@@ -400,6 +401,7 @@ const ACTION_ICONS: Record<ActionId, LucideIcon> = {
   newFolder: FolderPlus,
   clearToday: ListX,
   viewArchive: Archive,
+  clearArchive: ArchiveX,
   editTheme: Palette,
   appearance: SunMoon,
   restoreSidebar: History,
@@ -451,9 +453,20 @@ function useCommandContext(sidebarOpen: boolean): CommandContext {
   const activeId = useTabs((state) => state.activeId);
   const previousId = useTabs((state) => state.previousId);
   const todayIds = useTabs(useShallow((state) => selectTodayIds(state, spaceId)));
+  const archiveCount = useSidebar((state) => state.archive.entries.length);
   return useMemo(
-    () => ({ model, session, spaceId, tabs, activeId, previousId, todayIds, sidebarOpen }),
-    [model, session, spaceId, tabs, activeId, previousId, todayIds, sidebarOpen],
+    () => ({
+      model,
+      session,
+      spaceId,
+      tabs,
+      activeId,
+      previousId,
+      todayIds,
+      sidebarOpen,
+      archiveCount,
+    }),
+    [model, session, spaceId, tabs, activeId, previousId, todayIds, sidebarOpen, archiveCount],
   );
 }
 

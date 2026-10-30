@@ -273,6 +273,11 @@
   color: var(--on-accent);
 }
 
+/* Can't be undone, as a Mac's alert shows it: red, and not the default (Return is Cancel). */
+.button.destructive {
+  color: var(--danger);
+}
+
 .primary:disabled {
   opacity: 0.4;
 }

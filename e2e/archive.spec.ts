@@ -81,3 +81,42 @@ test('the archive time follows the setting', async ({ page }) => {
   await page.waitForTimeout(200);
   expect(await today(page)).toHaveLength(4);
 });
+
+const entries = (page: Page) => panel(page).locator('[data-archive-entry]');
+
+test('the archive filters to closed or auto-archived tabs, and Clear Archive asks first', async ({
+  page,
+}) => {
+  await ready(page);
+  await page.getByRole('button', { name: 'Make inactive tabs 13 hours old' }).click();
+  await page.getByRole('button', { name: 'Run auto-archive now' }).click();
+  await expect.poll(() => today(page)).toEqual(['Lo-fi beats to c']);
+  await panel(page)
+    .locator('[data-active-page] [data-nav-row="tab"]')
+    .getByRole('button', { name: 'Close tab' })
+    .click();
+  await panel(page).getByRole('button', { name: 'Archive', exact: true }).click();
+  await expect(entries(page)).toHaveCount(4);
+
+  const options = panel(page).getByRole('button', { name: 'Archive options' });
+  await options.click();
+  await panel(page).getByRole('menuitemradio', { name: 'Closed' }).click();
+  await expect(entries(page)).toHaveCount(1);
+  await expect(entries(page)).toContainText('Lo-fi');
+  await options.click();
+  await panel(page).getByRole('menuitemradio', { name: 'Auto-Archived' }).click();
+  await expect(entries(page)).toHaveCount(3);
+
+  await options.click();
+  await panel(page).getByRole('menuitem', { name: 'Clear Archive…' }).click();
+  const dialog = panel(page).getByRole('alertdialog');
+  await expect(dialog).toContainText('all 4 archived tabs');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(entries(page)).toHaveCount(3);
+
+  await options.click();
+  await panel(page).getByRole('menuitem', { name: 'Clear Archive…' }).click();
+  await dialog.getByRole('button', { name: 'Clear Archive' }).click();
+  await expect(entries(page)).toHaveCount(0);
+  await expect(panel(page).getByText('Nothing archived matches that.')).toBeVisible();
+});

@@ -34,6 +34,25 @@
   font-weight: 600;
 }
 
+/* What the archive is filtered to, beside its name; the options button stays at the end. */
+.filters {
+  overflow: hidden;
+  min-width: 0;
+  margin-left: 4px;
+  color: var(--ink-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.options {
+  margin-left: auto;
+}
+
+.options[data-filtered] {
+  color: var(--ink);
+}
+
 .search {
   height: 32px;
   padding: 0 10px;

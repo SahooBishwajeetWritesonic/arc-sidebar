@@ -12,6 +12,8 @@ interface UiState {
   importing: boolean;
   /** The backups the "Restore Sidebar" dialog offers, while it's open. */
   restoring: Backup[] | null;
+  /** "Clear Archive" is asking to be sure. */
+  clearingArchive: boolean;
   /** The command bar is open inside the sidebar. */
   commandBar: boolean;
   /** The selected tab's address, when the URL bar opened the bar to edit it. */
@@ -26,6 +28,7 @@ export const useUi = create<UiState>()(() => ({
   themePreview: null,
   importing: false,
   restoring: null,
+  clearingArchive: false,
   commandBar: false,
   commandBarAddress: null,
 }));
@@ -35,6 +38,7 @@ export const stopEditing = () => useUi.setState({ editingId: null });
 export const showView = (view: 'sidebar' | 'archive') => useUi.setState({ view });
 export const setImporting = (importing: boolean) => useUi.setState({ importing });
 export const setRestoring = (restoring: Backup[] | null) => useUi.setState({ restoring });
+export const setClearingArchive = (clearingArchive: boolean) => useUi.setState({ clearingArchive });
 export const setCommandBar = (commandBar: boolean) =>
   useUi.setState({ commandBar, commandBarAddress: null });
 export const toggleCommandBar = () =>

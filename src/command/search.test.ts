@@ -67,6 +67,7 @@ function context(overrides: Partial<CommandContext> = {}): CommandContext {
     previousId: 4,
     todayIds: [4, 1],
     sidebarOpen: true,
+    archiveCount: 2,
     ...overrides,
   };
 }

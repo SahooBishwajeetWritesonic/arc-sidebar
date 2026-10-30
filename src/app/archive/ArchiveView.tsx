@@ -1,13 +1,24 @@
-import { ChevronLeft, X } from 'lucide-react';
+import { Menu } from '@base-ui/react/menu';
+import { Check, ChevronLeft, Ellipsis, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { forgetArchived, restoreArchived } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
+import menu from '@/app/rows/menu.module.css';
 import rows from '@/app/rows/rows.module.css';
 import { Title } from '@/app/rows/Title';
 import type { ArchiveEntry } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
-import { showView } from '@/state/ui';
+import { setClearingArchive, showView } from '@/state/ui';
 import styles from './archive.module.css';
+
+/** Arc's archive filters: by how a tab left Today, and by space. */
+type How = 'all' | 'closed' | 'auto';
+const HOW: { value: How; label: string }[] = [
+  { value: 'all', label: 'All Tabs' },
+  { value: 'closed', label: 'Closed' },
+  { value: 'auto', label: 'Auto-Archived' },
+];
+const ALL_SPACES = '';
 
 const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
 const date = new Intl.DateTimeFormat(undefined, {
@@ -27,7 +38,14 @@ function dayLabel(timestamp: number, now: Date): string {
 
 export function ArchiveView() {
   const entries = useSidebar((state) => state.archive.entries);
+  const spaces = useSidebar((state) => state.model.spaces);
   const [query, setQuery] = useState('');
+  const [how, setHow] = useState<How>('all');
+  const [spaceId, setSpaceId] = useState(ALL_SPACES);
+  const space = spaces.find((s) => s.id === spaceId);
+  const filters = [space?.name, how !== 'all' && HOW.find((h) => h.value === how)?.label]
+    .filter(Boolean)
+    .join(' · ');
 
   const groups = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -35,13 +53,16 @@ export function ArchiveView() {
     const out: { label: string; entries: ArchiveEntry[] }[] = [];
     for (const entry of entries) {
       if (needle && !`${entry.title} ${entry.url}`.toLowerCase().includes(needle)) continue;
+      // Cleared counts as closed: you did it, not the timer.
+      if (how !== 'all' && (entry.reason === 'auto') !== (how === 'auto')) continue;
+      if (spaceId !== ALL_SPACES && entry.spaceId !== spaceId) continue;
       const label = dayLabel(entry.archivedAt, now);
       const group = out.at(-1);
       if (group?.label === label) group.entries.push(entry);
       else out.push({ label, entries: [entry] });
     }
     return out;
-  }, [entries, query]);
+  }, [entries, query, how, spaceId]);
 
   return (
     <section aria-label="Archive" className={styles.archive}>
@@ -55,6 +76,69 @@ export function ArchiveView() {
           <ChevronLeft size={16} strokeWidth={2} />
         </button>
         <h1 className={styles.heading}>Archive</h1>
+        {filters && <span className={styles.filters}>{filters}</span>}
+        <Menu.Root>
+          <Menu.Trigger
+            className={`${styles.back} ${styles.options}`}
+            aria-label="Archive options"
+            data-filtered={filters ? '' : undefined}
+          >
+            <Ellipsis size={16} strokeWidth={2} />
+          </Menu.Trigger>
+          <Menu.Portal>
+            <Menu.Positioner className={menu.positioner} align="end" sideOffset={4}>
+              <Menu.Popup className={menu.popup}>
+                <Menu.RadioGroup value={how} onValueChange={(value) => setHow(value as How)}>
+                  {HOW.map((choice) => (
+                    <Menu.RadioItem
+                      key={choice.value}
+                      value={choice.value}
+                      className={menu.item}
+                      closeOnClick
+                    >
+                      <Menu.RadioItemIndicator className={menu.check} keepMounted>
+                        <Check size={12} strokeWidth={2.5} />
+                      </Menu.RadioItemIndicator>
+                      {choice.label}
+                    </Menu.RadioItem>
+                  ))}
+                </Menu.RadioGroup>
+                {spaces.length > 1 && (
+                  <>
+                    <Menu.Separator className={menu.separator} />
+                    <Menu.RadioGroup
+                      value={spaceId}
+                      onValueChange={(value) => setSpaceId(value as string)}
+                    >
+                      {[{ id: ALL_SPACES, name: 'All Spaces' }, ...spaces].map((choice) => (
+                        <Menu.RadioItem
+                          key={choice.id}
+                          value={choice.id}
+                          className={menu.item}
+                          closeOnClick
+                        >
+                          <Menu.RadioItemIndicator className={menu.check} keepMounted>
+                            <Check size={12} strokeWidth={2.5} />
+                          </Menu.RadioItemIndicator>
+                          {choice.name}
+                        </Menu.RadioItem>
+                      ))}
+                    </Menu.RadioGroup>
+                  </>
+                )}
+                <Menu.Separator className={menu.separator} />
+                <Menu.Item
+                  className={menu.item}
+                  disabled={!entries.length}
+                  onClick={() => setClearingArchive(true)}
+                >
+                  <span className={menu.check} />
+                  Clear Archive…
+                </Menu.Item>
+              </Menu.Popup>
+            </Menu.Positioner>
+          </Menu.Portal>
+        </Menu.Root>
       </header>
       <input
         className={styles.search}
@@ -67,7 +151,7 @@ export function ArchiveView() {
 
       {groups.length === 0 && (
         <p className={styles.empty}>
-          {query
+          {query || filters
             ? 'Nothing archived matches that.'
             : 'Tabs you close, clear, or that auto-archive show up here.'}
         </p>

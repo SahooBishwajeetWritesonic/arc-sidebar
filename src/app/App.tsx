@@ -20,6 +20,7 @@ import { useSidebar } from '@/state/sidebar';
 import { activateTab, openUrl, useTabs } from '@/state/tabs';
 import { setCommandBar, useUi } from '@/state/ui';
 import { ArchiveView } from './archive/ArchiveView';
+import { ClearArchiveDialog } from './archive/ClearArchiveDialog';
 import { Boundary } from './chrome/Boundary';
 import { BottomBar } from './chrome/BottomBar';
 import { SidebarCommandBar } from './command/SidebarCommandBar';
@@ -247,6 +248,7 @@ export function App() {
       <Boundary region="dialogs">
         <ImportDialog />
         <RestoreDialog />
+        <ClearArchiveDialog />
       </Boundary>
       <Boundary region="command bar">
         <SidebarCommandBar />

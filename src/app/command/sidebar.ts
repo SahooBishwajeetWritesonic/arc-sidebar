@@ -4,7 +4,7 @@ import { showToast } from '@/app/toast/toast';
 import type { Command } from '@/command/types';
 import { copiedText } from '@/model/links';
 import { loadBackups, useSidebar } from '@/state/sidebar';
-import { setImporting, setRestoring, showView } from '@/state/ui';
+import { setClearingArchive, setImporting, setRestoring, showView } from '@/state/ui';
 import { runCommand } from './run';
 
 /**
@@ -22,6 +22,9 @@ export function runInSidebar(command: Command) {
       return showToast(copiedText(1, command.action === 'copyMarkdown'));
     case 'viewArchive':
       return showView('archive');
+    case 'clearArchive':
+      showView('archive');
+      return setClearingArchive(true);
     case 'editTheme':
       showView('sidebar');
       return openThemePicker(useSidebar.getState().spaceId);

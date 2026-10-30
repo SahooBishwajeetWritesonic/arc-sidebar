@@ -23,6 +23,7 @@ export type ActionId =
   | 'newFolder'
   | 'clearToday'
   | 'viewArchive'
+  | 'clearArchive'
   | 'editTheme'
   | 'appearance'
   | 'restoreSidebar'
