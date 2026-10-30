@@ -10,6 +10,7 @@ import {
   syncStateItem,
 } from './storage-items';
 import { fullPage, SITE_PERMISSION_DEFAULTS } from './capture';
+import { gmailFeedUrl, parseGmailFeed } from './gmail';
 import type { PeekMessage } from './peek';
 import type {
   MediaState,
@@ -92,6 +93,16 @@ export const chromePlatform: Platform = {
   onArchiveChange: (listener) => archiveItem.watch((archive) => listener(archive)),
   loadBackups: () => backupsItem.getValue(),
   loadSyncProblem: async () => (await syncStateItem.getValue()).problem,
+
+  // With the browser's own Gmail sign-in: the panel may read mail.google.com.
+  async gmailInbox(account) {
+    try {
+      const response = await fetch(gmailFeedUrl(account), { credentials: 'include' });
+      return response.ok ? parseGmailFeed(await response.text()) : null;
+    } catch {
+      return null;
+    }
+  },
 
   onRecordingChange(listener) {
     void recordingItem.getValue().then(listener);

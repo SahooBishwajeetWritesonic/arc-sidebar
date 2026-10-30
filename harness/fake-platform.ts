@@ -1,6 +1,7 @@
 import { generateNKeysBetween } from 'fractional-indexing';
 import { SidebarService, type LiveTab } from '@/background/service';
 import type { PullRequest } from '@/model/live';
+import type { GmailInbox } from '@/platform/gmail';
 import type { Synced, SyncState } from '@/model/sync';
 import { startCaptureTool } from '@/platform/capture-tool';
 import {
@@ -109,6 +110,8 @@ export class FakePlatform implements Platform {
     fixtures: Fixture[],
     history: HistoryEntry[] = [],
     pullRequests: (PullRequest & { mine: boolean })[] = [],
+    /** What Gmail's feed says; null as if signed out. Tests may change it. */
+    public inbox: GmailInbox | null = null,
   ) {
     this.history = [...history];
     this.github = { signedIn: true, open: [...pullRequests] };
@@ -214,6 +217,12 @@ export class FakePlatform implements Platform {
   onArchiveChange(listener: (archive: ArchiveState) => void) {
     this.archiveListeners.add(listener);
     return () => void this.archiveListeners.delete(listener);
+  }
+
+  // A moment, as Gmail takes.
+  async gmailInbox() {
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    return structuredClone(this.inbox);
   }
 
   onRecordingChange(listener: (recording: Record<number, Recording>) => void) {

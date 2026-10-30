@@ -152,3 +152,7 @@ export const newId = () => crypto.randomUUID();
 export const loadBackups = async () => (await platform?.loadBackups()) ?? [];
 
 export const loadSyncProblem = async () => platform?.loadSyncProblem();
+
+/** Gmail's unread mail for an account, for the Gmail preview; null when it won't say. */
+export const loadGmailInbox = async (account: number) =>
+  (await platform?.gmailInbox(account)) ?? null;

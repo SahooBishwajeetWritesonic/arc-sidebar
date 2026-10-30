@@ -1,7 +1,14 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { FakePlatform } from './fake-platform';
-import { edgeTabs, historyPages, manyTabs, pullRequests, startingTabs } from './fixtures';
+import {
+  edgeTabs,
+  gmailInbox,
+  historyPages,
+  manyTabs,
+  pullRequests,
+  startingTabs,
+} from './fixtures';
 import { Harness } from './Harness';
 import '@/app/global.css';
 
@@ -14,6 +21,7 @@ const platform = new FakePlatform(
   [...startingTabs, ...edge, ...manyTabs(extra)],
   historyPages,
   pullRequests,
+  gmailInbox,
 );
 window.harnessPlatform = platform;
 

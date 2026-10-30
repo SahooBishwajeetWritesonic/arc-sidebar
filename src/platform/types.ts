@@ -6,6 +6,7 @@ import type {
   SessionState,
   SidebarModel,
 } from '@/model/types';
+import type { GmailInbox } from './gmail';
 
 /** The slice of a Chrome tab the sidebar renders. */
 export interface TabInfo {
@@ -99,6 +100,8 @@ export interface Platform {
   loadBackups(): Promise<Backup[]>;
   /** Tabs using the microphone or camera, by id; told now and on each change. */
   onRecordingChange(listener: (recording: Record<number, Recording>) => void): () => void;
+  /** Gmail's unread mail for an account (/u/N/); null when it won't say (signed out). */
+  gmailInbox(account: number): Promise<GmailInbox | null>;
   /** Why Arc Sync's last try didn't go through, if it didn't. */
   loadSyncProblem(): Promise<string | undefined>;
   /** Resolves once the service has applied the intent; rejects if it failed. */

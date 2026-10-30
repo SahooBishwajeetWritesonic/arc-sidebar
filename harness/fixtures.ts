@@ -1,4 +1,5 @@
 import type { PullRequest } from '@/model/live';
+import type { GmailInbox } from '@/platform/gmail';
 import type { HistoryEntry } from '@/platform/types';
 import type { Fixture } from './fake-platform';
 
@@ -151,3 +152,37 @@ export const pullRequests = [
   }),
   pr('acme/design', 88, 'New space icons', '2026-10-21T08:30:00Z', { ci: 'success' }),
 ];
+
+const minutesAgo = (minutes: number) => Date.now() - minutes * 60_000;
+const message = (from: string, subject: string, snippet: string, minutes: number) => ({
+  from,
+  subject,
+  snippet,
+  at: minutesAgo(minutes),
+  url: `https://mail.google.com/mail/u/0/#inbox/${encodeURIComponent(subject)}`,
+});
+
+/** Gmail's unread mail, as its feed tells the Gmail preview; matches the pin's "(3)". */
+export const gmailInbox: GmailInbox = {
+  unread: 3,
+  messages: [
+    message(
+      'Priya Raman',
+      'Design review moved to 3 pm',
+      'Same room, same agenda. Bring the sidebar…',
+      12,
+    ),
+    message(
+      'GitHub',
+      '[acme/web] Keep the sidebar open across restarts (#482)',
+      'Approved: looks good once CI is green.',
+      95,
+    ),
+    message(
+      'Calendar',
+      'Invitation: Sprint planning',
+      'Thursday 10:00 – 11:00. Join with Google Meet.',
+      60 * 26,
+    ),
+  ],
+};
