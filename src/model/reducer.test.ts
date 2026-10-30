@@ -408,6 +408,17 @@ describe('spaces', () => {
   });
   const ids = (model: SidebarModel) => model.spaces.map((space) => space.id);
 
+  it('sets several spaces’ themes at once, and takes them away', () => {
+    const theme = { colors: ['#7fb2d8'], harmony: 'single' as const, intensity: 0.5, grain: 0 };
+    const themed = applyIntent(twoSpaces(), {
+      type: 'setSpaceThemes',
+      themes: { home: theme, work: theme },
+    });
+    expect(themed.spaces.map((space) => space.theme)).toEqual([theme, theme]);
+    const back = applyIntent(themed, { type: 'setSpaceThemes', themes: { work: null } });
+    expect(back.spaces.map((space) => space.theme)).toEqual([theme, undefined]);
+  });
+
   it('creates a space at an index, once', () => {
     const intent: Intent = { type: 'createSpace', spaceId: 'play', name: 'Play', index: 1 };
     const once = applyIntent(twoSpaces(), intent);

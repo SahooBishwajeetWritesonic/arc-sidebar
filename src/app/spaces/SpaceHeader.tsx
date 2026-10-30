@@ -7,6 +7,7 @@ import {
   renameSpace,
   setPinnedCollapsed,
   setSpaceIcon,
+  applyThemeToAllSpaces,
 } from '@/app/actions';
 import { spring } from '@/app/motion';
 import { InlineEdit } from '@/app/rows/InlineEdit';
@@ -24,7 +25,7 @@ import styles from './spaces.module.css';
  */
 export function SpaceHeader({ spaceId }: { spaceId: string }) {
   const space = useSidebar((state) => state.model.spaces.find((s) => s.id === spaceId));
-  const canDelete = useSidebar((state) => state.model.spaces.length > 1);
+  const several = useSidebar((state) => state.model.spaces.length > 1);
   const editing = useUi((state) => state.editingId === spaceId);
   const hasLiveFolder = useSidebar((state) => githubFolderOf(state.model) !== undefined);
   if (!space) return null;
@@ -37,12 +38,15 @@ export function SpaceHeader({ spaceId }: { spaceId: string }) {
     },
     { label: 'Rename…', onSelect: () => startEditing(spaceId) },
     { label: 'Edit Theme…', onSelect: () => openThemePicker(spaceId) },
+    ...(space.theme && several
+      ? [{ label: 'Use Theme for All Spaces', onSelect: () => applyThemeToAllSpaces(spaceId) }]
+      : []),
     ...iconMenu(space.icon, (icon) => setSpaceIcon(spaceId, icon)),
     'separator',
     // Arc turns its GitHub Live Folder back on from the sidebar's menu.
     ...(hasLiveFolder ? [] : [{ label: 'New GitHub Live Folder', onSelect: newLiveFolder }]),
     { label: 'New Space', onSelect: () => createSpace() },
-    ...(canDelete
+    ...(several
       ? [{ label: 'Delete Space', onSelect: () => deleteSpace(spaceId), danger: true }]
       : []),
   ];

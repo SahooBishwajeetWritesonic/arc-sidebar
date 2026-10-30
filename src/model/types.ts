@@ -357,6 +357,7 @@ export type Intent =
   | { type: 'renameSpace'; spaceId: string; name: string }
   | { type: 'setSpaceIcon'; spaceId: string; icon: SpaceIcon | null }
   | { type: 'setSpaceTheme'; spaceId: string; theme: SpaceTheme | null }
+  | { type: 'setSpaceThemes'; themes: Record<string, SpaceTheme | null> }
   | { type: 'setPinnedCollapsed'; spaceId: string; collapsed: boolean }
   | { type: 'setAppearance'; appearance: Appearance }
   | { type: 'setDeveloperMode'; host: string; on: boolean }

@@ -14,6 +14,7 @@ import {
   type SessionState,
   type SidebarModel,
   type Space,
+  type SpaceTheme,
 } from './types';
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -23,6 +24,12 @@ const withFolder = (model: SidebarModel, folder: Item): SidebarModel => ({
   ...model,
   items: { ...model.items, [folder.id]: folder },
 });
+
+function withTheme(space: Space, theme: SpaceTheme | null): Space {
+  const { theme: _old, ...rest } = space;
+  if (theme) return { ...rest, theme };
+  return space.theme ? rest : space;
+}
 
 function updateSpace(model: SidebarModel, spaceId: string, change: (space: Space) => Space) {
   let changed = false;
@@ -357,11 +364,13 @@ export function applyIntent(
       });
 
     case 'setSpaceTheme':
-      return updateSpace(model, intent.spaceId, (space) => {
-        const { theme: _old, ...rest } = space;
-        if (intent.theme) return { ...rest, theme: intent.theme };
-        return space.theme ? rest : space;
-      });
+      return updateSpace(model, intent.spaceId, (space) => withTheme(space, intent.theme));
+
+    case 'setSpaceThemes':
+      return Object.entries(intent.themes).reduce(
+        (next, [spaceId, theme]) => updateSpace(next, spaceId, (space) => withTheme(space, theme)),
+        model,
+      );
 
     case 'setAppearance':
       if (model.settings.appearance === intent.appearance) return model;

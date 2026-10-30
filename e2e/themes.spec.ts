@@ -125,3 +125,31 @@ test('the harmony glyph cycles arrangements and linked dots move together', asyn
   expect(freeAfter[0]).not.toBe(freeBefore[0]);
   expect(freeAfter.slice(1)).toEqual(freeBefore.slice(1));
 });
+
+test('a space’s theme can be used for all spaces, with Undo', async ({ page }) => {
+  await ready(page);
+  await panel(page).getByRole('button', { name: 'More', exact: true }).click();
+  await panel(page)
+    .getByRole('menu', { name: 'More' })
+    .getByRole('menuitem', { name: 'New Space' })
+    .click();
+  await panel(page).getByRole('textbox', { name: 'Name' }).fill('Work');
+  await page.keyboard.press('Enter');
+  await openPicker(page);
+  await panel(page).getByRole('button', { name: 'Muted #7fb2d8' }).click();
+  await page.keyboard.press('Escape');
+  await expect(panel(page).getByRole('dialog')).toHaveCount(0);
+
+  const themes = () =>
+    page.evaluate(() =>
+      (JSON.parse(localStorage.getItem('harness:model') ?? '{}').spaces ?? []).map(
+        (space: { theme?: { colors: string[] } }) => space.theme?.colors[0] ?? null,
+      ),
+    );
+  await expect.poll(themes).toEqual([null, '#7fb2d8']);
+  await panel(page).locator('[data-active-page] [data-space-header]').click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Use Theme for All Spaces' }).click();
+  await expect.poll(themes).toEqual(['#7fb2d8', '#7fb2d8']);
+  await panel(page).getByRole('button', { name: 'Undo' }).click();
+  await expect.poll(themes).toEqual([null, '#7fb2d8']);
+});

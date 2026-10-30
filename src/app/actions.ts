@@ -998,6 +998,20 @@ export function setSpaceTheme(spaceId: string, theme: SpaceTheme | null) {
   dispatch({ type: 'setSpaceTheme', spaceId, theme });
 }
 
+export function applyThemeToAllSpaces(spaceId: string) {
+  const { spaces } = useSidebar.getState().model;
+  const theme = spaces.find((space) => space.id === spaceId)?.theme;
+  if (!theme) return;
+  const before = Object.fromEntries(spaces.map((space) => [space.id, space.theme ?? null]));
+  dispatch({
+    type: 'setSpaceThemes',
+    themes: Object.fromEntries(spaces.map((s) => [s.id, theme])),
+  });
+  showUndoToast('Theme used for all spaces', () =>
+    dispatch({ type: 'setSpaceThemes', themes: before }),
+  );
+}
+
 export function setRoutes(routes: Route[]) {
   dispatch({ type: 'setRoutes', routes });
 }
