@@ -16,6 +16,7 @@ import {
   resetPin,
   separateSplit,
   setAppearance,
+  setPinnedCollapsed,
   splitTodayTabs,
   switchSpace,
   switchSpaceBy,
@@ -122,6 +123,12 @@ function runAction(command: Extract<Command, { type: 'action' }>) {
     case 'clearToday':
       clearToday();
       break;
+    case 'togglePinned': {
+      const { model, spaceId } = useSidebar.getState();
+      const space = model.spaces.find((s) => s.id === spaceId);
+      if (space) setPinnedCollapsed(space.id, !space.pinnedCollapsed);
+      break;
+    }
     case 'appearance':
       if (command.appearance) setAppearance(command.appearance);
       break;

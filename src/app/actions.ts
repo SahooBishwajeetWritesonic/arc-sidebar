@@ -811,6 +811,11 @@ export function setSpaceIcon(spaceId: string, icon: SpaceIcon | null) {
   dispatch({ type: 'setSpaceIcon', spaceId, icon });
 }
 
+/** Arc's caret on a space's name: folds its Pinned section away, or opens it. */
+export function setPinnedCollapsed(spaceId: string, collapsed: boolean) {
+  dispatch({ type: 'setPinnedCollapsed', spaceId, collapsed });
+}
+
 /** Its pins and folders go with it; its tabs move to a neighbouring space. */
 export function deleteSpace(spaceId: string) {
   const { model, windowId } = useSidebar.getState();

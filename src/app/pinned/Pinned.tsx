@@ -5,6 +5,7 @@ import { spring } from '@/app/motion';
 import { LayoutKey } from '@/app/rows/layout-key';
 import styles from '@/app/rows/rows.module.css';
 import { flattenSpace, partnerOf, type Row } from '@/model/tree';
+import type { Item } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
 import { selectTodayIds, useTabs } from '@/state/tabs';
 import { FolderRow } from './FolderRow';
@@ -20,14 +21,24 @@ export function Pinned({ spaceId }: { spaceId: string }) {
     selectTodayIds(state, spaceId).some((id) => !state.tabs.get(id)?.audible),
   );
 
-  const rows = useMemo(
-    () =>
-      pairUp(
-        model,
-        flattenSpace(model, spaceId, (item) => bindings[item.id] === activeId),
-      ),
-    [model, spaceId, bindings, activeId],
+  const collapsed = useSidebar(
+    (state) => state.model.spaces.find((space) => space.id === spaceId)?.pinnedCollapsed,
   );
+
+  const rows = useMemo(() => {
+    const isActive = (item: Item) => bindings[item.id] === activeId;
+    const all = flattenSpace(model, spaceId, isActive);
+    // Folded away like a closed folder: only the selected pinned tab (or split) stays.
+    const shown = collapsed
+      ? all
+          .filter(({ item }) => {
+            const partner = partnerOf(model, item);
+            return item.kind === 'pin' && (isActive(item) || (partner && isActive(partner)));
+          })
+          .map((row) => ({ ...row, depth: 0 }))
+      : all;
+    return pairUp(model, shown);
+  }, [model, spaceId, bindings, activeId, collapsed]);
   // An open Live Folder that GitHub says nobody is signed in to starts with a way to sign in.
   const signIn = (item: (typeof rows)[number]['item']) =>
     item.kind === 'folder' && !item.collapsed && item.live?.signedOut === true;

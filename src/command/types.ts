@@ -22,6 +22,7 @@ export type ActionId =
   | 'newSpace'
   | 'newFolder'
   | 'clearToday'
+  | 'togglePinned'
   | 'viewArchive'
   | 'clearArchive'
   | 'editTheme'

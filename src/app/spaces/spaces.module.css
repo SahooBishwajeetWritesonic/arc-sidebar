@@ -33,6 +33,41 @@
   flex: none;
   width: var(--favicon-size);
   height: var(--favicon-size);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+/* The icon and Arc's caret share one place; hovering swaps them at once, as Arc's hovers do. */
+.icon,
+.caret {
+  grid-area: 1 / 1;
+}
+
+.caret {
+  opacity: 0;
+  rotate: 90deg;
+  transition: rotate var(--caret-turn) var(--ease-out);
+}
+
+[data-collapsed] .caret {
+  rotate: 0deg;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .header:hover .icon {
+    opacity: 0;
+  }
+
+  .header:hover .caret {
+    opacity: 1;
+  }
+}
+
+/* Folded away: Arc makes the name stand out. */
+[data-collapsed] .name {
+  color: var(--ink);
 }
 
 .name {

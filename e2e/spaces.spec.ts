@@ -148,3 +148,29 @@ test('swiping past the last space springs back, and vertical scrolling never swi
   await page.waitForTimeout(600);
   await expect(panel(page).locator('[data-active-page]')).toHaveAttribute('aria-label', 'Work');
 });
+
+const pinRows = (page: Page) =>
+  panel(page).locator(
+    '[data-active-page] [data-nav-row="pin"], [data-active-page] [data-nav-row="folder"]',
+  );
+
+test('the caret on the space’s name folds Pinned away, keeping the selected tab', async ({
+  page,
+}) => {
+  await ready(page);
+  await expect(pinRows(page)).toHaveCount(5);
+  const header = panel(page).locator('[data-active-page] [data-space-header]');
+  await header.hover();
+  await header.getByRole('button', { name: 'Collapse Pinned' }).click();
+  await expect(header).toHaveAttribute('data-collapsed');
+  // Gmail is selected, so it stays.
+  await expect.poll(() => titles(page, 'pin')).toEqual(['Inbox (3) - Gmai']);
+  await expect(pinRows(page)).toHaveCount(1);
+
+  // Remembered, and back from the space's menu.
+  await page.reload();
+  await expect(pinRows(page)).toHaveCount(1);
+  await header.click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Expand Pinned' }).click();
+  await expect(pinRows(page)).toHaveCount(5);
+});

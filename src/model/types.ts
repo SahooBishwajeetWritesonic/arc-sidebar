@@ -53,6 +53,8 @@ export interface Space {
   name: string;
   icon?: SpaceIcon;
   theme?: SpaceTheme;
+  /** Arc's caret on the space's name folds its Pinned section away. */
+  pinnedCollapsed?: true;
 }
 
 /**
@@ -320,6 +322,7 @@ export type Intent =
   | { type: 'renameSpace'; spaceId: string; name: string }
   | { type: 'setSpaceIcon'; spaceId: string; icon: SpaceIcon | null }
   | { type: 'setSpaceTheme'; spaceId: string; theme: SpaceTheme | null }
+  | { type: 'setPinnedCollapsed'; spaceId: string; collapsed: boolean }
   | { type: 'setAppearance'; appearance: Appearance }
   | { type: 'setDeveloperMode'; host: string; on: boolean }
   | { type: 'setNavButtons'; on: boolean }

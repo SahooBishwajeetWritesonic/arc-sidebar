@@ -345,6 +345,18 @@ describe('settings, undo and archive', () => {
 });
 
 describe('spaces', () => {
+  it('folds a space’s Pinned section away and back, once', () => {
+    const fold = (collapsed: boolean): Intent => ({
+      type: 'setPinnedCollapsed',
+      spaceId: S,
+      collapsed,
+    });
+    const folded = applyIntent(emptyModel(), fold(true));
+    expect(folded.spaces[0]!.pinnedCollapsed).toBe(true);
+    expect(applyIntent(folded, fold(true))).toBe(folded);
+    expect(applyIntent(folded, fold(false)).spaces[0]).toEqual(emptyModel().spaces[0]);
+  });
+
   const twoSpaces = (): SidebarModel => ({
     ...emptyModel(),
     spaces: [

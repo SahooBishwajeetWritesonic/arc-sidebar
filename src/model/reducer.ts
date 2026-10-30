@@ -325,6 +325,13 @@ export function applyIntent(
         return space.icon ? rest : space;
       });
 
+    case 'setPinnedCollapsed':
+      return updateSpace(model, intent.spaceId, (space) => {
+        if (!!space.pinnedCollapsed === intent.collapsed) return space;
+        const { pinnedCollapsed: _old, ...rest } = space;
+        return intent.collapsed ? { ...rest, pinnedCollapsed: true } : rest;
+      });
+
     case 'setSpaceTheme':
       return updateSpace(model, intent.spaceId, (space) => {
         const { theme: _old, ...rest } = space;

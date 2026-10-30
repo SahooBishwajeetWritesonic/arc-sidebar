@@ -115,4 +115,6 @@
   --ease-swap: cubic-bezier(0.23, 1, 0.32, 1);
   --popup-in: 150ms;
   --popup-out: 100ms;
+  /* The space caret turning as Pinned folds (not measured). */
+  --caret-turn: 150ms;
 }

@@ -63,7 +63,13 @@ export function repairModel(raw: unknown): SidebarModel | null {
     if (space.id === FAVORITES_ID || spaces.some((s) => s.id === space.id)) continue;
     const icon = repairIcon(space.icon);
     const theme = repairTheme(space.theme);
-    spaces.push({ id: space.id, name: space.name, ...(icon && { icon }), ...(theme && { theme }) });
+    spaces.push({
+      id: space.id,
+      name: space.name,
+      ...(icon && { icon }),
+      ...(theme && { theme }),
+      ...(space.pinnedCollapsed === true && { pinnedCollapsed: true }),
+    });
   }
   if (!spaces.length) return null;
 

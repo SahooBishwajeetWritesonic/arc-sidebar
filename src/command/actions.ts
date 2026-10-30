@@ -127,7 +127,16 @@ export function availableActions(ctx: CommandContext): (Result & { words: string
   if (ctx.todayIds.length) {
     add({ action: 'clearToday', title: 'Clear Today', words: 'archive close all tabs' });
   }
-  const index = model.spaces.findIndex((space) => space.id === spaceId);
+  const space = model.spaces.find((s) => s.id === spaceId);
+  const inSpace = Object.values(model.items).filter((item) => item.spaceId === spaceId);
+  if (inSpace.length) {
+    add({
+      action: 'togglePinned',
+      title: space?.pinnedCollapsed ? 'Expand Pinned' : 'Collapse Pinned',
+      words: 'fold hide show section',
+    });
+  }
+  const index = model.spaces.findIndex((s) => s.id === spaceId);
   if (index < model.spaces.length - 1) {
     add({ action: 'nextSpace', title: 'Select Next Space', words: 'switch' });
   }
