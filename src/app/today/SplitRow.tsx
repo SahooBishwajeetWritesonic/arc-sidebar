@@ -1,12 +1,14 @@
 import { memo, useRef, type PointerEvent, type Ref } from 'react';
 import { Volume2, VolumeX, X } from 'lucide-react';
 import {
+  archiveTabsBelow,
   closeTodayTab,
   closeTodayTabs,
   favoriteSplit,
   moveTabsToSpace,
   pinSplit,
   separateSplit,
+  tabsBelow,
 } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
 import { IconSwap } from '@/app/rows/IconSwap';
@@ -102,7 +104,8 @@ export const SplitRow = memo(function SplitRow({ ids, splitViewId, ref }: SplitR
           folder: false,
         }),
       }}
-      menu={[
+      // Worked out as it opens: whether any tabs are below.
+      menu={() => [
         // Arc pins a split as one: it stays side by side in Pinned.
         { label: 'Pin Split', onSelect: () => pinSplit(ids) },
         ...(canFavorite
@@ -111,6 +114,9 @@ export const SplitRow = memo(function SplitRow({ ids, splitViewId, ref }: SplitR
         { label: 'Separate All Tabs', onSelect: () => separateSplit(splitViewId) },
         ...moveToSpaceMenu(spaces, spaceId, (target) => moveTabsToSpace(ids, target)),
         'separator',
+        ...(tabsBelow(ids).length
+          ? [{ label: 'Archive Below', onSelect: () => archiveTabsBelow(ids) }]
+          : []),
         { label: 'Close Split', onSelect: () => closeTodayTabs(ids) },
       ]}
     >

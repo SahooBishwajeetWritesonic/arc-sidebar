@@ -1,6 +1,14 @@
 import { memo, useRef, type PointerEvent, type Ref } from 'react';
 import { Volume2, VolumeX, X } from 'lucide-react';
-import { closeTodayTab, favoriteTab, moveTabToSpace, pinTab, renameTab } from '@/app/actions';
+import {
+  archiveTabsBelow,
+  closeTodayTab,
+  favoriteTab,
+  moveTabToSpace,
+  pinTab,
+  renameTab,
+  tabsBelow,
+} from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
 import { IconSwap } from '@/app/rows/IconSwap';
 import { InlineEdit } from '@/app/rows/InlineEdit';
@@ -62,7 +70,8 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
         source: { kind: 'tab', tabId: id },
         ghost: () => ({ title, faviconUrl: faviconFor(tab.url), folder: false }),
       }}
-      menu={[
+      // Worked out as it opens: whether any tabs are below.
+      menu={() => [
         { label: 'Rename…', onSelect: () => startEditing(editKey) },
         { label: 'Duplicate', onSelect: () => void duplicateTab(id) },
         { label: 'Pin Tab', onSelect: () => pinTab(id) },
@@ -70,6 +79,9 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
         { label: tab.muted ? 'Unmute Tab' : 'Mute Tab', onSelect: () => toggleMuted(id) },
         ...moveToSpaceMenu(spaces, spaceId, (target) => moveTabToSpace(id, target)),
         'separator',
+        ...(tabsBelow([id]).length
+          ? [{ label: 'Archive Tabs Below', onSelect: () => archiveTabsBelow([id]) }]
+          : []),
         { label: 'Close Tab', onSelect: () => closeTodayTab(id) },
       ]}
     >

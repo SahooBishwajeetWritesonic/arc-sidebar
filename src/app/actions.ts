@@ -567,17 +567,19 @@ export function closeTodayTabs(tabIds: readonly number[]) {
   });
 }
 
-export function clearToday() {
+/** Today's tabs from `from` on that would archive: all but ones playing audio. */
+function archivable(from = 0): TabInfo[] {
   const tabsState = useTabs.getState();
-  const { windowId } = useSidebar.getState();
-  if (windowId === null) return;
-  const tabs = selectTodayIds(tabsState)
+  return selectTodayIds(tabsState)
+    .slice(from)
     .map((id) => tabsState.tabs.get(id))
     .filter((tab): tab is TabInfo => tab !== undefined && !tab.audible);
-  if (!tabs.length) return;
+}
 
-  // Closing every tab would close the window; keep one open, as Arc does.
-  if (tabs.length === tabsState.tabs.size) openNewTab();
+/** Archives Today tabs as one batch, with an Undo toast that quick repeats add to. */
+function archiveWithUndo(tabs: TabInfo[], verb: 'Cleared' | 'Archived') {
+  const { windowId } = useSidebar.getState();
+  if (windowId === null || !tabs.length) return;
   const batchId = newId();
   const archived = tabs.map((tab) => ({
     tabId: tab.id,
@@ -587,10 +589,28 @@ export function clearToday() {
   dispatch({ type: 'archiveTabs', windowId, tabs: archived });
   const count = (n: number) => `${n} ${n === 1 ? 'tab' : 'tabs'}`;
   showToast(
-    `Cleared ${count(tabs.length)}`,
+    `${verb} ${count(tabs.length)}`,
     { label: 'Undo', run: () => restoreArchived(archived.map(({ entry }) => entry.id)) },
-    { key: 'clear', amount: tabs.length, message: (total) => `Cleared ${count(total)}` },
+    { key: verb, amount: tabs.length, message: (total) => `${verb} ${count(total)}` },
   );
+}
+
+export function clearToday() {
+  const tabs = archivable();
+  if (!tabs.length) return;
+  // Closing every tab would close the window; keep one open, as Arc does.
+  if (tabs.length === useTabs.getState().tabs.size) openNewTab();
+  archiveWithUndo(tabs, 'Cleared');
+}
+
+/** Today tabs below a row (a tab, or a split's two), for Arc's Archive Tabs Below. */
+export function tabsBelow(tabIds: readonly number[]): TabInfo[] {
+  const ids = selectTodayIds(useTabs.getState());
+  return archivable(Math.max(...tabIds.map((id) => ids.indexOf(id))) + 1);
+}
+
+export function archiveTabsBelow(tabIds: readonly number[]) {
+  archiveWithUndo(tabsBelow(tabIds), 'Archived');
 }
 
 export function restoreArchived(entryIds: string[]) {

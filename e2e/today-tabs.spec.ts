@@ -87,3 +87,22 @@ test('Duplicate opens a copy just below the tab, and a link from a tab opens bel
       'Lo-fi beats ',
     ]);
 });
+
+test('Archive Tabs Below archives what’s under the tab except audio, with Undo', async ({
+  page,
+}) => {
+  await ready(page);
+  await today(page).first().click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Archive Tabs Below' }).click();
+  await expect.poll(() => titles(page)).toEqual(['Engineering ', 'Lo-fi beats ']);
+  await expect(panel(page).getByRole('status')).toContainText('Archived 2 tabs');
+
+  // Nothing left below the last tab: no such item.
+  await today(page).last().click({ button: 'right' });
+  await expect(panel(page).getByRole('menuitem', { name: 'Close Tab' })).toBeVisible();
+  await expect(panel(page).getByRole('menuitem', { name: 'Archive Tabs Below' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  await panel(page).getByRole('status').getByRole('button', { name: 'Undo' }).click();
+  await expect(today(page)).toHaveCount(4);
+});
