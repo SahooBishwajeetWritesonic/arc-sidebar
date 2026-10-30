@@ -109,7 +109,8 @@ export interface Platform {
   navigateTab(tabId: number, url: string): void;
   /** Searches with Chrome's default search engine, in a new tab or in `tabId`. */
   searchWeb(text: string, tabId?: number): void;
-  duplicateTab(tabId: number): void;
+  /** Copies the tab, history and all, just below it; settles once the copy is open. */
+  duplicateTab(tabId: number): Promise<void>;
   /**
    * Back (-1) or forward (1) in the tab's history; `inNewTab` opens that page
    * in a copy of the tab instead, history and all (Arc's ⌘-click).

@@ -293,8 +293,8 @@ export function setSitePermission(
   return platform?.setSitePermission(url, kind, setting) ?? Promise.resolve();
 }
 
-export function duplicateTab(id: number) {
-  platform?.duplicateTab(id);
+export function duplicateTab(id: number): Promise<void> {
+  return platform?.duplicateTab(id) ?? Promise.resolve();
 }
 
 export function historyStep(id: number, by: -1 | 1, inNewTab = false) {

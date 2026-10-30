@@ -311,9 +311,12 @@ export class FakePlatform implements Platform {
     }
   }
 
-  duplicateTab(tabId: number) {
+  /** Selects the tab first, like the real one: Chrome makes the active tab the copy's opener. */
+  async duplicateTab(tabId: number) {
     const tab = this.tabs.find((t) => t.id === tabId);
-    if (tab) this.openTab({ title: tab.title, url: tab.url });
+    if (!tab) return;
+    this.activateTab(tabId);
+    this.openTab({ title: tab.title, url: tab.url }, true, tabId);
   }
 
   /** As Chrome does: the right tab moves next to the left, then both get the split's id. */

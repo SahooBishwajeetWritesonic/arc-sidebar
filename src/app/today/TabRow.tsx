@@ -12,7 +12,14 @@ import { FAVORITES_ID, FAVORITES_LIMIT } from '@/model/types';
 import type { TabInfo } from '@/platform/types';
 import { rowKey } from '@/state/selection';
 import { useSidebar } from '@/state/sidebar';
-import { activateTab, faviconFor, openInLittleArc, toggleMuted, useTabs } from '@/state/tabs';
+import {
+  activateTab,
+  duplicateTab,
+  faviconFor,
+  openInLittleArc,
+  toggleMuted,
+  useTabs,
+} from '@/state/tabs';
 import { startEditing, stopEditing, useUi } from '@/state/ui';
 
 const stop = (event: PointerEvent) => event.stopPropagation();
@@ -57,6 +64,7 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
       }}
       menu={[
         { label: 'Rename…', onSelect: () => startEditing(editKey) },
+        { label: 'Duplicate', onSelect: () => void duplicateTab(id) },
         { label: 'Pin Tab', onSelect: () => pinTab(id) },
         ...(canFavorite ? [{ label: 'Add to Favorites', onSelect: () => favoriteTab(id) }] : []),
         { label: tab.muted ? 'Unmute Tab' : 'Mute Tab', onSelect: () => toggleMuted(id) },

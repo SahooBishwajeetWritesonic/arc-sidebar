@@ -55,3 +55,35 @@ test('a renamed tab keeps its name when pinned and unpinned, and in the archive'
   await panel(page).getByRole('button', { name: 'Archive', exact: true }).click();
   await expect(panel(page).locator('[data-archive-entry]', { hasText: 'Wiki' })).toHaveCount(1);
 });
+
+const titles = (page: Page) =>
+  today(page).evaluateAll((rows) => rows.map((row) => row.textContent?.slice(0, 12) ?? ''));
+
+test('Duplicate opens a copy just below the tab, and a link from a tab opens below it', async ({
+  page,
+}) => {
+  await ready(page);
+  await today(page).filter({ hasText: 'Sidebar explorations' }).click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Duplicate' }).click();
+  await expect(today(page)).toHaveCount(5);
+  await expect
+    .poll(() => titles(page))
+    .toEqual(['Engineering ', 'Sidebar expl', 'Sidebar expl', 'chrome.sideP', 'Lo-fi beats ']);
+  await expect(today(page).nth(2)).toHaveAttribute('data-selected', 'true');
+
+  // From the copy, two links in new tabs: below it, in the order they were opened.
+  const link = page.getByRole('button', { name: 'Open a link from the active tab in a new tab' });
+  await link.click();
+  await link.click();
+  await expect
+    .poll(() => titles(page))
+    .toEqual([
+      'Engineering ',
+      'Sidebar expl',
+      'Sidebar expl',
+      'A link on ww',
+      'A link on ww',
+      'chrome.sideP',
+      'Lo-fi beats ',
+    ]);
+});

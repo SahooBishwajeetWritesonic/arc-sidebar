@@ -203,8 +203,11 @@ export const chromePlatform: Platform = {
     await browser.contentSettings[kind].set({ primaryPattern, setting } as never);
   },
 
-  duplicateTab(tabId) {
-    void browser.tabs.duplicate(tabId);
+  async duplicateTab(tabId) {
+    // Chrome makes the active tab the copy's opener: selecting the original
+    // first puts the copy just below it in Today.
+    await browser.tabs.update(tabId, { active: true });
+    await browser.tabs.duplicate(tabId);
   },
 
   splitTabs(left, right) {
