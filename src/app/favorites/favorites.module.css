@@ -82,6 +82,30 @@
   color: var(--ink);
 }
 
+/* Arc's red unread badge on a Favorite; the sound badge moves to the other corner. */
+.unread {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: var(--badge);
+  color: var(--on-accent);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+  text-align: center;
+}
+
+.tile[data-unread] .badge {
+  right: auto;
+  left: 6px;
+}
+
 /* The slot a drop would fill. */
 .gap {
   height: 47px;

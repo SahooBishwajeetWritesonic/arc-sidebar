@@ -86,9 +86,7 @@
   --scrim: light-dark(rgb(0 0 0 / 0.18), rgb(0 0 0 / 0.4));
   --field: light-dark(rgb(0 0 0 / 0.05), rgb(255 255 255 / 0.06));
   --danger: light-dark(#d70015, #ff6961);
-
-  /* Command bar: an opaque card over a dimmed page. Row hover and the divider
-     are Arc's own (research/05); the selected row takes the space's accent. */
+  --badge: light-dark(#ff3b30, #ff453a); /* a Mac's red notification badge */
   --command-width: 764px;
   --command-input-height: 64px;
   --command-input-size: 18px;

@@ -24,6 +24,7 @@ import { isSamePage } from '@/model/urls';
 import { useSidebar } from '@/state/sidebar';
 import { faviconFor, toggleMuted, useTabs } from '@/state/tabs';
 import styles from './favorites.module.css';
+import { unreadCount } from './unread';
 
 /** A favorite's tile: one pin, or a favorited split's two (left, then `partner`). */
 interface TileItem {
@@ -132,6 +133,7 @@ function Tile({ favorite, partner, ref }: TileItem & { ref?: React.Ref<HTMLLIEle
   const open = tab !== undefined || partnerTab !== undefined;
   // The one whose sound shows on the badge: the left tab's, else the right's.
   const sounding = [tab, partnerTab].find((each) => each && (each.audible || each.muted));
+  const unread = [tab, partnerTab].map((each) => each && unreadCount(each.title)).find(Boolean);
 
   const menu: MenuEntry[] = pair
     ? [
@@ -178,6 +180,7 @@ function Tile({ favorite, partner, ref }: TileItem & { ref?: React.Ref<HTMLLIEle
           data-selected={selected || undefined}
           data-favorite-id={favorite.id}
           data-split={pair ? true : undefined}
+          data-unread={unread ? true : undefined}
           aria-label={title}
           aria-pressed={selected}
           title={title}
@@ -215,6 +218,11 @@ function Tile({ favorite, partner, ref }: TileItem & { ref?: React.Ref<HTMLLIEle
             </span>
           ) : (
             <Favicon url={tab?.url ?? favorite.url} loading={!!tab?.loading && !tab.favIconUrl} />
+          )}
+          {unread && (
+            <span className={styles.unread} aria-hidden>
+              {unread}
+            </span>
           )}
           {sounding && (
             <span

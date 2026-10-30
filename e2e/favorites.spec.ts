@@ -81,3 +81,13 @@ test('dragging a favorite into Today un-favorites it', async ({ page }) => {
   await expect(tiles(page)).toHaveCount(0);
   await expect(today(page).filter({ hasText: 'Engineering Wiki' })).toHaveCount(1);
 });
+
+const pins = (page: Page) => panel(page).locator('[data-active-page] [data-nav-row="pin"]');
+
+test('a favorite shows the unread count its page puts in its title', async ({ page }) => {
+  await ready(page);
+  await pins(page).filter({ hasText: 'Gmail' }).click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Add to Favorites' }).click();
+  await expect(tiles(page)).toHaveCount(1);
+  await expect(tiles(page).first().locator('span[class*="unread"]')).toHaveText('3');
+});
