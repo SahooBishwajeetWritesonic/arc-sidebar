@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   reconcileOrder,
+  withNewTab,
   withTabBefore,
   withTabOnTop,
   withTabReplaced,
@@ -14,6 +15,16 @@ describe('Today order', () => {
 
   it('moves an existing tab to the top instead of duplicating it', () => {
     expect(withTabOnTop([3, 1, 2], 1)).toEqual([1, 3, 2]);
+  });
+
+  it('puts a link’s tab below the tab it came from, after ones opened from it before', () => {
+    const openers = new Map([[8, 1]]);
+    const openerOf = (id: number) => openers.get(id);
+    expect(withNewTab([3, 1, 8, 2], 9, 1, openerOf)).toEqual([3, 1, 8, 9, 2]);
+    expect(withNewTab([3, 1, 2], 9, 2, openerOf)).toEqual([3, 1, 2, 9]);
+    // Opened from a pinned tab, or none: on top.
+    expect(withNewTab([3, 1, 2], 9, 5, openerOf)).toEqual([9, 3, 1, 2]);
+    expect(withNewTab([3, 1, 2], 9, undefined, openerOf)).toEqual([9, 3, 1, 2]);
   });
 
   it('moves a tab before another, or to the end', () => {

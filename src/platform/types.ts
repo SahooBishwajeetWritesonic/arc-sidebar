@@ -21,6 +21,7 @@ export interface TabInfo {
   discarded: boolean;
   /** Chrome's split view it's in (two tabs side by side), if any. */
   splitViewId?: number;
+  openerTabId?: number;
 }
 
 /** A page from Chrome's history, as the command bar uses it. */

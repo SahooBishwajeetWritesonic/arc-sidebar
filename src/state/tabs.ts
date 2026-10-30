@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { hostname, isSamePage } from '@/model/urls';
 import type { Platform, SitePermissionKind, TabEvent, TabInfo } from '@/platform/types';
+import { withNewTab } from '@/platform/today-order';
 
 /** The window's live Chrome tabs, plus what the sidebar store tells us about them. */
 export interface TabsState {
@@ -43,14 +44,14 @@ export function selectTodayIds(state: TabsState, spaceId: string = state.spaceId
   // A tab the service hasn't given a space yet is new, so it is in the shown space.
   const inSpace = (id: number) => (state.tabSpaces[id] ?? state.spaceId) === spaceId;
   const inToday = (id: number) => state.tabs.has(id) && !state.bound.has(id) && inSpace(id);
-  const ordered = state.order.filter(inToday);
   const placed = new Set(state.order);
-  const pending = [...state.tabs.values()]
-    .filter((tab) => !placed.has(tab.id) && inToday(tab.id))
+  const openerOf = (id: number) => state.tabs.get(id)?.openerTabId;
+  // In the order Chrome opened them, each where the service will put it.
+  return [...state.tabs.values()]
+    .filter((tab) => !placed.has(tab.id))
     .filter((tab) => !state.openingUrls.some((url) => isSamePage(url, tab.url)))
-    .map((tab) => tab.id)
-    .reverse();
-  return [...pending, ...ordered];
+    .reduce((order, tab) => withNewTab(order, tab.id, tab.openerTabId, openerOf), state.order)
+    .filter(inToday);
 }
 
 export type TodayRow =

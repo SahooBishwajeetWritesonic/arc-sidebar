@@ -30,6 +30,7 @@ function toTabInfo(tab: Browser.tabs.Tab): TabInfo | undefined {
     // SPLIT_VIEW_ID_NONE is -1; Chrome before 140 has no split views at all.
     splitViewId:
       tab.splitViewId !== undefined && tab.splitViewId !== -1 ? tab.splitViewId : undefined,
+    openerTabId: tab.openerTabId,
   };
 }
 

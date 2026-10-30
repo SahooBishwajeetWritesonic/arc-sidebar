@@ -9,6 +9,24 @@ export function withTabOnTop(order: readonly number[], tabId: number): number[] 
   return [tabId, ...order.filter((id) => id !== tabId)];
 }
 
+/**
+ * A new tab opened from a Today tab goes just below it, after others opened from it before
+ * (as in Chrome's tab strip). Any other goes on top.
+ */
+export function withNewTab(
+  order: readonly number[],
+  tabId: number,
+  openerTabId: number | undefined,
+  openerOf: (tabId: number) => number | undefined,
+): number[] {
+  const rest = order.filter((id) => id !== tabId);
+  const at = openerTabId === undefined ? -1 : rest.indexOf(openerTabId);
+  if (at === -1) return [tabId, ...rest];
+  let end = at + 1;
+  while (end < rest.length && openerOf(rest[end]!) === openerTabId) end++;
+  return [...rest.slice(0, end), tabId, ...rest.slice(end)];
+}
+
 /** Moves (or inserts) a tab just before another one, or to the end for null. */
 export function withTabBefore(
   order: readonly number[],

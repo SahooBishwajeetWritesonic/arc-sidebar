@@ -41,6 +41,12 @@ describe('selectTodayIds', () => {
     expect(selectTodayIds(state({ tabs }))).toEqual([5, 4, 1, 2, 3]);
   });
 
+  it('shows a link the worker has not placed yet below the tab it came from', () => {
+    const tabs = new Map(state().tabs);
+    tabs.set(4, tab(4, { openerTabId: 2 }));
+    expect(selectTodayIds(state({ tabs }))).toEqual([1, 2, 4, 3]);
+  });
+
   it('leaves out tabs bound to pinned items', () => {
     expect(selectTodayIds(state({ bound: new Set([2]) }))).toEqual([1, 3]);
   });

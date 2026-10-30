@@ -394,8 +394,8 @@ export class FakePlatform implements Platform {
 
   // Simulation helpers for the harness controls
 
-  openTab(fixture: Fixture, active = true) {
-    const tab = this.makeTab(fixture, false);
+  openTab(fixture: Fixture, active = true, openerTabId?: number) {
+    const tab = { ...this.makeTab(fixture, false), openerTabId };
     this.tabs.push(tab);
     this.emit({ type: 'upsert', tab: { ...tab } });
     void this.service.onTabCreated(this.live(tab, this.tabs.length - 1));
@@ -430,6 +430,15 @@ export class FakePlatform implements Platform {
     const url = new URL(tab.url);
     url.pathname = `/page-${Math.floor(Math.random() * 1000)}`;
     this.navigate(tab.id, url.href, `Another page on ${url.hostname}`);
+  }
+
+  /** A link in the active tab opened in a new tab, in the background (⌘-click). */
+  openLinkFromActive() {
+    const tab = this.tabs.find((t) => t.active);
+    if (!tab || !/^https?:/.test(tab.url)) return;
+    const url = new URL(tab.url);
+    url.pathname = `/link-${Math.floor(Math.random() * 1000)}`;
+    this.openTab({ title: `A link on ${url.hostname}`, url: url.href }, false, tab.id);
   }
 
   /** Pretends nobody has looked at the inactive tabs for `hours`. */
@@ -567,6 +576,7 @@ export class FakePlatform implements Platform {
       audible: tab.audible,
       lastAccessed: this.accessed.get(tab.id),
       splitViewId: tab.splitViewId,
+      openerTabId: tab.openerTabId,
     };
   }
 

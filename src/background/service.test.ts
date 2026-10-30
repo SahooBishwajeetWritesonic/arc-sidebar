@@ -132,6 +132,19 @@ describe('SidebarService', () => {
     expect(saved.session.orders['1']).toEqual([2, 1]);
   });
 
+  it('puts links opened from a Today tab below it, in the order they were opened', async () => {
+    const { service, saved } = setup({
+      model: { ...emptyModel(), spaces: [...emptyModel().spaces, { id: 'work', name: 'Work' }] },
+      tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')],
+    });
+    await service.handleIntent({ type: 'moveTabToSpace', tabId: 1, spaceId: 'work' });
+    await service.onTabCreated(tab(3, 'https://a.com/1', 3, { openerTabId: 1 }));
+    await service.onTabCreated(tab(4, 'https://a.com/2', 4, { openerTabId: 1 }));
+    expect(saved.session.orders['1']).toEqual([1, 3, 4, 2]);
+    // In the space of the tab they came from.
+    expect(saved.session.tabSpaces[4]).toBe('work');
+  });
+
   it('pins a tab: saves the pin, binds the tab, takes it out of Today', async () => {
     const { service, saved } = setup({ tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')] });
     const result = await service.handleIntent(pinIntent('p1', 1, 'https://a.com'));

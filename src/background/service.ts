@@ -29,7 +29,13 @@ import {
   type TabDetails,
 } from '@/model/types';
 import { isSamePage, isSamePath } from '@/model/urls';
-import { reconcileOrder, withTabOnTop, withTabReplaced, withoutTab } from '@/platform/today-order';
+import {
+  reconcileOrder,
+  withNewTab,
+  withTabOnTop,
+  withTabReplaced,
+  withoutTab,
+} from '@/platform/today-order';
 
 export interface LiveTab {
   id: number;
@@ -42,6 +48,7 @@ export interface LiveTab {
   /** When the tab was last viewed (Chrome 121+). */
   lastAccessed?: number;
   splitViewId?: number;
+  openerTabId?: number;
 }
 
 /** What the service needs from Chrome. The harness passes in-memory fakes. */
@@ -109,6 +116,8 @@ export class SidebarService {
   /** Today tabs closed while the worker was stopped, with their spaces; onRemoved is coming. */
   private vanished = new Map<number, string | undefined>();
   private opening: { itemId: string; url: string; expires: number }[] = [];
+  /** Tab id → the tab it was opened from, for placing the next one opened from it. */
+  private openers = new Map<number, number>();
   private liveRefresh: Promise<void> | null = null;
   private liveRefreshedAt = -Infinity;
   /** The filters changed while GitHub was being asked: ask again after. */
@@ -600,15 +609,21 @@ export class SidebarService {
     const restored =
       this.deps.now() <= this.restoringUntil ? this.matchSnapshot(tab.url) : undefined;
     const key = String(tab.windowId);
+    const order = this.session.orders[key] ?? [];
+    // A link opened from a Today tab goes just below it, in its space.
+    const opener = restored ? undefined : tab.openerTabId;
+    if (opener !== undefined) this.openers.set(tab.id, opener);
+    const openerSpace =
+      opener !== undefined && order.includes(opener) && this.session.tabSpaces[opener];
     this.writeSession({
       ...this.session,
       orders: {
         ...this.session.orders,
-        [key]: withTabOnTop(this.session.orders[key] ?? [], tab.id),
+        [key]: withNewTab(order, tab.id, opener, (id) => this.openers.get(id)),
       },
       tabSpaces: {
         ...this.session.tabSpaces,
-        [tab.id]: restored?.spaceId ?? this.activeSpaceOf(tab.windowId),
+        [tab.id]: restored?.spaceId || openerSpace || this.activeSpaceOf(tab.windowId),
       },
       tabTitles: restored?.title
         ? { ...this.session.tabTitles, [tab.id]: restored.title }
@@ -652,6 +667,7 @@ export class SidebarService {
    */
   async onTabRemoved(tabId: number, windowId: number, windowClosing = false) {
     await this.ready;
+    this.openers.delete(tabId);
     const details = this.details[tabId];
     if (details) {
       const { [tabId]: _closed, ...rest } = this.details;

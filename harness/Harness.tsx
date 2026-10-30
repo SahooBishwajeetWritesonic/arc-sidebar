@@ -104,6 +104,9 @@ export function Harness({ platform }: { platform: FakePlatform }) {
         <button onClick={() => platform.reloadAll()}>Reload every tab</button>
         <button onClick={() => platform.toggleAudibleRandom()}>Toggle audio</button>
         <button onClick={() => platform.navigateActive()}>Follow a link in the active tab</button>
+        <button onClick={() => platform.openLinkFromActive()}>
+          Open a link from the active tab in a new tab
+        </button>
         <button onClick={() => platform.splitActiveWithNext()}>
           Split the active tab with the next one
         </button>

@@ -41,6 +41,7 @@ function toLiveTab(tab: Browser.tabs.Tab): LiveTab | undefined {
     lastAccessed: tab.lastAccessed,
     splitViewId:
       tab.splitViewId !== undefined && tab.splitViewId !== -1 ? tab.splitViewId : undefined,
+    openerTabId: tab.openerTabId,
   };
 }
 
