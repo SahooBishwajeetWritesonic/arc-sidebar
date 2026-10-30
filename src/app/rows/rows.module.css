@@ -281,6 +281,38 @@
   color: var(--ink);
 }
 
+/* A tab using the mic or camera (see RecordingBadge), in a row's accessory slot. */
+.recording {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--accessory-size);
+  height: var(--accessory-size);
+}
+
+/* Its colour and pulse, wherever it sits (a Favorite shows it in a corner,
+   over that badge's own colour). */
+.recordingMark[data-recording] {
+  color: var(--recording-mic);
+  animation: recording var(--recording-pulse) ease-in-out infinite;
+}
+
+.recordingMark:not([data-recording='mic']) {
+  color: var(--recording-camera);
+}
+
+@keyframes recording {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recordingMark[data-recording] {
+    animation: none;
+  }
+}
+
 .close {
   opacity: 0;
 }

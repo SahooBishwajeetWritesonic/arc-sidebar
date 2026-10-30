@@ -11,6 +11,7 @@ import {
   tabsBelow,
 } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
+import { RecordingBadge } from '@/app/rows/RecordingBadge';
 import { IconSwap } from '@/app/rows/IconSwap';
 import { Row } from '@/app/rows/Row';
 import { Title } from '@/app/rows/Title';
@@ -59,6 +60,7 @@ export const SplitRow = memo(function SplitRow({ ids, splitViewId, ref }: SplitR
     >
       <Favicon url={tab.url} loading={tab.loading && !tab.favIconUrl} />
       <Title text={tab.title} className={styles.paneTitle} />
+      <RecordingBadge tabIds={[id]} />
       {(tab.audible || tab.muted) && (
         <button
           type="button"

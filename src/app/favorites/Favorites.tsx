@@ -18,11 +18,13 @@ import {
 import { beginPress, isPress, useDrag } from '@/app/drag/drag';
 import { fade, spring } from '@/app/motion';
 import { Favicon } from '@/app/rows/Favicon';
+import { RecordingBadge } from '@/app/rows/RecordingBadge';
 import { RowMenu, type MenuEntry } from '@/app/rows/RowMenu';
 import { iconMenu, SpaceGlyph } from '@/app/spaces/icons';
 import { childrenOf, partnerOf } from '@/model/tree';
 import { FAVORITES_ID, type PinItem } from '@/model/types';
 import { isSamePage } from '@/model/urls';
+import { useRecording } from '@/state/recording';
 import { useSidebar } from '@/state/sidebar';
 import { faviconFor, toggleMuted, useTabs } from '@/state/tabs';
 import styles from './favorites.module.css';
@@ -135,6 +137,8 @@ function Tile({ favorite, partner, ref }: TileItem & { ref?: React.Ref<HTMLLIEle
   const open = tab !== undefined || partnerTab !== undefined;
   // The one whose sound shows on the badge: the left tab's, else the right's.
   const sounding = [tab, partnerTab].find((each) => each && (each.audible || each.muted));
+  // Using the mic or camera takes the sound badge's place.
+  const recording = useRecording(tab?.id, partnerTab?.id) !== null;
   const unread = [tab, partnerTab].map((each) => each && unreadCount(each.title)).find(Boolean);
 
   // A split's icon is its left pin's, standing for both.
@@ -236,19 +240,23 @@ function Tile({ favorite, partner, ref }: TileItem & { ref?: React.Ref<HTMLLIEle
               {unread}
             </span>
           )}
-          {sounding && (
-            <span
-              className={styles.badge}
-              role="button"
-              aria-label={sounding.muted ? 'Unmute' : 'Mute'}
-              onPointerDown={stop}
-              onClick={(event) => {
-                event.stopPropagation();
-                toggleMuted(sounding.id);
-              }}
-            >
-              {sounding.muted ? <VolumeX size={10} /> : <Volume2 size={10} />}
-            </span>
+          {recording ? (
+            <RecordingBadge tabIds={[tab?.id, partnerTab?.id]} size={10} className={styles.badge} />
+          ) : (
+            sounding && (
+              <span
+                className={styles.badge}
+                role="button"
+                aria-label={sounding.muted ? 'Unmute' : 'Mute'}
+                onPointerDown={stop}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleMuted(sounding.id);
+                }}
+              >
+                {sounding.muted ? <VolumeX size={10} /> : <Volume2 size={10} />}
+              </span>
+            )
           )}
         </button>
       </RowMenu>

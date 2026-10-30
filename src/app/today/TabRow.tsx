@@ -11,6 +11,7 @@ import {
   tabsBelow,
 } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
+import { RecordingBadge } from '@/app/rows/RecordingBadge';
 import { IconSwap } from '@/app/rows/IconSwap';
 import { InlineEdit } from '@/app/rows/InlineEdit';
 import { Row } from '@/app/rows/Row';
@@ -102,6 +103,7 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
       ) : (
         <Title text={title} subtitle={developerHost} />
       )}
+      <RecordingBadge tabIds={[id]} />
       {(tab.audible || tab.muted) && (
         <button
           type="button"

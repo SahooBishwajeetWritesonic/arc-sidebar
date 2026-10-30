@@ -14,6 +14,7 @@ import {
   unpinWithUndo,
 } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
+import { RecordingBadge } from '@/app/rows/RecordingBadge';
 import { IconSwap } from '@/app/rows/IconSwap';
 import { InlineEdit } from '@/app/rows/InlineEdit';
 import { isPress } from '@/app/drag/drag';
@@ -162,6 +163,7 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
       ) : (
         <Title text={title} subtitle={developerHost} />
       )}
+      <RecordingBadge tabIds={[tab?.id]} />
       {tab && (tab.audible || tab.muted) && (
         <button
           type="button"

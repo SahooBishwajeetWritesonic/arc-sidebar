@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Favicon } from '@/app/rows/Favicon';
+import { RecordingBadge } from '@/app/rows/RecordingBadge';
 import { SpaceGlyph } from '@/app/spaces/icons';
 import { themeAccent } from '@/app/theme/engine';
 import { usePreferredScheme } from '@/app/theme/looks';
@@ -151,6 +152,7 @@ export function RecentTabs({ host }: { host: Pick<CommandHost, 'close'> }) {
               <span className={styles.title} dir="auto">
                 {titleOf(tab)}
               </span>
+              <RecordingBadge tabIds={[id]} />
               {space && model.spaces.length > 1 && (
                 <span className={styles.space}>
                   <SpaceGlyph icon={space.icon} size={13} />

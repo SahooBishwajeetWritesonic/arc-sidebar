@@ -88,6 +88,11 @@
   --danger: light-dark(#d70015, #ff6961);
   --badge: light-dark(#ff3b30, #ff453a); /* a Mac's red notification badge */
   --copy-badge: light-dark(#28a745, #30d158); /* a Mac's green copy badge */
+  --recording-mic: light-dark(#ff9500, #ff9f0a);
+  --recording-camera: light-dark(#28cd41, #30d158);
+
+  /* Command bar: an opaque card over a dimmed page. Row hover and the divider
+     are Arc's own (research/05); the selected row takes the space's accent. */
   --command-width: 764px;
   --command-input-height: 64px;
   --command-input-size: 18px;
@@ -116,4 +121,6 @@
   --popup-out: 100ms;
   /* The space caret turning as Pinned folds (not measured). */
   --caret-turn: 150ms;
+  /* A recording tab's indicator breathing in and out (not measured). */
+  --recording-pulse: 1.6s;
 }

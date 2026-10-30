@@ -10,6 +10,7 @@ import {
   unpinSplit,
 } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
+import { RecordingBadge } from '@/app/rows/RecordingBadge';
 import { IconSwap } from '@/app/rows/IconSwap';
 import { Row } from '@/app/rows/Row';
 import { Title } from '@/app/rows/Title';
@@ -68,6 +69,7 @@ export const PinnedSplitRow = memo(function PinnedSplitRow({
     >
       <Favicon url={tab?.url ?? pin.url} loading={!!tab?.loading && !tab.favIconUrl} />
       <Title text={pin.customTitle ?? tab?.title ?? pin.title} className={styles.paneTitle} />
+      <RecordingBadge tabIds={[tab?.id]} />
       {tab && (tab.audible || tab.muted) && (
         <button
           type="button"

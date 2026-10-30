@@ -187,3 +187,27 @@ test('⌘1–9 select the sidebar’s tabs top to bottom, ⌘9 the last', async 
   await page.keyboard.press('Meta+9');
   await expect(today(page).last()).toHaveAttribute('data-selected');
 });
+
+test('a tab using the mic or camera shows it, in Today and as a favorite', async ({ page }) => {
+  await ready(page);
+  const wiki = today(page).filter({ hasText: 'Engineering Wiki' });
+  const id = Number(await wiki.getAttribute('data-row-id'));
+  const using = (recording: { mic: boolean; camera: boolean } | null) =>
+    page.evaluate(([tabId, r]) => window.harnessPlatform.setRecording(tabId, r), [
+      id,
+      recording,
+    ] as const);
+
+  await using({ mic: true, camera: false });
+  await expect(wiki.getByRole('img', { name: 'Using the microphone' })).toBeVisible();
+  await using({ mic: true, camera: true });
+  await expect(wiki.getByRole('img', { name: 'Using the camera and microphone' })).toBeVisible();
+
+  await wiki.click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Add to Favorites' }).click();
+  const tile = panel(page).locator('[data-favorite-id]');
+  await expect(tile.getByRole('img', { name: 'Using the camera and microphone' })).toBeVisible();
+
+  await using(null);
+  await expect(tile.getByRole('img')).toHaveCount(0);
+});
