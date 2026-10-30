@@ -64,3 +64,35 @@ export function reconcileOrder(
   const known = new Set(kept);
   return [...kept, ...liveIdsInStripOrder.filter((id) => !known.has(id))];
 }
+
+export type TodayRow =
+  { kind: 'tab'; id: number } | { kind: 'split'; ids: [number, number]; splitViewId: number };
+
+/**
+ * A Chrome split view's two tabs become one row (Arc's split row), where the first of them is.
+ * A split whose other tab isn't in this Today (pinned, or elsewhere) shows as a plain row.
+ */
+export function todayRows(
+  ids: readonly number[],
+  splitOf: (id: number) => number | undefined,
+): TodayRow[] {
+  const pairs = new Map<number, number[]>();
+  for (const id of ids) {
+    const split = splitOf(id);
+    if (split !== undefined) pairs.set(split, [...(pairs.get(split) ?? []), id]);
+  }
+  const rows: TodayRow[] = [];
+  const placed = new Set<number>();
+  for (const id of ids) {
+    if (placed.has(id)) continue;
+    const split = splitOf(id);
+    const pair = split === undefined ? undefined : pairs.get(split);
+    if (split !== undefined && pair?.length === 2) {
+      rows.push({ kind: 'split', ids: [pair[0]!, pair[1]!], splitViewId: split });
+      pair.forEach((tabId) => placed.add(tabId));
+    } else {
+      rows.push({ kind: 'tab', id });
+    }
+  }
+  return rows;
+}

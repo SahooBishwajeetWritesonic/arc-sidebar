@@ -55,6 +55,49 @@ export function flattenSpace(
   return rows;
 }
 
+/** A row of Pinned as it shows: a pinned split's left pin carries the right one. */
+export type PinnedRow = Row & { partner?: string };
+
+/**
+ * The Pinned section as it shows. With Pinned collapsed, like a closed folder, only the
+ * selected pinned tab (or split) stays, at the top level.
+ */
+export function pinnedRows(
+  model: SidebarModel,
+  spaceId: string,
+  isActive: (item: Item) => boolean,
+): PinnedRow[] {
+  const all = flattenSpace(model, spaceId, isActive);
+  const collapsed = model.spaces.find((space) => space.id === spaceId)?.pinnedCollapsed;
+  const shown = collapsed
+    ? all
+        .filter(({ item }) => {
+          const partner = partnerOf(model, item);
+          return item.kind === 'pin' && (isActive(item) || (partner && isActive(partner)));
+        })
+        .map((row) => ({ ...row, depth: 0 }))
+    : all;
+  return pairUp(model, shown);
+}
+
+/**
+ * Each pinned split as one row: the left pin's row carries the right one. A pair split
+ * up by a move shows as two pins.
+ */
+export function pairUp(model: SidebarModel, rows: Row[]): PinnedRow[] {
+  const out: PinnedRow[] = [];
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]!;
+    const next = rows[i + 1];
+    const partner = partnerOf(model, row.item);
+    if (partner && next?.item.id === partner.id && next.depth === row.depth) {
+      out.push({ ...row, partner: partner.id });
+      i++;
+    } else out.push(row);
+  }
+  return out;
+}
+
 /**
  * The pin `pin` is split with, if both name each other and sit in the same place;
  * otherwise (one unpinned or moved) they're two pins of their own.

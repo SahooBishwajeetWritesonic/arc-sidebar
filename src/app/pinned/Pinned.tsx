@@ -4,8 +4,7 @@ import { clearToday } from '@/app/actions';
 import { spring } from '@/app/motion';
 import { LayoutKey } from '@/app/rows/layout-key';
 import styles from '@/app/rows/rows.module.css';
-import { flattenSpace, partnerOf, type Row } from '@/model/tree';
-import type { Item } from '@/model/types';
+import { pinnedRows } from '@/model/tree';
 import { useSidebar } from '@/state/sidebar';
 import { selectTodayIds, useTabs } from '@/state/tabs';
 import { FolderRow } from './FolderRow';
@@ -21,24 +20,10 @@ export function Pinned({ spaceId }: { spaceId: string }) {
     selectTodayIds(state, spaceId).some((id) => !state.tabs.get(id)?.audible),
   );
 
-  const collapsed = useSidebar(
-    (state) => state.model.spaces.find((space) => space.id === spaceId)?.pinnedCollapsed,
+  const rows = useMemo(
+    () => pinnedRows(model, spaceId, (item) => bindings[item.id] === activeId),
+    [model, spaceId, bindings, activeId],
   );
-
-  const rows = useMemo(() => {
-    const isActive = (item: Item) => bindings[item.id] === activeId;
-    const all = flattenSpace(model, spaceId, isActive);
-    // Folded away like a closed folder: only the selected pinned tab (or split) stays.
-    const shown = collapsed
-      ? all
-          .filter(({ item }) => {
-            const partner = partnerOf(model, item);
-            return item.kind === 'pin' && (isActive(item) || (partner && isActive(partner)));
-          })
-          .map((row) => ({ ...row, depth: 0 }))
-      : all;
-    return pairUp(model, shown);
-  }, [model, spaceId, bindings, activeId, collapsed]);
   // An open Live Folder that GitHub says nobody is signed in to starts with a way to sign in.
   const signIn = (item: (typeof rows)[number]['item']) =>
     item.kind === 'folder' && !item.collapsed && item.live?.signedOut === true;
@@ -91,25 +76,4 @@ export function Pinned({ spaceId }: { spaceId: string }) {
       </motion.div>
     </section>
   );
-}
-
-/**
- * Each pinned split as one row: the left pin's row carries the right one. A pair split
- * up by a move shows as two pins.
- */
-function pairUp(
-  model: Parameters<typeof partnerOf>[0],
-  rows: Row[],
-): (Row & { partner?: string })[] {
-  const out: (Row & { partner?: string })[] = [];
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i]!;
-    const next = rows[i + 1];
-    const partner = partnerOf(model, row.item);
-    if (partner && next?.item.id === partner.id && next.depth === row.depth) {
-      out.push({ ...row, partner: partner.id });
-      i++;
-    } else out.push(row);
-  }
-  return out;
 }

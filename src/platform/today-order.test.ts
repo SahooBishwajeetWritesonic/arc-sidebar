@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   reconcileOrder,
+  todayRows,
   withNewTab,
   withTabBefore,
   withTabOnTop,
@@ -48,5 +49,25 @@ describe('Today order', () => {
 
   it('keeps the stored order, drops gone tabs, appends unseen ones in strip order', () => {
     expect(reconcileOrder([6, 99, 4], [4, 5, 6, 7])).toEqual([6, 4, 5, 7]);
+  });
+});
+
+describe('todayRows', () => {
+  const splits: Record<number, number> = { 2: 7, 4: 7, 5: 9 };
+  const splitOf = (id: number) => splits[id];
+
+  it('pairs a split’s two tabs into one row where the first of them is', () => {
+    expect(todayRows([1, 2, 3, 4], splitOf)).toEqual([
+      { kind: 'tab', id: 1 },
+      { kind: 'split', ids: [2, 4], splitViewId: 7 },
+      { kind: 'tab', id: 3 },
+    ]);
+  });
+
+  it('shows a split tab alone when its other tab isn’t in this Today', () => {
+    expect(todayRows([5, 1], splitOf)).toEqual([
+      { kind: 'tab', id: 5 },
+      { kind: 'tab', id: 1 },
+    ]);
   });
 });

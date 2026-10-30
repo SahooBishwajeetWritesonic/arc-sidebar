@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TabInfo } from '@/platform/types';
-import { applyTabEvents, selectTodayIds, todayRows, type TabsState } from './tabs';
+import { applyTabEvents, selectTodayIds, type TabsState } from './tabs';
 
 const tab = (id: number, change: Partial<TabInfo> = {}): TabInfo => ({
   id,
@@ -133,25 +133,5 @@ describe('applyTabEvents', () => {
   it('returns the same map when nothing changed', () => {
     const before = state();
     expect(applyTabEvents(before, [{ type: 'remove', tabId: 42 }]).tabs).toBe(before.tabs);
-  });
-});
-
-describe('todayRows', () => {
-  const splits: Record<number, number> = { 2: 7, 4: 7, 5: 9 };
-  const splitOf = (id: number) => splits[id];
-
-  it('pairs a split’s two tabs into one row where the first of them is', () => {
-    expect(todayRows([1, 2, 3, 4], splitOf)).toEqual([
-      { kind: 'tab', id: 1 },
-      { kind: 'split', ids: [2, 4], splitViewId: 7 },
-      { kind: 'tab', id: 3 },
-    ]);
-  });
-
-  it('shows a split tab alone when its other tab isn’t in this Today', () => {
-    expect(todayRows([5, 1], splitOf)).toEqual([
-      { kind: 'tab', id: 5 },
-      { kind: 'tab', id: 1 },
-    ]);
   });
 });
