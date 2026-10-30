@@ -162,13 +162,19 @@ function RestorePopup() {
   );
 }
 
+const BECAUSE: Record<NonNullable<Backup['reason']>, string> = {
+  import: 'before an import',
+  restore: 'before a restore',
+  sync: 'before the first sync',
+};
+
 const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
 function describe(copy: Copy & { same: boolean }) {
   if (copy.same) return 'Same as now';
   const tabs = Object.values(copy.model.items).filter((item) => item.kind === 'pin').length;
   const what = `${count(copy.model.spaces.length, 'space')}, ${count(tabs, 'tab')}`;
-  const why = copy.reason === 'import' ? 'before an import' : copy.reason && 'before a restore';
+  const why = copy.reason && BECAUSE[copy.reason];
   return why ? `${what} · ${why}` : what;
 }
 

@@ -30,6 +30,14 @@ import {
 } from '@/model/types';
 import { numberedAt, type Numbered } from '@/model/numbered';
 import { routeFor } from '@/model/routes';
+import {
+  mergeSynced,
+  sameSynced,
+  syncedPart,
+  withSynced,
+  type Synced,
+  type SyncState,
+} from '@/model/sync';
 import { isSamePage, isSamePath } from '@/model/urls';
 import {
   reconcileOrder,
@@ -73,12 +81,24 @@ export interface ServiceDeps {
   saveSnapshot(snapshot: RestoreSnapshot): Promise<void>;
   loadTabDetails(): Promise<TabDetails>;
   saveTabDetails(details: TabDetails): Promise<void>;
+  /** Chrome's synced storage, for Arc Sync (left out where nothing syncs). */
+  sync?: SyncStore;
   /** For the GitHub Live Folder. Throws when GitHub can't say. */
   fetchPullRequests(filters: GitHubFilters): Promise<PullRequestResult>;
   /** Runs `run` later (setTimeout in Chrome; tests can run it at once or not at all). */
   defer(run: () => void, ms: number): void;
   now(): number;
   newId(): string;
+}
+
+/** Arc Sync's copy in Chrome's synced storage, and this computer's side of it. */
+export interface SyncStore {
+  /** null if none yet; undefined while its parts are still arriving. Throws if unreadable. */
+  read(): Promise<Synced | null | undefined>;
+  /** Throws when Chrome won't take it (it keeps 100 KB in all). */
+  write(copy: Synced): Promise<void>;
+  loadState(): Promise<SyncState>;
+  saveState(state: SyncState): Promise<void>;
 }
 
 /** How long after a restart restored tabs that match a pin are bound to it. */
@@ -93,6 +113,7 @@ const BACKED_UP: Partial<Record<Intent['type'], Backup['reason']>> = {
   restoreSidebar: 'restore',
 };
 const SNAPSHOT_DELAY_MS = 2_000;
+const SYNC_DELAY_MS = 3_000;
 /** Tab details are saved this long after the last change (the worker lives 30 s past an event). */
 const DETAILS_DELAY_MS = 1_000;
 /** The Live Folder asks GitHub at most this often, unless something it shows just changed. */
@@ -116,6 +137,8 @@ export class SidebarService {
   private snapshotQueued = false;
   private details: TabDetails = {};
   private detailsQueued = false;
+  private syncing: Promise<void> = Promise.resolve();
+  private syncQueued = false;
   /** Today tabs closed while the worker was stopped, with their spaces; onRemoved is coming. */
   private vanished = new Map<number, string | undefined>();
   private opening: { itemId: string; url: string; expires: number }[] = [];
@@ -215,6 +238,60 @@ export class SidebarService {
           [String(tab.id), { url: tab.url, title: tab.title, windowId: tab.windowId }] as const,
       ),
     ]);
+    // Changes from other computers while Chrome was closed.
+    this.queueSync();
+  }
+
+  /** Debounced; background.ts also calls it when another computer's changes arrive. */
+  queueSync() {
+    if (!this.deps.sync || !this.model.settings.sync || this.syncQueued) return;
+    this.syncQueued = true;
+    this.deps.defer(() => {
+      this.syncQueued = false;
+      void this.sync();
+    }, SYNC_DELAY_MS);
+  }
+
+  /** Merges spaces and pins with the synced copy, writing the result to both. One at a time. */
+  sync(): Promise<void> {
+    // One that fails before it starts mustn't stop the next.
+    this.syncing = this.syncing.then(() => this.syncNow()).catch(() => {});
+    return this.syncing;
+  }
+
+  private async syncNow() {
+    await this.ready;
+    const store = this.deps.sync;
+    if (!store || !this.model.settings.sync) return;
+    const state = await store.loadState();
+    let base = state.base;
+    try {
+      const remote = await store.read();
+      // The rest of it will arrive, and sync again.
+      if (remote === undefined) return;
+      const local = syncedPart(this.model);
+      const merged = remote ? mergeSynced(base, local, remote) : local;
+      if (!sameSynced(merged, local)) {
+        const model = withSynced(this.model, merged);
+        if (!model) throw new Error('The synced copy has no spaces');
+        // The first sync after turning it on is backed up, as an import is.
+        this.writeModel(model, base ? undefined : 'sync');
+        // As after a restore: tabs of pins removed elsewhere stay open, on
+        // top of Today, and a window showing a removed space shows another.
+        const windowOf = (id: number) => this.details[id]?.windowId;
+        const windowId = Object.values(this.details)[0]?.windowId ?? 0;
+        const restored = { type: 'restoreSidebar', model: this.model, windowId } as const;
+        this.writeSession(applySessionIntent(this.session, restored, windowOf));
+      }
+      // Both sides now hold at least what's synced, should writing it fail.
+      base = remote ?? base;
+      const result = syncedPart(this.model);
+      if (!remote || !sameSynced(result, remote)) await store.write(result);
+      await store.saveState({ base: result });
+    } catch (error) {
+      const problem = error instanceof Error ? error.message : String(error);
+      await store.saveState({ base, problem });
+    }
   }
 
   /** Saves what is open, for matching restored tabs after a restart. */
@@ -273,6 +350,10 @@ export class SidebarService {
     if (archive !== this.archive) this.writeArchive(archive);
 
     switch (intent.type) {
+      case 'setSync':
+        // Turned on again later, it starts afresh, removing nothing.
+        await this.deps.sync?.saveState({ base: null });
+        break;
       case 'openPin':
         if (item?.kind !== 'pin') break;
         if (tabId !== undefined) {
@@ -1021,6 +1102,7 @@ export class SidebarService {
     this.model = { ...model, rev: previous.rev + 1 };
     void this.deps.saveModel(this.model);
     this.backUp(previous, reason);
+    this.queueSync();
   }
 
   private backUp(model: SidebarModel, reason?: Backup['reason']) {

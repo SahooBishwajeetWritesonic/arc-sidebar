@@ -40,6 +40,8 @@ export interface Settings {
   navButtons: boolean;
   /** Arc's Air Traffic Control: new tabs at matching addresses open in a chosen space. */
   routes: Route[];
+  /** Arc Sync: spaces and pinned tabs kept the same on each computer signed in to Chrome. */
+  sync: boolean;
 }
 
 /** One of Air Traffic Control's rules. The first that matches a new tab decides its space. */
@@ -58,6 +60,7 @@ export const defaultSettings = (): Settings => ({
   developerSites: ['localhost', '127.0.0.1'],
   navButtons: false,
   routes: [],
+  sync: false,
 });
 
 export interface Space {
@@ -231,8 +234,8 @@ export const ARCHIVE_LIMIT = 500;
 export interface Backup {
   savedAt: number;
   model: SidebarModel;
-  /** Taken before an import or a restore; hourly copies have none. */
-  reason?: 'import' | 'restore';
+  /** Taken before an import, a restore or the first sync; hourly copies have none. */
+  reason?: 'import' | 'restore' | 'sync';
 }
 
 /**
@@ -342,6 +345,7 @@ export type Intent =
   | { type: 'setNavButtons'; on: boolean }
   /** Air Traffic Control's rules, as edited; ones with no text are dropped. */
   | { type: 'setRoutes'; routes: Route[] }
+  | { type: 'setSync'; on: boolean }
   | { type: 'moveSpace'; spaceId: string; index: number }
   /**
    * Removes a space and its pins and folders (`itemIds`). Its Today tabs, and

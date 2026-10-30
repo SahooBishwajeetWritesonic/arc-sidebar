@@ -16,7 +16,8 @@ import {
   type TabDetails,
 } from '@/model/types';
 import type { PullRequestResult } from '@/model/live';
-import { SidebarService, type LiveTab } from './service';
+import type { Synced, SyncState } from '@/model/sync';
+import { SidebarService, type LiveTab, type SyncStore } from './service';
 
 /** A tiny in-memory Chrome for the service. */
 function setup(options: {
@@ -25,6 +26,7 @@ function setup(options: {
   session?: SessionState;
   snapshot?: RestoreSnapshot;
   details?: TabDetails;
+  sync?: SyncStore;
 }) {
   /** What GitHub answers; tests change it between refreshes. */
   const github: { answer: PullRequestResult | Error; asked: number } = {
@@ -74,6 +76,7 @@ function setup(options: {
     saveSnapshot: async (snapshot) => void (saved.snapshot = snapshot),
     loadTabDetails: async () => saved.details,
     saveTabDetails: async (details) => void (saved.details = details),
+    sync: options.sync,
     fetchPullRequests: async () => {
       github.asked++;
       if (github.answer instanceof Error) throw github.answer;
@@ -1030,6 +1033,103 @@ describe('SidebarService', () => {
         'https://a.com',
         'https://c.com',
       ]);
+    });
+  });
+
+  describe('Arc Sync', () => {
+    /** Chrome's synced storage, shared by the computers; each keeps its own state. */
+    function syncedStorage() {
+      const shared = { copy: null as Synced | null, fail: false };
+      const computer = (): SyncStore & { state: SyncState } => ({
+        state: { base: null },
+        read: async () => structuredClone(shared.copy),
+        write: async (copy) => {
+          if (shared.fail) throw new Error('Too much to sync');
+          shared.copy = structuredClone(copy);
+        },
+        async loadState() {
+          return this.state;
+        },
+        async saveState(state) {
+          this.state = state;
+        },
+      });
+      return { shared, computer };
+    }
+    const syncing = (): SidebarModel => ({
+      ...emptyModel(),
+      settings: { ...defaultSettings(), sync: true },
+    });
+
+    it('carries pinned tabs, names and removals between computers', async () => {
+      const { computer } = syncedStorage();
+      const a = setup({ tabs: [tab(1, 'https://a.com')], model: syncing(), sync: computer() });
+      const b = setup({ tabs: [tab(5, 'https://b.com')], model: syncing(), sync: computer() });
+      await a.service.handleIntent(pinIntent('x', 1, 'https://a.com'));
+      await a.service.sync();
+      await b.service.sync();
+      expect(b.saved.model.items.x).toMatchObject({ url: 'https://a.com' });
+
+      await b.service.handleIntent({ type: 'rename', itemId: 'x', title: 'Mine' });
+      await b.service.sync();
+      await a.service.sync();
+      expect(a.saved.model.items.x).toMatchObject({ customTitle: 'Mine' });
+
+      await a.service.handleIntent({ type: 'unpin', itemId: 'x', windowId: 1 });
+      await a.service.sync();
+      await b.service.sync();
+      expect(b.saved.model.items.x).toBeUndefined();
+    });
+
+    it('puts the tab of a pin removed on another computer back in Today', async () => {
+      const { computer } = syncedStorage();
+      const a = setup({ tabs: [tab(1, 'https://a.com')], model: syncing(), sync: computer() });
+      const b = setup({ tabs: [tab(5, 'https://a.com')], model: syncing(), sync: computer() });
+      await a.service.handleIntent(pinIntent('x', 1, 'https://a.com'));
+      await a.service.sync();
+      await b.service.sync();
+      await b.service.handleIntent({ type: 'openPin', itemId: 'x', windowId: 1 });
+      expect(b.saved.session.bindings).toEqual({ x: 100 });
+      expect(b.saved.session.orders['1']).toEqual([5]);
+
+      await a.service.handleIntent({ type: 'unpin', itemId: 'x', windowId: 1 });
+      await a.service.sync();
+      await b.service.sync();
+      expect(b.saved.model.items.x).toBeUndefined();
+      expect(b.saved.session.bindings).toEqual({});
+      expect(b.saved.session.orders['1']).toEqual([100, 5]);
+    });
+
+    it('turned on, keeps what both computers have, backing up first', async () => {
+      const { computer } = syncedStorage();
+      const a = setup({ tabs: [tab(1, 'https://a.com')], model: syncing(), sync: computer() });
+      await a.service.handleIntent(pinIntent('x', 1, 'https://a.com'));
+      await a.service.sync();
+
+      const b = setup({ tabs: [tab(5, 'https://b.com')], sync: computer() });
+      await b.service.handleIntent(pinIntent('y', 5, 'https://b.com'));
+      await b.service.sync(); // off: nothing happens
+      expect(b.saved.model.items.x).toBeUndefined();
+      await b.service.handleIntent({ type: 'setSync', on: true });
+      await b.service.sync();
+      expect(Object.keys(b.saved.model.items).sort()).toEqual(['x', 'y']);
+      expect(b.saved.backups[0]).toMatchObject({ reason: 'sync' });
+      await a.service.sync();
+      expect(Object.keys(a.saved.model.items).sort()).toEqual(['x', 'y']);
+    });
+
+    it('says why when Chrome won’t take the copy, and tries again later', async () => {
+      const { shared, computer } = syncedStorage();
+      const store = computer();
+      const a = setup({ tabs: [tab(1, 'https://a.com')], model: syncing(), sync: store });
+      shared.fail = true;
+      await a.service.handleIntent(pinIntent('x', 1, 'https://a.com'));
+      await a.service.sync();
+      expect(store.state.problem).toBe('Too much to sync');
+      shared.fail = false;
+      await a.service.sync();
+      expect(store.state.problem).toBeUndefined();
+      expect(shared.copy?.items.x).toBeDefined();
     });
   });
 });

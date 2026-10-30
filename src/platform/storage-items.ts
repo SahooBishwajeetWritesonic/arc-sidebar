@@ -12,6 +12,7 @@ import {
   type SidebarModel,
   type TabDetails,
 } from '@/model/types';
+import type { SyncState } from '@/model/sync';
 import type { CommandBarRequest } from './command-bar';
 import type { FloatingKind } from './peek';
 
@@ -41,6 +42,11 @@ export const archiveItem = storage.defineItem<ArchiveState>('local:archive', {
 /** Rolling copies of the model, newest first. */
 export const backupsItem = storage.defineItem<Backup[]>('local:backups', {
   fallback: [],
+});
+
+/** This computer's side of Arc Sync: what both sides held after the last sync. */
+export const syncStateItem = storage.defineItem<SyncState>('local:syncState', {
+  fallback: { base: null },
 });
 
 /** What was open before Chrome quit, for putting restored tabs back. */

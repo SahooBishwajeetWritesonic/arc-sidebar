@@ -13,6 +13,7 @@ import {
   syncKeepItem,
 } from '@/background/peek';
 import { onShortcut } from '@/background/shortcuts';
+import { chromeSyncStore } from '@/background/sync-storage';
 import { buildTabMenu, onTabMenuClick } from '@/background/tab-menu';
 import type { Intent } from '@/model/types';
 import type { CommandBarMessage } from '@/platform/command-bar';
@@ -74,6 +75,7 @@ export default defineBackground(() => {
     saveSnapshot: (snapshot) => restoreSnapshotItem.setValue(snapshot),
     loadTabDetails: () => tabDetailsItem.getValue(),
     saveTabDetails: (details) => tabDetailsItem.setValue(details),
+    sync: chromeSyncStore,
     fetchPullRequests: (filters) => fetchPullRequests(filters, fetchGitHubJson),
     defer: (run, ms) => void setTimeout(run, ms),
     now: () => Date.now(),
@@ -113,6 +115,8 @@ export default defineBackground(() => {
     void onWindowRemoved(windowId);
   });
   browser.windows.onFocusChanged.addListener((windowId) => void onFocusChanged(windowId));
+  // Arc Sync: another computer's changes arrive in Chrome's synced storage.
+  browser.storage.sync.onChanged.addListener(() => service.queueSync());
   void syncKeepItem();
   // Pages in pinned tabs learn so again, in case they were told while the worker was stopped.
   void service.ready.then(() =>

@@ -386,6 +386,10 @@ export function applyIntent(
       return { ...model, settings: { ...model.settings, routes } };
     }
 
+    case 'setSync':
+      if (model.settings.sync === intent.on) return model;
+      return { ...model, settings: { ...model.settings, sync: intent.on } };
+
     case 'moveSpace': {
       const from = model.spaces.findIndex((space) => space.id === intent.spaceId);
       if (from === -1) return model;
