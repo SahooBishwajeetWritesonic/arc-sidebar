@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyArchiveIntent, applyIntent, applySessionIntent } from './reducer';
-import { childrenOf, flattenSpace } from './tree';
+import { childrenOf, flattenSpace, partnerOf } from './tree';
 import {
   ARCHIVE_LIMIT,
   FAVORITES_ID,
@@ -128,6 +128,33 @@ describe('applyIntent', () => {
     const model = build({ type: 'createLiveFolder', itemId: 'l1', spaceId: S, order: 'a0' });
     const intent: Intent = { type: 'duplicateFolder', itemId: 'l1', ids: { l1: 'c1' } };
     expect(applyIntent(model, intent)).toBe(model);
+  });
+
+  it('pins a split as two pins that name each other, and separates them', () => {
+    const model = build(
+      { ...pin('p1', 'a0'), pair: 'p2' } as Intent,
+      { ...pin('p2', 'a1'), pair: 'p1' } as Intent,
+    );
+    expect(partnerOf(model, model.items.p1!)?.id).toBe('p2');
+    expect(partnerOf(model, model.items.p2!)?.id).toBe('p1');
+    const separated = applyIntent(model, { type: 'unpairPins', itemIds: ['p1', 'p2'] });
+    expect(separated.items.p1).not.toHaveProperty('pair');
+    expect(partnerOf(separated, separated.items.p2!)).toBeUndefined();
+    expect(applyIntent(separated, { type: 'unpairPins', itemIds: ['p1', 'p2'] })).toBe(separated);
+  });
+
+  it('counts a pair only while both pins are there, in the same place', () => {
+    const model = build(
+      folder('f1', 'a2'),
+      { ...pin('p1', 'a0'), pair: 'p2' } as Intent,
+      { ...pin('p2', 'a1'), pair: 'p1' } as Intent,
+    );
+    // One moved into a folder: two pins of their own.
+    const apart = applyIntent(model, { type: 'move', itemId: 'p2', parentId: 'f1', order: 'a0' });
+    expect(partnerOf(apart, apart.items.p1!)).toBeUndefined();
+    // One unpinned: the other is on its own.
+    const alone = applyIntent(model, { type: 'unpin', itemId: 'p2', windowId: 1 });
+    expect(partnerOf(alone, alone.items.p1!)).toBeUndefined();
   });
 
   it('refuses to move a folder into itself', () => {

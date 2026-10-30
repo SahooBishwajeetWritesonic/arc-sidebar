@@ -94,6 +94,11 @@ export interface PinItem extends ItemBase {
   url: string;
   title: string;
   customTitle?: string;
+  /**
+   * Arc's pinned Split View: the partner pin, the first in order on the left. Counts only
+   * while each names the other and they share a place (see tree.ts partnerOf).
+   */
+  pair?: string;
   /** Put here by a Live Folder, which takes it out again when the pull request closes. */
   live?: LivePin;
 }
@@ -277,6 +282,8 @@ export type Intent =
       order: string;
       url: string;
       title: string;
+      /** Pinned as one of a split: the pin it's split with. */
+      pair?: string;
     }
   | {
       type: 'unpin';
@@ -336,6 +343,7 @@ export type Intent =
   | { type: 'openPin'; itemId: string; windowId: number }
   | { type: 'closePin'; itemId: string }
   | { type: 'resetPin'; itemId: string }
+  | { type: 'unpairPins'; itemIds: [string, string] }
   | { type: 'replacePinUrl'; itemId: string; url: string; title: string }
   | { type: 'rename'; itemId: string; title: string | null }
   | {

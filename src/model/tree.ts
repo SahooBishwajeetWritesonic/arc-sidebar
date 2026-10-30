@@ -1,5 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
-import { FAVORITES_ID, FAVORITES_LIMIT, type Item, type SidebarModel } from './types';
+import { FAVORITES_ID, FAVORITES_LIMIT, type Item, type PinItem, type SidebarModel } from './types';
 
 const byOrder = (a: Item, b: Item) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0);
 
@@ -53,6 +53,21 @@ export function flattenSpace(
   };
   walk(null, 0);
   return rows;
+}
+
+/**
+ * The pin `pin` is split with, if both name each other and sit in the same place;
+ * otherwise (one unpinned or moved) they're two pins of their own.
+ */
+export function partnerOf(model: SidebarModel, pin: Item): PinItem | undefined {
+  if (pin.kind !== 'pin' || !pin.pair) return undefined;
+  const other = model.items[pin.pair];
+  return other?.kind === 'pin' &&
+    other.pair === pin.id &&
+    other.spaceId === pin.spaceId &&
+    other.parentId === pin.parentId
+    ? other
+    : undefined;
 }
 
 export function descendants(model: SidebarModel, folderId: string): Item[] {

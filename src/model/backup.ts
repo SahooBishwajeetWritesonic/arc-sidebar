@@ -147,6 +147,7 @@ function repairItem(id: string, raw: unknown): Item | undefined {
       url: raw.url,
       title: raw.title,
       ...(isString(raw.customTitle) && { customTitle: raw.customTitle }),
+      ...(isString(raw.pair) && { pair: raw.pair }),
       ...(live && { live }),
     };
   }

@@ -3,9 +3,11 @@ import type { KeyboardEvent, PointerEvent } from 'react';
 import {
   clearToday,
   closePin,
+  closePinnedSplit,
   closeTodayTab,
   closeTodayTabs,
   moveByKeyboard,
+  pairOf,
   pressPin,
   setFolderCollapsed,
   splitOf,
@@ -51,7 +53,11 @@ function press(kind: string, id: string) {
 function remove(kind: string, id: string) {
   if (kind === 'tab') closeTodayTab(Number(id));
   if (kind === 'split') closeTodayTabs(splitOf(Number(id)));
-  if (kind === 'pin') closePin(id);
+  if (kind === 'pin') {
+    const pair = pairOf(id);
+    if (pair) closePinnedSplit(pair);
+    else closePin(id);
+  }
 }
 
 function onKeyDown(event: KeyboardEvent<HTMLElement>) {

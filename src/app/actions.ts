@@ -1,8 +1,16 @@
+import { generateNKeysBetween } from 'fractional-indexing';
 import type { ArcSidebar } from '@/import/arc';
 import { planImport, type ImportChoice } from '@/import/plan';
 import { toExportFile } from '@/model/backup';
 import { githubFolderOf } from '@/model/live';
-import { childrenOf, descendants, flattenSpace, orderAtEnd, orderBefore } from '@/model/tree';
+import {
+  childrenOf,
+  descendants,
+  flattenSpace,
+  orderAtEnd,
+  orderBefore,
+  partnerOf,
+} from '@/model/tree';
 import {
   FAVORITES_ID,
   FAVORITES_LIMIT,
@@ -37,12 +45,108 @@ import { showToast } from './toast/toast';
 const boundTab = (itemId: string) => useSidebar.getState().session.bindings[itemId];
 
 export function pressPin(itemId: string) {
+  const pair = pairOf(itemId);
+  if (pair) return pressPinnedSplit(pair, itemId);
   const tabId = boundTab(itemId);
   if (tabId !== undefined && useTabs.getState().tabs.has(tabId)) {
     activateTab(tabId);
   } else {
     dispatch({ type: 'openPin', itemId, windowId: useSidebar.getState().windowId! });
   }
+}
+
+// Pinned splits: two pins that name each other (model/tree.ts partnerOf).
+
+/** A pinned split's two pins, left then right; undefined for a pin of its own. */
+export function pairOf(itemId: string): [string, string] | undefined {
+  const { model } = useSidebar.getState();
+  const pin = model.items[itemId];
+  const other = pin && partnerOf(model, pin);
+  if (!pin || !other) return undefined;
+  return pin.order < other.order ? [pin.id, other.id] : [other.id, pin.id];
+}
+
+const openTabOf = (itemId: string) => {
+  const tabId = boundTab(itemId);
+  return tabId !== undefined && useTabs.getState().tabs.has(tabId) ? tabId : undefined;
+};
+
+/**
+ * Arc's pinned split: opens whichever isn't open, puts them side by side in Chrome
+ * (again, if Chrome's split was undone), and selects the one pressed.
+ */
+export function pressPinnedSplit(pair: readonly [string, string], pressed: string) {
+  const { windowId } = useSidebar.getState();
+  if (windowId === null) return;
+  for (const itemId of pair) {
+    if (openTabOf(itemId) === undefined) dispatch({ type: 'openPin', itemId, windowId });
+  }
+  whenOpen(pair, (left, right) => {
+    const { tabs } = useTabs.getState();
+    const split = tabs.get(left)?.splitViewId;
+    if (split === undefined || tabs.get(right)?.splitViewId !== split) splitTabs(left, right);
+    activateTab(pressed === pair[0] ? left : right);
+  });
+}
+
+/** Calls `then` once both pins' tabs are open; gives up after a few seconds. */
+function whenOpen(pair: readonly [string, string], then: (left: number, right: number) => void) {
+  let stops: (() => void)[] = [];
+  const stop = () => stops.forEach((unsubscribe) => unsubscribe());
+  const check = () => {
+    const [left, right] = pair.map(openTabOf);
+    if (left === undefined || right === undefined) return;
+    stop();
+    then(left, right);
+  };
+  const timer = setTimeout(stop, 5000);
+  stops = [useTabs.subscribe(check), useSidebar.subscribe(check), () => clearTimeout(timer)];
+  check();
+}
+
+/** Two pins naming each other, left first; at the end of Pinned unless `at` says where. */
+export function pinSplit(
+  tabIds: readonly number[],
+  at?: { parentId: string | null; orders: string[] },
+) {
+  const { tabs } = useTabs.getState();
+  const { model, spaceId } = useSidebar.getState();
+  const pair = tabIds.map((id) => tabs.get(id));
+  if (pair.length !== 2 || pair.some((tab) => !tab)) return;
+  const ids = [newId(), newId()];
+  const last = childrenOf(model, spaceId, null).at(-1);
+  const orders = at?.orders ?? generateNKeysBetween(last?.order ?? null, null, 2);
+  pair.forEach((tab, i) =>
+    dispatch({
+      type: 'pinTab',
+      itemId: ids[i]!,
+      tabId: tab!.id,
+      spaceId,
+      parentId: at?.parentId ?? null,
+      order: orders[i]!,
+      url: tab!.url,
+      title: tab!.title,
+      pair: ids[1 - i]!,
+    }),
+  );
+}
+
+/** Arc's Separate All Tabs on a pinned split: two lone pins, out of Chrome's split too. */
+export function separatePinnedSplit(pair: readonly [string, string]) {
+  dispatch({ type: 'unpairPins', itemIds: [pair[0], pair[1]] });
+  const tabId = openTabOf(pair[0]);
+  const split = tabId === undefined ? undefined : useTabs.getState().tabs.get(tabId)?.splitViewId;
+  if (split !== undefined) unsplit(split);
+}
+
+/** Back to Today, still side by side: the right one first, so the left lands above it. */
+export function unpinSplit(pair: readonly [string, string]) {
+  unpinWithUndo(pair[1]);
+  unpinWithUndo(pair[0]);
+}
+
+export function closePinnedSplit(pair: readonly [string, string]) {
+  for (const itemId of pair) if (openTabOf(itemId) !== undefined) closePin(itemId);
 }
 
 /** Closes the pinned tab but keeps the pin, as in Arc. */
@@ -464,6 +568,7 @@ export function unpinWithUndo(itemId: string) {
           order: item.order,
           url: item.url,
           title: item.title,
+          ...(item.pair && { pair: item.pair }),
         });
         if (item.customTitle) renameItem(item.id, item.customTitle);
       },

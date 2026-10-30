@@ -1,6 +1,12 @@
 import { memo, useRef, type PointerEvent, type Ref } from 'react';
 import { Volume2, VolumeX, X } from 'lucide-react';
-import { closeTodayTab, closeTodayTabs, moveTabsToSpace, separateSplit } from '@/app/actions';
+import {
+  closeTodayTab,
+  closeTodayTabs,
+  moveTabsToSpace,
+  pinSplit,
+  separateSplit,
+} from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
 import { IconSwap } from '@/app/rows/IconSwap';
 import { Row } from '@/app/rows/Row';
@@ -89,6 +95,8 @@ export const SplitRow = memo(function SplitRow({ ids, splitViewId, ref }: SplitR
         }),
       }}
       menu={[
+        // Arc pins a split as one: it stays side by side in Pinned.
+        { label: 'Pin Split', onSelect: () => pinSplit(ids) },
         { label: 'Separate All Tabs', onSelect: () => separateSplit(splitViewId) },
         ...moveToSpaceMenu(spaces, spaceId, (target) => moveTabsToSpace(ids, target)),
         'separator',

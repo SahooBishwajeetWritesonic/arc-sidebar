@@ -96,7 +96,18 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
         order: intent.order,
         url: intent.url,
         title: intent.title,
+        ...(intent.pair && { pair: intent.pair }),
       });
+
+    case 'unpairPins': {
+      const unpaired = intent.itemIds.flatMap((id) => {
+        const pin = items[id];
+        if (pin?.kind !== 'pin' || !pin.pair) return [];
+        const { pair: _gone, ...rest } = pin;
+        return [rest];
+      });
+      return unpaired.length ? put(...unpaired) : model;
+    }
 
     case 'unpin': {
       if (item?.kind !== 'pin') return model;
