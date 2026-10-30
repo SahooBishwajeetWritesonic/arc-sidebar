@@ -62,8 +62,9 @@ function rebuild() {
   );
   let { model, session, archive } = saved;
   for (const { intent } of pending) {
-    model = applyIntent(model, intent);
-    session = applySessionIntent(session, intent);
+    const before = model;
+    model = applyIntent(model, intent, session);
+    session = applySessionIntent(session, intent, undefined, before);
     archive = applyArchiveIntent(archive, intent);
   }
   for (const itemId of opening.keys()) {

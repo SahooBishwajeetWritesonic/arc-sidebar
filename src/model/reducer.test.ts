@@ -16,7 +16,7 @@ import {
 const S = 'default';
 
 function build(...intents: Intent[]): SidebarModel {
-  return intents.reduce(applyIntent, emptyModel());
+  return intents.reduce((next, intent) => applyIntent(next, intent), emptyModel());
 }
 
 const pin = (itemId: string, order: string, parentId: string | null = null): Intent => ({
@@ -57,7 +57,7 @@ describe('applyIntent', () => {
       { type: 'move', itemId: 'p1', parentId: null, order: 'a2' } as Intent,
     ];
     const once = build(...intents);
-    const twice = intents.reduce(applyIntent, once);
+    const twice = intents.reduce((next, intent) => applyIntent(next, intent), once);
     expect(twice).toEqual(once);
   });
 
@@ -223,6 +223,43 @@ describe('applySessionIntent', () => {
     const next = applySessionIntent(session, { type: 'closePin', itemId: 'p6' });
     expect(next.bindings).toEqual({});
     expect(next.orders['1']).toEqual([5]);
+  });
+
+  it('names a Today tab, once, and gives it back its title', () => {
+    const session = { ...emptySession(), orders: { '1': [5] } };
+    const rename = (title: string | null, tabId = 5): Intent => ({
+      type: 'renameTab',
+      tabId,
+      title,
+    });
+    const named = applySessionIntent(session, rename('  Docs '));
+    expect(named.tabTitles).toEqual({ 5: 'Docs' });
+    expect(applySessionIntent(named, rename('Docs'))).toBe(named);
+    expect(applySessionIntent(named, rename(' ')).tabTitles).toEqual({});
+    // Not a Today tab (pinned, or closed meanwhile): nothing to name.
+    expect(applySessionIntent(session, rename('Docs', 6))).toBe(session);
+  });
+
+  it('keeps a Today tab’s name when it’s pinned and unpinned', () => {
+    const session = { ...emptySession(), orders: { '1': [6] }, tabTitles: { 6: 'Docs' } };
+    const pinned = applyIntent(emptyModel(), pin('p6', 'a0'), session);
+    expect(pinned.items.p6).toMatchObject({ title: 'p6', customTitle: 'Docs' });
+    const bound = applySessionIntent(session, pin('p6', 'a0'));
+    expect(bound.tabTitles).toEqual({});
+
+    const unpin: Intent = { type: 'unpin', itemId: 'p6', windowId: 1 };
+    expect(applySessionIntent(bound, unpin, undefined, pinned).tabTitles).toEqual({ 6: 'Docs' });
+  });
+
+  it('forgets the names of archived tabs', () => {
+    const session = { ...emptySession(), orders: { '1': [5, 6] }, tabTitles: { 5: 'A', 6: 'B' } };
+    const entry = { id: 'e', url: '', title: 'B', spaceId: S, archivedAt: 0 };
+    const intent: Intent = {
+      type: 'archiveTabs',
+      windowId: 1,
+      tabs: [{ tabId: 6, entry: { ...entry, reason: 'closed', batchId: 'b' } }],
+    };
+    expect(applySessionIntent(session, intent).tabTitles).toEqual({ 5: 'A' });
   });
 });
 

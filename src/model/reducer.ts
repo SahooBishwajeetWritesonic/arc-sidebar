@@ -69,10 +69,14 @@ function releaseTabs(
 }
 
 /**
- * The saved part of an intent. Pure: panels apply it at once for instant feedback,
- * then the service applies it again and saves the result.
+ * The saved part of an intent. Pure: panels apply it for instant feedback, then the service
+ * applies it again and saves. `session` is pre-intent: a pinned Today tab keeps its name.
  */
-export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
+export function applyIntent(
+  model: SidebarModel,
+  intent: Intent,
+  session?: SessionState,
+): SidebarModel {
   const items = model.items;
   const item = 'itemId' in intent ? items[intent.itemId] : undefined;
   const put = (...changed: Item[]): SidebarModel => ({
@@ -81,13 +85,14 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
   });
 
   switch (intent.type) {
-    case 'pinTab':
+    case 'pinTab': {
       if (
         item ||
         !canPlace(model, { id: intent.itemId, kind: 'pin' }, intent.spaceId, intent.parentId)
       ) {
         return model;
       }
+      const customTitle = session?.tabTitles[intent.tabId];
       return put({
         kind: 'pin',
         id: intent.itemId,
@@ -96,8 +101,10 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
         order: intent.order,
         url: intent.url,
         title: intent.title,
+        ...(customTitle && { customTitle }),
         ...(intent.pair && { pair: intent.pair }),
       });
+    }
 
     case 'unpairPins': {
       const unpaired = intent.itemIds.flatMap((id) => {
@@ -424,6 +431,7 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
     case 'resetPin':
     case 'refreshLiveFolder':
     case 'reorderToday':
+    case 'renameTab':
     case 'archiveTabs':
     case 'restoreArchived':
     case 'forgetArchived':
@@ -434,13 +442,14 @@ export function applyIntent(model: SidebarModel, intent: Intent): SidebarModel {
 }
 
 /**
- * The session part of an intent that a panel can predict. `windowOf` is a tab's
- * window when known: the service always knows; a panel knows only its own tabs.
+ * The session part of an intent a panel can predict. `windowOf` knows only a panel's own
+ * window's tabs (the service knows all). `model` is pre-intent: unpinned tabs keep pin names.
  */
 export function applySessionIntent(
   session: SessionState,
   intent: Intent,
   windowOf: (tabId: number) => number | undefined = () => undefined,
+  model?: SidebarModel,
 ): SessionState {
   switch (intent.type) {
     case 'pinTab': {
@@ -452,12 +461,14 @@ export function applySessionIntent(
       const orders = Object.fromEntries(
         Object.entries(session.orders).map(([w, order]) => [w, withoutTab(order, intent.tabId)]),
       );
-      // A pinned tab belongs to its pin's space, not to a Today.
+      // A pinned tab belongs to its pin's space, not to a Today; its name goes to the pin.
       const { [intent.tabId]: _today, ...tabSpaces } = session.tabSpaces;
+      const { [intent.tabId]: _named, ...tabTitles } = session.tabTitles;
       return {
         ...session,
         orders,
         tabSpaces,
+        tabTitles,
         bindings: { ...session.bindings, [intent.itemId]: intent.tabId },
       };
     }
@@ -476,7 +487,23 @@ export function applySessionIntent(
       const tabSpaces = intent.spaceId
         ? { ...session.tabSpaces, [tabId]: intent.spaceId }
         : session.tabSpaces;
-      return { ...session, bindings, tabSpaces, orders: { ...session.orders, [key]: placed } };
+      const pin = model?.items[intent.itemId];
+      const tabTitles =
+        pin?.kind === 'pin' && pin.customTitle
+          ? { ...session.tabTitles, [tabId]: pin.customTitle }
+          : session.tabTitles;
+      const orders = { ...session.orders, [key]: placed };
+      return { ...session, bindings, tabSpaces, tabTitles, orders };
+    }
+    case 'renameTab': {
+      const key = String(intent.tabId);
+      if (!Object.values(session.orders).some((order) => order.includes(intent.tabId))) {
+        return session;
+      }
+      const title = intent.title?.trim() || null;
+      if ((session.tabTitles[key] ?? null) === title) return session;
+      const { [key]: _old, ...tabTitles } = session.tabTitles;
+      return { ...session, tabTitles: title ? { ...tabTitles, [key]: title } : tabTitles };
     }
     case 'reorderToday': {
       const key = String(intent.windowId);
@@ -494,7 +521,10 @@ export function applySessionIntent(
           order.filter((id) => !closed.has(id)),
         ]),
       );
-      return { ...session, orders };
+      const tabTitles = Object.fromEntries(
+        Object.entries(session.tabTitles).filter(([id]) => !closed.has(Number(id))),
+      );
+      return { ...session, orders, tabTitles };
     }
     case 'moveTabToSpace': {
       if (session.tabSpaces[intent.tabId] === intent.spaceId) return session;

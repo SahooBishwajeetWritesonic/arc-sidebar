@@ -222,7 +222,10 @@ describe('orderForDrop', () => {
     url: `https://example.com/${itemId}`,
     title: itemId,
   });
-  const model = [pin('a', 'a0'), pin('b', 'a1'), pin('c', 'a2')].reduce(applyIntent, emptyModel());
+  const model = [pin('a', 'a0'), pin('b', 'a1'), pin('c', 'a2')].reduce(
+    (next, intent) => applyIntent(next, intent),
+    emptyModel(),
+  );
   const place = (order: string, id = 'x') =>
     childrenOf(
       applyIntent(model, { type: 'move', itemId: id, parentId: null, order }),

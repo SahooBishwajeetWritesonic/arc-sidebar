@@ -28,7 +28,7 @@ function withFolder(...intents: Intent[]): SidebarModel {
   return [
     { type: 'createLiveFolder', itemId: F, spaceId: S, order: 'a0' } as Intent,
     ...intents,
-  ].reduce(applyIntent, emptyModel());
+  ].reduce((next, intent) => applyIntent(next, intent), emptyModel());
 }
 
 /** Applies what GitHub answered, as the service does. */

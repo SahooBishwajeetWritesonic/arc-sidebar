@@ -235,6 +235,11 @@ export interface SessionState {
   activeSpaces: Record<string, string>;
   /** Space id → the tab last used there, re-selected when switching back. */
   lastActive: Record<string, number>;
+  /**
+   * Today tab id → the name it was given (Arc's Rename on a Today tab). A
+   * pinned tab's name is its pin's customTitle instead.
+   */
+  tabTitles: Record<string, string>;
 }
 
 export const emptySession = (): SessionState => ({
@@ -244,6 +249,7 @@ export const emptySession = (): SessionState => ({
   tabSpaces: {},
   activeSpaces: {},
   lastActive: {},
+  tabTitles: {},
 });
 
 /** Fills in fields that sessions saved by older versions don't have. */
@@ -258,6 +264,8 @@ export const normalizeSession = (session: Partial<SessionState>): SessionState =
  */
 export interface RestoreSnapshot {
   today: Record<string, string[]>;
+  /** Space id → the names renamed Today tabs had, at the same places as `today`. */
+  titles?: Record<string, (string | null)[]>;
   pins: Record<string, string>;
   /** 0 when there is no snapshot yet (first run, or one saved before pins were kept). */
   takenAt: number;
@@ -295,6 +303,8 @@ export type Intent =
       todayBeforeTabId?: number | null;
     }
   | { type: 'reorderToday'; windowId: number; tabId: number; beforeTabId: number | null }
+  /** Names a Today tab; null gives it back the page's title. */
+  | { type: 'renameTab'; tabId: number; title: string | null }
   /** Closes Today tabs and records them in the archive (entries made by the panel). */
   | { type: 'archiveTabs'; windowId: number; tabs: { tabId: number; entry: ArchiveEntry }[] }
   /** Reopens archived tabs at the top of Today, in their original order. */

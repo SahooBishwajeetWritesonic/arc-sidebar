@@ -11,6 +11,7 @@ import {
   pinTab,
   pressPin,
   renameItem,
+  renameTab,
   replacePinUrl,
   resetPin,
   separateSplit,
@@ -95,6 +96,7 @@ function runAction(command: Extract<Command, { type: 'action' }>) {
       break;
     case 'renameTab':
       if (pin && name) renameItem(pin.id, name);
+      else if (tab && !pin) renameTab(tab.id, name ?? '');
       break;
     case 'splitView':
       // The picked tab or page goes on the right, as Arc's "Add Split View".

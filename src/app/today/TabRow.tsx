@@ -1,15 +1,19 @@
 import { memo, useRef, type PointerEvent, type Ref } from 'react';
 import { Volume2, VolumeX, X } from 'lucide-react';
-import { closeTodayTab, favoriteTab, moveTabToSpace, pinTab } from '@/app/actions';
+import { closeTodayTab, favoriteTab, moveTabToSpace, pinTab, renameTab } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
 import { IconSwap } from '@/app/rows/IconSwap';
+import { InlineEdit } from '@/app/rows/InlineEdit';
 import { Row } from '@/app/rows/Row';
 import { Title, useDeveloperHost } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
 import { FAVORITES_ID, FAVORITES_LIMIT } from '@/model/types';
+import type { TabInfo } from '@/platform/types';
+import { rowKey } from '@/state/selection';
 import { useSidebar } from '@/state/sidebar';
 import { activateTab, faviconFor, openInLittleArc, toggleMuted, useTabs } from '@/state/tabs';
+import { startEditing, stopEditing, useUi } from '@/state/ui';
 
 const stop = (event: PointerEvent) => event.stopPropagation();
 
@@ -18,6 +22,9 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
   const selected = useTabs((state) => state.activeId === id);
   const previous = useTabs((state) => state.previousId === id);
   const spaceId = useTabs((state) => state.tabSpaces[id] ?? state.spaceId);
+  const named = useSidebar((state) => state.session.tabTitles[id]);
+  const editKey = rowKey('tab', id);
+  const editing = useUi((state) => state.editingId === editKey);
   const spaces = useSidebar((state) => state.model.spaces);
   const developerHost = useDeveloperHost(live?.url ?? '');
   const canFavorite = useSidebar(
@@ -28,10 +35,10 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
 
   // While the row fades out after a close, the tab is already gone from the
   // store; keep drawing its last state.
-  const last = useRef(live);
-  if (live) last.current = live;
-  const tab = live ?? last.current;
-  if (!tab) return null;
+  const last = useRef<{ tab: TabInfo; title: string } | undefined>(undefined);
+  if (live) last.current = { tab: live, title: named ?? live.title };
+  if (!last.current) return null;
+  const { tab, title } = last.current;
 
   return (
     <Row
@@ -43,11 +50,13 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
       onPress={() => activateTab(id)}
       onMiddleClick={() => closeTodayTab(id)}
       onLittleArc={() => openInLittleArc({ tabId: id })}
+      onDoubleClick={() => startEditing(editKey)}
       drag={{
         source: { kind: 'tab', tabId: id },
-        ghost: () => ({ title: tab.title, faviconUrl: faviconFor(tab.url), folder: false }),
+        ghost: () => ({ title, faviconUrl: faviconFor(tab.url), folder: false }),
       }}
       menu={[
+        { label: 'Rename…', onSelect: () => startEditing(editKey) },
         { label: 'Pin Tab', onSelect: () => pinTab(id) },
         ...(canFavorite ? [{ label: 'Add to Favorites', onSelect: () => favoriteTab(id) }] : []),
         { label: tab.muted ? 'Unmute Tab' : 'Mute Tab', onSelect: () => toggleMuted(id) },
@@ -57,7 +66,18 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
       ]}
     >
       <Favicon url={tab.url} loading={tab.loading && !tab.favIconUrl} />
-      <Title text={tab.title} subtitle={developerHost} />
+      {editing ? (
+        <InlineEdit
+          initial={title}
+          onCommit={(value) => {
+            renameTab(id, value);
+            stopEditing();
+          }}
+          onCancel={stopEditing}
+        />
+      ) : (
+        <Title text={title} subtitle={developerHost} />
+      )}
       {(tab.audible || tab.muted) && (
         <button
           type="button"

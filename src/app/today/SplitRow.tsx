@@ -120,10 +120,11 @@ export const SplitRow = memo(function SplitRow({ ids, splitViewId, ref }: SplitR
   );
 });
 
-/** The tab, or its last state while the row fades out after it closed. */
+/** The tab under its given name, if any, or its last state while the row fades out. */
 function useLastTab(id: number): TabInfo | undefined {
   const live = useTabs((state) => state.tabs.get(id));
-  const last = useRef(live);
-  if (live) last.current = live;
-  return live ?? last.current;
+  const name = useSidebar((state) => state.session.tabTitles[id]);
+  const last = useRef<TabInfo | undefined>(undefined);
+  if (live) last.current = name ? { ...live, title: name } : live;
+  return last.current;
 }

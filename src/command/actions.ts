@@ -80,6 +80,11 @@ export function availableActions(ctx: CommandContext): (Result & { words: string
       add({ action: 'pinTab', title: 'Pin Tab' });
       if (roomInFavorites) add({ action: 'favoriteTab', title: 'Favorite Tab', words: 'add' });
       add({ action: 'archiveTab', title: 'Archive Tab', words: 'close' });
+      add({
+        action: 'renameTab',
+        title: 'Rename Current Tab…',
+        prompt: { label: 'Rename tab', initial: ctx.session.tabTitles[tab.id] ?? tab.title },
+      });
     } else if (pin.spaceId === FAVORITES_ID) {
       add({ action: 'unfavoriteTab', title: 'Remove from Favorites', words: 'unfavorite' });
       add({ action: 'closeTab', title: 'Close Tab' });

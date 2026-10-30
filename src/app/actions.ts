@@ -257,6 +257,13 @@ export function renameItem(itemId: string, title: string) {
   dispatch({ type: 'rename', itemId, title });
 }
 
+/** Arc's Rename on a Today tab. The page's own title, or nothing, gives it back. */
+export function renameTab(tabId: number, title: string) {
+  const name = title.trim();
+  const page = useTabs.getState().tabs.get(tabId)?.title;
+  dispatch({ type: 'renameTab', tabId, title: name && name !== page ? name : null });
+}
+
 export function newFolderWith(itemId: string) {
   const { model } = useSidebar.getState();
   const item = model.items[itemId];
@@ -530,7 +537,7 @@ function archiveEntry(tab: TabInfo, reason: ArchiveEntry['reason'], batchId: str
   return {
     id: newId(),
     url: tab.url,
-    title: tab.title,
+    title: useSidebar.getState().session.tabTitles[tab.id] ?? tab.title,
     spaceId: useSidebar.getState().spaceId,
     archivedAt: Date.now(),
     reason,

@@ -88,14 +88,15 @@ function pages(ctx: CommandContext): Page[] {
 
   for (const tab of tabs.values()) {
     if (bound.has(tab.id) || tab.id === ctx.activeId) continue;
+    const title = session.tabTitles[tab.id] ?? tab.title;
     list.push({
       key: `tab:${tab.id}`,
       command: { type: 'switchToTab', tabId: tab.id },
-      title: tab.title,
+      title,
       detail: spaceName(session.tabSpaces[tab.id]),
       url: tab.url,
       hint: 'Switch to Tab',
-      text: `${tab.title} ${displayUrl(tab.url)}`,
+      text: `${title} ${tab.title} ${displayUrl(tab.url)}`,
       tabId: tab.id,
     });
   }

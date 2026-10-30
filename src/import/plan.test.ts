@@ -84,7 +84,7 @@ describe('planImport', () => {
         name: 'Docs',
       },
     ];
-    model = intents.reduce(applyIntent, model);
+    model = intents.reduce((next, intent) => applyIntent(next, intent), model);
 
     const result = run(model, { spaceIds: ['S-WORK'], favorites: false });
     expect(result.plan.spaces).toEqual([]);

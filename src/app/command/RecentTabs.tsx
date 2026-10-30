@@ -4,6 +4,7 @@ import { SpaceGlyph } from '@/app/spaces/icons';
 import { themeAccent } from '@/app/theme/engine';
 import { usePreferredScheme } from '@/app/theme/looks';
 import type { SwitcherPost } from '@/platform/command-bar';
+import type { TabInfo } from '@/platform/types';
 import { useSidebar } from '@/state/sidebar';
 import { activateTab, closeTab, recentTabs, useTabs } from '@/state/tabs';
 import type { CommandHost } from './CommandBar';
@@ -25,6 +26,7 @@ export function RecentTabs({ host }: { host: Pick<CommandHost, 'close'> }) {
   const tabSpaces = useTabs((state) => state.tabSpaces);
   const model = useSidebar((state) => state.model);
   const bindings = useSidebar((state) => state.session.bindings);
+  const tabTitles = useSidebar((state) => state.session.tabTitles);
   const [ids, setIds] = useState<number[] | null>(null);
   const [index, setIndex] = useState(1);
   // Switches when the shortcut's keys are let go; set once the page says they're held.
@@ -107,10 +109,19 @@ export function RecentTabs({ host }: { host: Pick<CommandHost, 'close'> }) {
   }, [drawn]);
 
   // A pinned tab's space is its pin's; Favorites belong to none.
-  const spaceOf = (tabId: number) => {
+  const pinOf = (tabId: number) => {
     const itemId = Object.keys(bindings).find((id) => bindings[id] === tabId);
-    const spaceId = itemId ? model.items[itemId]?.spaceId : tabSpaces[tabId];
+    return itemId ? model.items[itemId] : undefined;
+  };
+  const spaceOf = (tabId: number) => {
+    const pin = pinOf(tabId);
+    const spaceId = pin ? pin.spaceId : tabSpaces[tabId];
     return model.spaces.find((space) => space.id === spaceId);
+  };
+  // The name it was given, as the sidebar shows it.
+  const titleOf = (tab: TabInfo) => {
+    const pin = pinOf(tab.id);
+    return (pin?.kind === 'pin' ? pin.customTitle : tabTitles[tab.id]) ?? tab.title;
   };
 
   if (!drawn) return null;
@@ -138,7 +149,7 @@ export function RecentTabs({ host }: { host: Pick<CommandHost, 'close'> }) {
             >
               <Favicon url={tab.url} loading={tab.loading && !tab.favIconUrl} />
               <span className={styles.title} dir="auto">
-                {tab.title}
+                {titleOf(tab)}
               </span>
               {space && model.spaces.length > 1 && (
                 <span className={styles.space}>

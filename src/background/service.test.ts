@@ -545,6 +545,30 @@ describe('SidebarService', () => {
       expect(saved.session.tabSpaces[10]).toBe('work');
     });
 
+    it('keeps renamed Today tabs’ names over a restart, and archives them by name', async () => {
+      const before = setup({
+        model: twoSpaces(),
+        tabs: [tab(1, 'https://a.com/'), tab(2, 'https://b.com/')],
+      });
+      await before.service.handleIntent({ type: 'renameTab', tabId: 2, title: 'Docs' });
+      await before.service.takeSnapshot();
+      expect(before.saved.snapshot.titles).toEqual({ home: [null, 'Docs'] });
+
+      // Chrome restarts and restores both with new ids, one a moment later.
+      const { service, saved } = setup({
+        model: twoSpaces(),
+        snapshot: before.saved.snapshot,
+        tabs: [tab(7, 'https://a.com/')],
+      });
+      await service.ready;
+      await service.onTabCreated(tab(8, 'https://b.com/'));
+      expect(saved.session.tabTitles).toEqual({ 8: 'Docs' });
+
+      await service.onTabRemoved(8, 1);
+      expect(saved.archive.entries[0]).toMatchObject({ url: 'https://b.com/', title: 'Docs' });
+      expect(saved.session.tabTitles).toEqual({});
+    });
+
     it('snapshots each space\u2019s Today URLs, top first', async () => {
       const { service, saved, tabs } = setup({
         model: twoSpaces(),
