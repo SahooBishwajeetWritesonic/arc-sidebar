@@ -24,6 +24,8 @@ import { Title, useDeveloperHost } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { iconMenu, SpaceGlyph } from '@/app/spaces/icons';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
+import { gmailAccountOf } from '@/platform/gmail';
+import { GmailPreview } from './GmailPreview';
 import { CiBadge } from './LiveIcons';
 import { FAVORITES_ID, FAVORITES_LIMIT, type PinItem } from '@/model/types';
 import { isSamePage } from '@/model/urls';
@@ -161,7 +163,13 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
           onCancel={stopEditing}
         />
       ) : (
-        <Title text={title} subtitle={developerHost} />
+        <GmailPreview
+          itemId={itemId}
+          account={pin.live ? undefined : gmailAccountOf(pin.url)}
+          anchor="[data-nav-row]"
+        >
+          <Title text={title} subtitle={developerHost} />
+        </GmailPreview>
       )}
       <RecordingBadge tabIds={[tab?.id]} />
       {tab && (tab.audible || tab.muted) && (

@@ -17,6 +17,11 @@
   outline: none;
 }
 
+/* A Gmail favorite's hover target, around its tile (see GmailPreview). */
+.previewTrigger {
+  display: block;
+}
+
 .tile {
   position: relative;
   display: grid;

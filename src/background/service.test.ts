@@ -172,6 +172,20 @@ describe('SidebarService', () => {
     expect(saved.session.orders['1']).toEqual([]);
   });
 
+  it('opens a page within a pin: in its tab, or a new one bound to it', async () => {
+    const { service, saved, calls } = setup({ tabs: [tab(1, 'https://mail.example/')] });
+    await service.handleIntent(pinIntent('p1', 1, 'https://mail.example/'));
+    const message = 'https://mail.example/#inbox/42';
+    await service.handleIntent({ type: 'openPin', itemId: 'p1', windowId: 1, url: message });
+    expect(calls).toEqual(['activate 1', `navigate 1 ${message}`]);
+
+    await service.handleIntent({ type: 'closePin', itemId: 'p1' });
+    await service.onTabRemoved(1, 1);
+    await service.handleIntent({ type: 'openPin', itemId: 'p1', windowId: 1, url: message });
+    expect(calls).toContain(`create ${message}`);
+    expect(saved.session.bindings).toEqual({ p1: 100 });
+  });
+
   it('keeps the pin when its tab closes', async () => {
     const { service, saved } = setup({ tabs: [tab(1, 'https://a.com')] });
     await service.handleIntent(pinIntent('p1', 1, 'https://a.com'));

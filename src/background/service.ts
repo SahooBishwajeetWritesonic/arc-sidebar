@@ -354,16 +354,19 @@ export class SidebarService {
         // Turned on again later, it starts afresh, removing nothing.
         await this.deps.sync?.saveState({ base: null });
         break;
-      case 'openPin':
+      case 'openPin': {
         if (item?.kind !== 'pin') break;
+        const url = intent.url ?? item.url;
         if (tabId !== undefined) {
           await this.deps.activateTab(tabId);
+          if (intent.url) await this.deps.navigateTab(tabId, url);
         } else {
           const expires = this.deps.now() + OPEN_TIMEOUT_MS;
-          this.opening.push({ itemId: item.id, url: item.url, expires });
-          await this.deps.createTab(intent.windowId, item.url, true);
+          this.opening.push({ itemId: item.id, url, expires });
+          await this.deps.createTab(intent.windowId, url, true);
         }
         break;
+      }
       case 'closePin':
         if (tabId !== undefined) await this.deps.closeTab(tabId);
         break;

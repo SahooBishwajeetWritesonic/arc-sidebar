@@ -79,6 +79,12 @@ export function goToNumbered(n: number) {
   else if (target) activateTab(target.tabId);
 }
 
+/** Opens a page within a pinned tab (a Gmail preview's message), in its tab if it's open. */
+export function openInPin(itemId: string, url: string) {
+  const { windowId } = useSidebar.getState();
+  if (windowId !== null) dispatch({ type: 'openPin', itemId, windowId, url });
+}
+
 // Pinned splits: two pins that name each other (model/tree.ts partnerOf).
 
 /** A pinned split's two pins, left then right; undefined for a pin of its own. */

@@ -376,7 +376,8 @@ export type Intent =
   | { type: 'moveTabToSpace'; tabId: number; spaceId: string }
   /** Shows a space in a window; `openNewTab` when it has no tab to select. */
   | { type: 'setActiveSpace'; windowId: number; spaceId: string; openNewTab?: boolean }
-  | { type: 'openPin'; itemId: string; windowId: number }
+  /** Opens the pin, or selects its tab; at `url` instead, a page in it (a Gmail message). */
+  | { type: 'openPin'; itemId: string; windowId: number; url?: string }
   | { type: 'closePin'; itemId: string }
   | { type: 'resetPin'; itemId: string }
   | { type: 'unpairPins'; itemIds: [string, string] }
