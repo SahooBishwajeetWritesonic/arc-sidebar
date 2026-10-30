@@ -812,6 +812,11 @@ export function setSpaceIcon(spaceId: string, icon: SpaceIcon | null) {
   dispatch({ type: 'setSpaceIcon', spaceId, icon });
 }
 
+/** Puts a space at another place in the switcher (and in ⌃1–9's order). */
+export function moveSpace(spaceId: string, index: number) {
+  dispatch({ type: 'moveSpace', spaceId, index });
+}
+
 /** Arc's Reset Space: every pinned tab in the space that's on another page goes back. */
 export function resetSpace(spaceId = useSidebar.getState().spaceId) {
   const { model, session } = useSidebar.getState();

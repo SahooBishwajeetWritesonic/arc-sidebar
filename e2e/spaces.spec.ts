@@ -174,3 +174,38 @@ test('the caret on the space’s name folds Pinned away, keeping the selected ta
   await panel(page).getByRole('menuitem', { name: 'Expand Pinned' }).click();
   await expect(pinRows(page)).toHaveCount(5);
 });
+
+const spaceOrder = (page: Page) =>
+  panel(page)
+    .getByRole('navigation', { name: 'Spaces' })
+    .getByRole('button')
+    .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label')));
+
+test('dragging a space’s icon sideways reorders the spaces; so does ⌥← and ⌥→', async ({
+  page,
+}) => {
+  await ready(page);
+  await newSpace(page, 'Work');
+  await newSpace(page, 'Home');
+  await expect.poll(() => spaceOrder(page)).toEqual(['Space', 'Work', 'Home']);
+
+  const icon = (name: string) =>
+    panel(page).getByRole('navigation', { name: 'Spaces' }).getByRole('button', { name });
+  const from = (await icon('Work').boundingBox())!;
+  const to = (await icon('Space').boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + 4, to.y + to.height / 2, { steps: 12 });
+  await page.mouse.up();
+  await expect.poll(() => spaceOrder(page)).toEqual(['Work', 'Space', 'Home']);
+  // Home stays shown: a drag doesn't switch to the space dragged.
+  await page.waitForTimeout(100);
+  await expect(panel(page).locator('[data-active-page]')).toHaveAttribute('aria-label', 'Home');
+
+  await icon('Home').focus();
+  await page.keyboard.press('Alt+ArrowLeft');
+  await expect.poll(() => spaceOrder(page)).toEqual(['Work', 'Home', 'Space']);
+  await expect(icon('Home')).toBeFocused();
+  await page.reload();
+  await expect.poll(() => spaceOrder(page)).toEqual(['Work', 'Home', 'Space']);
+});

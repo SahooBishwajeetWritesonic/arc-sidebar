@@ -1,14 +1,18 @@
 import { Menu } from '@base-ui/react/menu';
 import { Archive, Check, ChevronRight, Plus } from 'lucide-react';
+import { Reorder } from 'motion/react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import {
   createSpace,
   exportSidebar,
+  moveSpace,
   newFolder,
   newLiveFolder,
   setArchiveAfter,
   setNavButtons,
   switchSpace,
 } from '@/app/actions';
+import { spring } from '@/app/motion';
 import { useBesideMenu } from '@/app/rows/beside';
 import menu from '@/app/rows/menu.module.css';
 import { SpaceGlyph } from '@/app/spaces/icons';
@@ -48,29 +52,84 @@ export function BottomBar() {
   );
 }
 
+/** Dragging an icon sideways reorders spaces, as Arc on Windows does; so does ⌥←/→ on one. */
 function SpaceSwitcher() {
   const all = useSidebar((state) => state.model.spaces);
   const current = useSidebar((state) => state.spaceId);
+  // The order while an icon is dragged; saved when it's let go.
+  const [dragged, setDragged] = useState<string[] | null>(null);
+  const latest = useRef<string[] | null>(null);
+  latest.current = dragged;
+  // A drag ends with a click on the icon dragged, which mustn't switch to it.
+  const justDragged = useRef(false);
+  const nav = useRef<HTMLElement>(null);
   if (all.length < 2) return <div className={spaces.switcher} />;
+
+  const order = dragged ?? all.map((space) => space.id);
+  const drop = (spaceId: string) => {
+    const index = latest.current?.indexOf(spaceId) ?? -1;
+    if (index !== -1 && all[index]?.id !== spaceId) moveSpace(spaceId, index);
+    setDragged(null);
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, spaceId: string, i: number) => {
+    if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const to = i + (event.key === 'ArrowLeft' ? -1 : 1);
+    if (to < 0 || to >= all.length) return;
+    moveSpace(spaceId, to);
+    // React moves the button, which drops its focus; put it back.
+    const button = event.currentTarget;
+    requestAnimationFrame(() => button.focus());
+  };
+
   return (
-    <nav className={spaces.switcher} aria-label="Spaces">
-      {all.map((space, i) => (
-        <button
-          key={space.id}
-          type="button"
-          className={spaces.space}
-          aria-label={space.name}
-          aria-current={space.id === current}
-          title={i < 9 ? `${space.name} (⌃${i + 1})` : space.name}
-          onClick={() => {
-            showView('sidebar');
-            switchSpace(space.id);
-          }}
-        >
-          <SpaceGlyph icon={space.icon} />
-        </button>
-      ))}
-    </nav>
+    <Reorder.Group
+      as="nav"
+      ref={nav}
+      axis="x"
+      values={order}
+      onReorder={setDragged}
+      className={spaces.switcher}
+      aria-label="Spaces"
+    >
+      {order.map((spaceId, i) => {
+        const space = all.find((s) => s.id === spaceId);
+        if (!space) return null;
+        return (
+          <Reorder.Item
+            key={space.id}
+            as="button"
+            value={space.id}
+            type="button"
+            className={spaces.space}
+            aria-label={space.name}
+            aria-current={space.id === current}
+            title={i < 9 ? `${space.name} (⌃${i + 1})` : space.name}
+            dragConstraints={nav}
+            dragElastic={0}
+            transition={spring.row}
+            onDragStart={() => (justDragged.current = true)}
+            onDragEnd={() => {
+              drop(space.id);
+              // Let go off the icon, there's no click to swallow.
+              setTimeout(() => (justDragged.current = false));
+            }}
+            onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) => onKeyDown(event, space.id, i)}
+            onClick={() => {
+              if (justDragged.current) {
+                justDragged.current = false;
+                return;
+              }
+              showView('sidebar');
+              switchSpace(space.id);
+            }}
+          >
+            <SpaceGlyph icon={space.icon} />
+          </Reorder.Item>
+        );
+      })}
+    </Reorder.Group>
   );
 }
 
