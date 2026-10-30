@@ -104,3 +104,27 @@ test('Copy All Links copies the folder’s links; with Option, as Markdown', asy
     '- [My issues · Linear](https://linear.app/)\n- [Pull requests · GitHub](https://github.com/pulls)',
   );
 });
+
+test('Paste URL as New Tab pins the copied address in the folder; ⌘⌥V opens it in Today', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await ready(page);
+  await page.evaluate(() => navigator.clipboard.writeText('example.com/pasted'));
+
+  await dev(page).click({ button: 'right' });
+  await choose(page, 'Paste URL as New Tab');
+  // At the end of the folder, titled by its address until it's opened.
+  await expect
+    .poll(async () => (await rows(page)).filter((row) => row.startsWith('pin:1:')).at(-1))
+    .toBe('pin:1:https://example.co');
+
+  // Another address: just after a start, a new tab at a pinned address goes to its pin.
+  await page.evaluate(() => navigator.clipboard.writeText('example.org/pasted'));
+  const today = panel(page).locator('[data-active-page] [data-nav-row="tab"]');
+  await today.first().focus();
+  await page.keyboard.press('Meta+Alt+KeyV');
+  await expect(today).toHaveCount(5);
+  await expect(today.first()).toContainText('example.org');
+});

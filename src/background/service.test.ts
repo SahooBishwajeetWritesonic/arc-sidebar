@@ -381,6 +381,28 @@ describe('SidebarService', () => {
     expect(saved.session.tabSpaces['1']).toBe(saved.session.tabSpaces['3']);
   });
 
+  it('names a pin added by its address after its page, once that has loaded', async () => {
+    const { service, saved, advance } = setup({ tabs: [] });
+    const url = 'https://example.com/';
+    await service.handleIntent({
+      type: 'addPin',
+      itemId: 'p1',
+      spaceId: 'default',
+      parentId: null,
+      order: 'a0',
+      url,
+    });
+    expect(saved.model.items.p1).toMatchObject({ title: url });
+    advance(60_000); // past the restart window, so the tab is matched as an opened pin
+    await service.handleIntent({ type: 'openPin', itemId: 'p1', windowId: 1 });
+    const tabId = saved.session.bindings.p1!;
+    // Chrome shows the address as the title while it loads.
+    await service.onTabUpdated(tabId, { title: 'example.com/' });
+    expect(saved.model.items.p1).toMatchObject({ title: url });
+    await service.onTabUpdated(tabId, { title: 'Example Domain' });
+    expect(saved.model.items.p1).toMatchObject({ url, title: 'Example Domain' });
+  });
+
   it('archives a Today tab closed in Chrome, with the page it was on', async () => {
     const { service, saved } = setup({ tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')] });
     await service.onTabUpdated(1, { url: 'https://a.com/next' });

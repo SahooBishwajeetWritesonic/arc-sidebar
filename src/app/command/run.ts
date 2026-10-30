@@ -24,6 +24,7 @@ import {
   unfavoriteToPinned,
   unpinWithUndo,
 } from '@/app/actions';
+import { pasteAsNewTab } from '@/app/paste';
 import { pinOf } from '@/command/actions';
 import { linksText } from '@/model/links';
 import type { Command } from '@/command/types';
@@ -124,6 +125,9 @@ function runAction(command: Extract<Command, { type: 'action' }>) {
     case 'clearToday':
       clearToday();
       break;
+    case 'pasteUrl':
+      // Returned, so the bar's frame (which reads the clipboard) stays until it has.
+      return pasteAsNewTab();
     case 'resetSpace':
       resetSpace();
       break;

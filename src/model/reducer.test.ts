@@ -164,6 +164,21 @@ describe('applyIntent', () => {
     expect(loop).toBe(nested);
   });
 
+  it('adds a pin by its address, once, only where it can go', () => {
+    const add = (itemId: string, parentId: string | null = null): Intent => ({
+      type: 'addPin',
+      itemId,
+      spaceId: S,
+      parentId,
+      order: 'a5',
+      url: 'https://example.com/',
+    });
+    const model = build(add('p1'));
+    expect(model.items.p1).toMatchObject({ kind: 'pin', title: 'https://example.com/' });
+    expect(applyIntent(model, add('p1'))).toBe(model);
+    expect(applyIntent(model, add('p2', 'nowhere'))).toBe(model);
+  });
+
   it('keeps a custom title only when it differs from the page title', () => {
     const model = build(pin('p1', 'a0'));
     expect(

@@ -19,6 +19,8 @@ export default defineConfig({
       'contextMenus',
       'offscreen',
       'clipboardWrite',
+      // Arc's Paste URL as New Tab (⌘⌥V, and a folder's menu).
+      'clipboardRead',
       // The URL bar's site menu: full-page capture and site permissions.
       'debugger',
       'contentSettings',

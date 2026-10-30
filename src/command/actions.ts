@@ -127,6 +127,7 @@ export function availableActions(ctx: CommandContext): (Result & { words: string
   if (ctx.todayIds.length) {
     add({ action: 'clearToday', title: 'Clear Today', words: 'archive close all tabs' });
   }
+  add({ action: 'pasteUrl', title: 'Paste URL as New Tab', words: 'clipboard open link' });
   const space = model.spaces.find((s) => s.id === spaceId);
   const inSpace = Object.values(model.items).filter((item) => item.spaceId === spaceId);
   if (inSpace.some((item) => item.kind === 'pin' && awayFromPin(ctx, item))) {

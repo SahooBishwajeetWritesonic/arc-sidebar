@@ -677,6 +677,14 @@ export class SidebarService {
     if (known.url === url && known.title === title) return;
     this.details = { ...this.details, [tabId]: { ...known, url, title } };
     this.queueDetails();
+    // A pin added by its address alone takes its page's title once it loads
+    // (Chrome shows the address as the title until then).
+    const pin = this.model.items[this.itemOfTab(tabId) ?? ''];
+    if (pin?.kind === 'pin' && pin.title === pin.url && isSamePage(url, pin.url)) {
+      const named = title && !url.includes(title) && !pin.url.includes(title);
+      const keep = { itemId: pin.id, url: pin.url, title };
+      if (named) await this.handleIntent({ type: 'replacePinUrl', ...keep });
+    }
     if (url === known.url || !GITHUB_PAGE.test(url)) return;
     this.onGitHubPage(tabId, known.windowId, url);
     if (pullRequestKey(url)) this.adoptPullRequestTabs();

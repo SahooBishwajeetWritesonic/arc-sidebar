@@ -12,6 +12,7 @@ import {
   setLiveFilters,
 } from '@/app/actions';
 import { copyText } from '@/app/command/run';
+import { pasteIntoFolder } from '@/app/paste';
 import { Favicon } from '@/app/rows/Favicon';
 import { IconSwap } from '@/app/rows/IconSwap';
 import { InlineEdit } from '@/app/rows/InlineEdit';
@@ -85,6 +86,7 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
                   submenu: iconMenu(folder.icon, (icon) => setFolderIcon(itemId, icon)),
                 },
                 { label: 'Duplicate', onSelect: () => duplicateFolder(itemId) },
+                { label: 'Paste URL as New Tab', onSelect: () => void pasteIntoFolder(itemId) },
               ]),
           ...(links.length
             ? [

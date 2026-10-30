@@ -65,7 +65,7 @@ export default defineContentScript({
         'position: absolute; inset: 0; display: block; width: 100%; height: 100%; border: 0; background: transparent; color-scheme: normal;';
       const frame = document.createElement('iframe');
       frame.src = `${browser.runtime.getURL('/command.html')}#${token}`;
-      frame.allow = 'clipboard-write';
+      frame.allow = 'clipboard-read; clipboard-write';
       frame.style.cssText = frameStyle;
       const shadow = host.attachShadow({ mode: 'closed' });
       shadow.append(frame);

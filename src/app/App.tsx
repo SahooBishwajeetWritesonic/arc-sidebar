@@ -36,6 +36,7 @@ import { SpacePager } from './spaces/SpacePager';
 import { Backdrop } from './theme/Backdrop';
 import { useRootScheme, useSpaceLooks } from './theme/looks';
 import { ThemePicker } from './theme/ThemePicker';
+import { pasteAsNewTab } from './paste';
 import { dismissUndone } from './toast/toast';
 import { ToastLayer } from './toast/ToastLayer';
 import { undoLast } from './undo';
@@ -83,6 +84,13 @@ function onKeyDown(event: KeyboardEvent<HTMLElement>) {
   if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'k') {
     event.preventDefault();
     clearToday();
+    return;
+  }
+
+  // Arc's ⌘⌥V: the address on the clipboard in a new tab.
+  if (event.metaKey && event.altKey && event.code === 'KeyV') {
+    event.preventDefault();
+    void pasteAsNewTab();
     return;
   }
 

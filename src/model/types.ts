@@ -361,6 +361,18 @@ export type Intent =
   | { type: 'resetPin'; itemId: string }
   | { type: 'unpairPins'; itemIds: [string, string] }
   | { type: 'replacePinUrl'; itemId: string; url: string; title: string }
+  /**
+   * Pins a page that isn't open (Arc's Paste URL as New Tab in a folder). Its title
+   * is its address until it's opened and its page names itself.
+   */
+  | {
+      type: 'addPin';
+      itemId: string;
+      spaceId: string;
+      parentId: string | null;
+      order: string;
+      url: string;
+    }
   | { type: 'rename'; itemId: string; title: string | null }
   | {
       type: 'createFolder';
