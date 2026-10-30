@@ -125,3 +125,16 @@ test('Option-click splits a tab with the current one; on the split, separates it
   await expect(split).toHaveCount(0);
   await expect(today(page)).toHaveCount(4);
 });
+
+test('⌘-clicking a pinned tab’s icon resets it and keeps the page in a new tab', async ({
+  page,
+}) => {
+  await ready(page);
+  await page.getByRole('button', { name: 'Follow a link in the active tab' }).click();
+  const gmail = pins(page).first();
+  await expect(gmail).toContainText('Another page');
+  await gmail.locator('[data-resettable]').click({ modifiers: ['Meta'] });
+  await expect(gmail).not.toContainText('Another page');
+  await expect(today(page).first()).toContainText('Another page');
+  await expect(today(page).first()).toHaveAttribute('data-selected', 'true');
+});

@@ -9,6 +9,7 @@ import {
   renameItem,
   replacePinUrl,
   resetPin,
+  resetPinKeepingPage,
   unpinWithUndo,
 } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
@@ -117,13 +118,16 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
       <span
         className={styles.faviconButton}
         data-resettable={awayFromPin || undefined}
-        title={awayFromPin ? 'Back to pinned URL' : undefined}
+        title={
+          awayFromPin ? 'Back to pinned URL (⌘-click keeps this page in a new tab)' : undefined
+        }
         onPointerDown={
           awayFromPin
             ? (event) => {
                 if (!isPress(event)) return;
                 event.stopPropagation();
-                resetPin(itemId);
+                if (event.metaKey) resetPinKeepingPage(itemId);
+                else resetPin(itemId);
               }
             : undefined
         }

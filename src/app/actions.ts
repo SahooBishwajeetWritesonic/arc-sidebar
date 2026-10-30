@@ -26,6 +26,7 @@ import type { TabInfo } from '@/platform/types';
 import { dispatch, newId, useSidebar } from '@/state/sidebar';
 import {
   activateTab,
+  duplicateTab,
   forgetTab,
   forgetTabs,
   leaveTabs,
@@ -214,6 +215,16 @@ export function resetPin(itemId: string) {
   const tabId = boundTab(itemId);
   dispatch({ type: 'resetPin', itemId });
   if (tabId !== undefined) activateTab(tabId);
+}
+
+/**
+ * Arc's ⌘-click on a pinned tab's icon: back to the pinned page, with the
+ * page it was on kept in a new tab (a copy, history and all), which you stay on.
+ */
+export function resetPinKeepingPage(itemId: string) {
+  const tabId = openTabOf(itemId);
+  if (tabId === undefined) return;
+  void duplicateTab(tabId).then(() => resetPin(itemId));
 }
 
 export function replacePinUrl(itemId: string) {
