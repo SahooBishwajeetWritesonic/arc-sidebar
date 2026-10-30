@@ -91,6 +91,8 @@ export interface Platform {
   onArchiveChange(listener: (archive: ArchiveState) => void): () => void;
   /** The service's rolling copies of the model, newest first. */
   loadBackups(): Promise<Backup[]>;
+  /** Why Arc Sync's last try didn't go through, if it didn't. */
+  loadSyncProblem(): Promise<string | undefined>;
   /** Resolves once the service has applied the intent; rejects if it failed. */
   sendIntent(intent: Intent): Promise<IntentResult>;
 

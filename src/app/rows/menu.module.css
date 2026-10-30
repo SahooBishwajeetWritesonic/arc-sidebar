@@ -42,6 +42,10 @@
   color: var(--on-accent);
 }
 
+.item[data-disabled] {
+  color: var(--ink-secondary);
+}
+
 .item[data-danger]:not([data-highlighted]) {
   color: light-dark(#d70015, #ff6961);
 }

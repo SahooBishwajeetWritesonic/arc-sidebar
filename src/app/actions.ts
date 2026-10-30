@@ -997,6 +997,12 @@ export function setNavButtons(on: boolean) {
   dispatch({ type: 'setNavButtons', on });
 }
 
+/** Arc Sync, through Chrome's own sync: spaces and pinned tabs, not Favorites. */
+export function setSync(on: boolean) {
+  dispatch({ type: 'setSync', on });
+  if (on) showToast('Spaces now sync through Chrome');
+}
+
 export function setAppearance(appearance: Appearance) {
   dispatch({ type: 'setAppearance', appearance });
 }

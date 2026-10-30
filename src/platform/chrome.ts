@@ -1,7 +1,7 @@
 import { browser, type Browser } from 'wxt/browser';
 import type { IntentResult } from '@/model/types';
 import { readMedia, runMedia } from './media-page';
-import { archiveItem, backupsItem, modelItem, sessionItem } from './storage-items';
+import { archiveItem, backupsItem, modelItem, sessionItem, syncStateItem } from './storage-items';
 import { fullPage, SITE_PERMISSION_DEFAULTS } from './capture';
 import type { PeekMessage } from './peek';
 import type {
@@ -84,6 +84,7 @@ export const chromePlatform: Platform = {
   loadArchive: () => archiveItem.getValue(),
   onArchiveChange: (listener) => archiveItem.watch((archive) => listener(archive)),
   loadBackups: () => backupsItem.getValue(),
+  loadSyncProblem: async () => (await syncStateItem.getValue()).problem,
 
   async sendIntent(intent) {
     const response = (await browser.runtime.sendMessage({ kind: 'intent', intent })) as

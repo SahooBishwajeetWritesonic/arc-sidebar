@@ -1,6 +1,7 @@
 import { generateNKeysBetween } from 'fractional-indexing';
 import { SidebarService, type LiveTab } from '@/background/service';
 import type { PullRequest } from '@/model/live';
+import type { Synced, SyncState } from '@/model/sync';
 import { startCaptureTool } from '@/platform/capture-tool';
 import {
   DEFAULT_SPACE_ID,
@@ -97,6 +98,8 @@ export class FakePlatform implements Platform {
   /** github.com as the Live Folder sees it. */
   private github: { signedIn: boolean; open: (PullRequest & { mine: boolean })[] };
   private nextPullRequest = 2000;
+  /** Chrome's synced storage as this one computer sees it. */
+  private synced: { copy: Synced | null; state: SyncState } = { copy: null, state: { base: null } };
 
   constructor(
     fixtures: Fixture[],
@@ -141,6 +144,12 @@ export class FakePlatform implements Platform {
       loadSnapshot: async () => read(localStorage, SNAPSHOT_KEY, emptySnapshot()),
       saveSnapshot: async (snapshot) =>
         localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot)),
+      sync: {
+        read: async () => structuredClone(this.synced.copy),
+        write: async (copy) => void (this.synced.copy = structuredClone(copy)),
+        loadState: async () => this.synced.state,
+        saveState: async (state) => void (this.synced.state = state),
+      },
       loadTabDetails: async () => read(sessionStorage, DETAILS_KEY, {}),
       saveTabDetails: async (details) =>
         sessionStorage.setItem(DETAILS_KEY, JSON.stringify(details)),
@@ -206,6 +215,10 @@ export class FakePlatform implements Platform {
   async loadBackups() {
     await this.service.ready;
     return this.backups;
+  }
+
+  async loadSyncProblem() {
+    return this.synced.state.problem;
   }
 
   async sendIntent(intent: Intent) {

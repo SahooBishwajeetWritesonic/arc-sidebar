@@ -10,6 +10,7 @@ import {
   newLiveFolder,
   setArchiveAfter,
   setNavButtons,
+  setSync,
   switchSpace,
 } from '@/app/actions';
 import { spring } from '@/app/motion';
@@ -19,7 +20,7 @@ import { SpaceGlyph } from '@/app/spaces/icons';
 import spaces from '@/app/spaces/spaces.module.css';
 import { githubFolderOf } from '@/model/live';
 import type { ArchiveAfter } from '@/model/types';
-import { loadBackups, useSidebar } from '@/state/sidebar';
+import { loadBackups, loadSyncProblem, useSidebar } from '@/state/sidebar';
 import { setEditingRoutes, setImporting, setRestoring, showView, useUi } from '@/state/ui';
 import styles from './bottom-bar.module.css';
 
@@ -137,9 +138,11 @@ function AddMenu() {
   const archiveAfter = useSidebar((state) => state.model.settings?.archiveAfter ?? '12h');
   const hasLiveFolder = useSidebar((state) => githubFolderOf(state.model) !== undefined);
   const navButtons = useSidebar((state) => state.model.settings.navButtons);
+  const sync = useSidebar((state) => state.model.settings.sync);
+  const [syncProblem, setSyncProblem] = useState<string>();
   const beside = useBesideMenu();
   return (
-    <Menu.Root>
+    <Menu.Root onOpenChange={(open) => open && void loadSyncProblem().then(setSyncProblem)}>
       <Menu.Trigger className={styles.button} aria-label="More">
         <Plus size={16} strokeWidth={1.75} />
       </Menu.Trigger>
@@ -209,6 +212,14 @@ function AddMenu() {
             <Menu.Item className={menu.item} onClick={() => void loadBackups().then(setRestoring)}>
               Restore Sidebar…
             </Menu.Item>
+            <Menu.Item className={menu.item} onClick={() => setSync(!sync)}>
+              {sync ? 'Stop Syncing Spaces' : 'Sync Spaces Across Computers'}
+            </Menu.Item>
+            {sync && syncProblem && (
+              <Menu.Item className={menu.item} disabled>
+                {syncProblem}
+              </Menu.Item>
+            )}
           </Menu.Popup>
         </Menu.Positioner>
       </Menu.Portal>
