@@ -319,6 +319,11 @@ export function setFolderIcon(itemId: string, icon: SpaceIcon | null) {
   dispatch({ type: 'setFolderIcon', itemId, icon });
 }
 
+/** Arc's custom tab icon: an emoji or symbol in place of a pinned tab's favicon. */
+export function setPinIcon(itemId: string, icon: SpaceIcon | null) {
+  dispatch({ type: 'setPinIcon', itemId, icon });
+}
+
 /** Arc's Duplicate: a copy of the folder and everything in it, just below it, closed. */
 export function duplicateFolder(itemId: string) {
   const { model } = useSidebar.getState();
@@ -708,6 +713,7 @@ export function unpinWithUndo(itemId: string) {
         ...(item.pair && { pair: item.pair }),
       });
       if (item.customTitle) renameItem(item.id, item.customTitle);
+      if (item.icon) setPinIcon(item.id, item.icon);
     },
     { key: 'unpin', amount: 1, message: (total) => `Unpinned ${total} tabs` },
   );

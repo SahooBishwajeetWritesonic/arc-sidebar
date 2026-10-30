@@ -98,6 +98,16 @@ describe('applyIntent', () => {
     expect(applyIntent(removed, { type: 'setFolderIcon', itemId: 'f1', icon: null })).toBe(removed);
   });
 
+  it('sets and removes a pinned tab’s icon', () => {
+    const model = build(pin('p1', 'a0'));
+    const rocket = { type: 'emoji', char: '🚀' } as const;
+    const set = applyIntent(model, { type: 'setPinIcon', itemId: 'p1', icon: rocket });
+    expect(set.items.p1).toMatchObject({ icon: rocket });
+    const removed = applyIntent(set, { type: 'setPinIcon', itemId: 'p1', icon: null });
+    expect(removed.items.p1).toEqual(model.items.p1);
+    expect(applyIntent(removed, { type: 'setPinIcon', itemId: 'p1', icon: null })).toBe(removed);
+  });
+
   it('duplicates a folder with its contents just below it, once', () => {
     const model = build(
       pin('p1', 'a0'),

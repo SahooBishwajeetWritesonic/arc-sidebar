@@ -91,3 +91,23 @@ test('a favorite shows the unread count its page puts in its title', async ({ pa
   await expect(tiles(page)).toHaveCount(1);
   await expect(tiles(page).first().locator('span[class*="unread"]')).toHaveText('3');
 });
+
+test('Change Icon puts an emoji in place of a pinned tab’s favicon, kept as a favorite', async ({
+  page,
+}) => {
+  await ready(page);
+  const calendar = pins(page).filter({ hasText: 'Google Calendar' });
+  await calendar.click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Change Icon' }).hover();
+  await panel(page).getByRole('menuitem', { name: 'Emoji', exact: true }).hover();
+  await panel(page).getByRole('menuitem', { name: '🚀' }).click();
+  await expect(calendar.locator('span[class*="folderIcon"]')).toHaveText('🚀');
+
+  await calendar.click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Add to Favorites' }).click();
+  await expect(tiles(page).first()).toHaveText('🚀');
+  await tiles(page).first().click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Change Icon' }).hover();
+  await panel(page).getByRole('menuitem', { name: 'Remove Icon' }).click();
+  await expect(tiles(page).first().locator('img')).toHaveCount(1);
+});

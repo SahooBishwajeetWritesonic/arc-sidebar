@@ -147,6 +147,7 @@ function repairItem(id: string, raw: unknown): Item | undefined {
   const base = { id, spaceId: raw.spaceId, parentId, order: raw.order };
   if (raw.kind === 'pin' && isString(raw.url) && isString(raw.title)) {
     const live = repairLivePin(raw.live);
+    const icon = repairIcon(raw.icon);
     return {
       ...base,
       kind: 'pin',
@@ -154,6 +155,7 @@ function repairItem(id: string, raw: unknown): Item | undefined {
       title: raw.title,
       ...(isString(raw.customTitle) && { customTitle: raw.customTitle }),
       ...(isString(raw.pair) && { pair: raw.pair }),
+      ...(icon && { icon }),
       ...(live && { live }),
     };
   }

@@ -9,6 +9,7 @@ import {
   replacePinUrl,
   resetPin,
   separatePinnedSplit,
+  setPinIcon,
   unfavoritePair,
   unfavoriteToPinned,
   unpinSplit,
@@ -18,6 +19,7 @@ import { beginPress, isPress, useDrag } from '@/app/drag/drag';
 import { fade, spring } from '@/app/motion';
 import { Favicon } from '@/app/rows/Favicon';
 import { RowMenu, type MenuEntry } from '@/app/rows/RowMenu';
+import { iconMenu, SpaceGlyph } from '@/app/spaces/icons';
 import { childrenOf, partnerOf } from '@/model/tree';
 import { FAVORITES_ID, type PinItem } from '@/model/types';
 import { isSamePage } from '@/model/urls';
@@ -135,8 +137,14 @@ function Tile({ favorite, partner, ref }: TileItem & { ref?: React.Ref<HTMLLIEle
   const sounding = [tab, partnerTab].find((each) => each && (each.audible || each.muted));
   const unread = [tab, partnerTab].map((each) => each && unreadCount(each.title)).find(Boolean);
 
+  // A split's icon is its left pin's, standing for both.
+  const changeIcon: MenuEntry = {
+    label: 'Change Icon',
+    submenu: iconMenu(favorite.icon, (icon) => setPinIcon(favorite.id, icon)),
+  };
   const menu: MenuEntry[] = pair
     ? [
+        changeIcon,
         { label: 'Move to Pinned', onSelect: () => unfavoritePair(pair) },
         { label: 'Separate All Tabs', onSelect: () => separatePinnedSplit(pair) },
         'separator',
@@ -153,6 +161,7 @@ function Tile({ favorite, partner, ref }: TileItem & { ref?: React.Ref<HTMLLIEle
               },
             ]
           : []),
+        changeIcon,
         { label: 'Move to Pinned', onSelect: () => unfavoriteToPinned(favorite.id) },
         'separator',
         ...(tab ? [{ label: 'Close Tab', onSelect: () => closePin(favorite.id) }] : []),
@@ -196,6 +205,7 @@ function Tile({ favorite, partner, ref }: TileItem & { ref?: React.Ref<HTMLLIEle
                 title,
                 faviconUrl: faviconFor(tab?.url ?? favorite.url),
                 folder: false,
+                icon: favorite.icon,
               }),
               onTap: ready ? undefined : () => pressPin(favorite.id),
               onDrop: dropOn,
@@ -207,7 +217,9 @@ function Tile({ favorite, partner, ref }: TileItem & { ref?: React.Ref<HTMLLIEle
           }
           onDoubleClick={() => awayFromPin && resetPin(favorite.id)}
         >
-          {partner ? (
+          {favorite.icon ? (
+            <SpaceGlyph icon={favorite.icon} />
+          ) : partner ? (
             <span className={styles.split}>
               <Favicon url={tab?.url ?? favorite.url} loading={!!tab?.loading && !tab.favIconUrl} />
               <span className={styles.splitLine} aria-hidden />

@@ -155,6 +155,7 @@ export function inverseOf(before: State, after: State, windowId: number): Intent
       title: old.title,
       ...(old.pair && { pair: old.pair }),
     });
+    if (old.icon) steps.push({ type: 'setPinIcon', itemId: old.id, icon: old.icon });
   }
 
   for (const added of Object.values(after.model.items)) {

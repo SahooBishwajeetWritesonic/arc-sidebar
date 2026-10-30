@@ -187,6 +187,13 @@ export function applyIntent(
       return item.icon ? put(rest) : model;
     }
 
+    case 'setPinIcon': {
+      if (item?.kind !== 'pin' || item.live) return model;
+      const { icon: _old, ...rest } = item;
+      if (intent.icon) return put({ ...rest, icon: intent.icon });
+      return item.icon ? put(rest) : model;
+    }
+
     case 'duplicateFolder': {
       if (item?.kind !== 'folder' || item.live) return model;
       const copyId = intent.ids[item.id];

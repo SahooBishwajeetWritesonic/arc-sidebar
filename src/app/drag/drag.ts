@@ -16,6 +16,7 @@ export interface Ghost {
   title: string;
   faviconUrl?: string;
   folder: boolean;
+  /** A folder's or pinned tab's own icon, from Change Icon. */
   icon?: SpaceIcon;
   width: number;
   /** Rows moving together, when a selection is dragged. */

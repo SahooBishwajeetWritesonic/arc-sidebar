@@ -10,6 +10,7 @@ import {
   replacePinUrl,
   resetPin,
   resetPinKeepingPage,
+  setPinIcon,
   unpinWithUndo,
 } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
@@ -20,6 +21,7 @@ import type { MenuEntry } from '@/app/rows/RowMenu';
 import { Row } from '@/app/rows/Row';
 import { Title, useDeveloperHost } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
+import { iconMenu, SpaceGlyph } from '@/app/spaces/icons';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
 import { CiBadge } from './LiveIcons';
 import { FAVORITES_ID, FAVORITES_LIMIT, type PinItem } from '@/model/types';
@@ -74,6 +76,7 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
     ? liveMenu
     : [
         { label: 'Rename…', onSelect: () => startEditing(itemId) },
+        { label: 'Change Icon', submenu: iconMenu(pin.icon, (icon) => setPinIcon(itemId, icon)) },
         ...(awayFromPin
           ? [
               { label: 'Back to Pinned URL', onSelect: () => resetPin(itemId) },
@@ -108,7 +111,12 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
           ? undefined
           : {
               source: { kind: 'pin', itemId, bound: tab !== undefined },
-              ghost: () => ({ title, faviconUrl: faviconFor(tab?.url ?? pin.url), folder: false }),
+              ghost: () => ({
+                title,
+                faviconUrl: faviconFor(tab?.url ?? pin.url),
+                folder: false,
+                icon: pin.icon,
+              }),
             }
       }
       onMiddleClick={() => closePin(itemId)}
@@ -132,7 +140,13 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
             : undefined
         }
       >
-        <Favicon url={tab?.url ?? pin.url} loading={!!tab?.loading && !tab.favIconUrl} />
+        {pin.icon ? (
+          <span className={styles.folderIcon} aria-hidden>
+            <SpaceGlyph icon={pin.icon} />
+          </span>
+        ) : (
+          <Favicon url={tab?.url ?? pin.url} loading={!!tab?.loading && !tab.favIconUrl} />
+        )}
         {pin.live?.ci && <CiBadge state={pin.live.ci} />}
       </span>
       {awayFromPin && <span className={styles.slash}>/</span>}

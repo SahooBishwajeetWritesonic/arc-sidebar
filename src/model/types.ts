@@ -101,6 +101,8 @@ export interface PinItem extends ItemBase {
    * while each names the other and they share a place (see tree.ts partnerOf).
    */
   pair?: string;
+  /** Arc's custom tab icon, in place of the favicon. A favorited split's is its left pin's. */
+  icon?: SpaceIcon;
   /** Put here by a Live Folder, which takes it out again when the pull request closes. */
   live?: LivePin;
 }
@@ -386,6 +388,7 @@ export type Intent =
     }
   | { type: 'setFolderCollapsed'; itemId: string; collapsed: boolean }
   | { type: 'setFolderIcon'; itemId: string; icon: SpaceIcon | null }
+  | { type: 'setPinIcon'; itemId: string; icon: SpaceIcon | null }
   /**
    * Copies a folder and its contents just below it; `ids` maps each original id to its copy's.
    * Live Folders and their pull requests aren't copied.
