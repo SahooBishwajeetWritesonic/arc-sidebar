@@ -1,7 +1,7 @@
 import { browser, type Browser } from 'wxt/browser';
 import type { Command } from '@/command/types';
 import type { CommandBarMessage } from '@/platform/command-bar';
-import { onCommandBarShortcut, onRecentTabsShortcut } from './command-bar';
+import { commandLook, onCommandBarShortcut, onRecentTabsShortcut } from './command-bar';
 import { copyFromShortcut, showNote } from './copy';
 import { openLittleArc } from './peek';
 import type { SidebarService } from './service';
@@ -17,8 +17,10 @@ export function onShortcut(
 ) {
   if (tab?.id === undefined) return;
   // The command bar must open in the shortcut's own turn (a closed sidebar opens only then).
-  if (command === 'command-bar') return onCommandBarShortcut(tab);
-  if (command === 'edit-url') return onCommandBarShortcut(tab, { editAddress: true });
+  const { model, session } = service.snapshot();
+  const look = commandLook(model, session, tab.windowId);
+  if (command === 'command-bar') return onCommandBarShortcut(tab, { look });
+  if (command === 'edit-url') return onCommandBarShortcut(tab, { editAddress: true, look });
   void run(command, tab, tab.id, service);
 }
 

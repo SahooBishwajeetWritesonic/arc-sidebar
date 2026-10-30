@@ -1,10 +1,16 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
-import type { CommandHost } from '@/app/command/CommandBar';
+import type { CommandBarHandle, CommandHost } from '@/app/command/CommandBar';
 import { CommandPage } from '@/app/command/CommandPage';
 import { RecentTabs } from '@/app/command/RecentTabs';
-import { CLOSE_MESSAGE, type CommandBarMessage, type HelloReply } from '@/platform/command-bar';
+import {
+  CLOSE_MESSAGE,
+  type CommandBarMessage,
+  type CommandBarPost,
+  type HelloReply,
+  type Typed,
+} from '@/platform/command-bar';
 import { chromePlatform } from '@/platform/chrome';
 import { connect } from '@/state/connect';
 import '@/app/global.css';
@@ -30,12 +36,37 @@ async function start() {
         () => false,
       ),
   };
+  // Drawn: the page hands over what was typed into its stand-in (again if
+  // more was typed meanwhile), until it lets this take the keyboard.
+  const onMount = (bar: CommandBarHandle) => {
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as Partial<CommandBarPost & Typed> | null;
+      if (event.source !== parent || data?.arcCommandBar !== 'typed') return;
+      if (typeof data.text !== 'string') return;
+      const at = (value: unknown) => (typeof value === 'number' ? value : data.text!.length);
+      bar.carryOn({
+        text: data.text,
+        start: at(data.start),
+        end: at(data.end),
+        submit: data.submit === true,
+      });
+      parent.postMessage({ arcCommandBar: 'carried' } satisfies CommandBarPost, '*');
+    };
+    addEventListener('message', onMessage);
+    parent.postMessage({ arcCommandBar: 'ready' } satisfies CommandBarPost, '*');
+  };
+
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       {hello.switcher ? (
         <RecentTabs host={host} />
       ) : (
-        <CommandPage host={host} sidebarOpen={hello.sidebarOpen ?? false} address={hello.address} />
+        <CommandPage
+          host={host}
+          sidebarOpen={hello.sidebarOpen ?? false}
+          address={hello.address}
+          onMount={onMount}
+        />
       )}
     </StrictMode>,
   );

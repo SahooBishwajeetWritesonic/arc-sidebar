@@ -1,4 +1,5 @@
 import type { Command } from '@/command/types';
+import type { Appearance } from '@/model/types';
 
 /**
  * Messages that open and run the command bar, over the page (in an overlay frame) or in the
@@ -14,10 +15,40 @@ export type CommandBarMessage =
   /** Bar → background: the token it was opened with, to prove the page didn't frame it. */
   | { kind: 'command-bar:hello'; token: string }
   /**
-   * Background → the page's overlay script: open or close the bar over the page.
-   * With `switcher`, the recent tabs (or their next one); answered with a SwitcherReply.
+   * Background → overlay script: open or close the bar over the page, or with `switcher` the
+   * recent tabs (replies SwitcherReply). `look` and `address` draw the field while the bar loads.
    */
-  | { kind: 'command-bar:overlay'; token: string; switcher?: boolean };
+  | {
+      kind: 'command-bar:overlay';
+      token: string;
+      switcher?: boolean;
+      look?: CommandLook;
+      address?: string;
+    };
+
+/** How the bar looks in this window: the Appearance setting, and its space's accent. */
+export interface CommandLook {
+  appearance: Appearance;
+  accent: string;
+}
+
+/** What was typed into the stand-in before the bar was drawn, and whether Return was pressed. */
+export interface Typed {
+  text: string;
+  start: number;
+  end: number;
+  submit: boolean;
+}
+
+/** Between the bar's frame and the page around it, as window messages. */
+export type CommandBarPost =
+  | typeof CLOSE_MESSAGE
+  /** Frame → page: drawn, its field focused. */
+  | { arcCommandBar: 'ready' }
+  /** Page → frame: what was typed into the stand-in, to carry on from. */
+  | ({ arcCommandBar: 'typed' } & Typed)
+  /** Frame → page: it has that; the stand-in can go if nothing more was typed. */
+  | { arcCommandBar: 'carried' };
 
 /** The overlay script's answer to opening the recent tabs. */
 export type SwitcherReply =

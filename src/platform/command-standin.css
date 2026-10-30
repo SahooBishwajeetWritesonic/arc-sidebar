@@ -1,0 +1,67 @@
+/* Matches the real bar's field (app/command/command.module.css), so the swap can't be seen. */
+html:root {
+  /* Kept transparent over the page (see app/command/page.css). */
+  color-scheme: normal;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: transparent;
+}
+
+.layer {
+  position: fixed;
+  inset: 0;
+  background: var(--command-scrim);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--title-size);
+  -webkit-font-smoothing: antialiased;
+}
+
+.card {
+  position: absolute;
+  top: var(--command-top);
+  left: 50%;
+  translate: -50% 0;
+  width: min(var(--command-width), 100% - 32px);
+  overflow: hidden;
+  border-radius: var(--command-radius);
+  background: var(--sheet);
+  box-shadow:
+    0 0 0 0.5px var(--command-edge),
+    0 2px 6px var(--command-shadow),
+    0 24px 64px var(--command-shadow);
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: var(--command-field-gap);
+  height: var(--command-input-height);
+  padding: 0 var(--command-field-pad);
+}
+
+.icon {
+  flex: none;
+  color: var(--ink-secondary);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--command-input-size);
+  caret-color: var(--command-accent);
+}
+
+.input::placeholder {
+  color: var(--ink-secondary);
+}

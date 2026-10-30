@@ -1,17 +1,24 @@
 import {
   CLOSE_MESSAGE,
   type CommandBarMessage,
+  type CommandBarPost,
+  type CommandLook,
   type SwitcherPost,
   type SwitcherReply,
+  type Typed,
 } from '@/platform/command-bar';
+import { drawStandIn, type StandIn } from '@/platform/command-standin';
 import type { NoteMessage } from '@/platform/messages';
 import { trackModifiers } from '@/platform/modifiers';
 import { showPageNote } from '@/platform/page-note';
 
 /**
- * Kept tiny: it runs in every page. Frames go in a closed shadow root, out of reach.
- * Until the recent tabs' frame has the keyboard, this page watches the shortcut's keys.
+ * The command bar over the page: an extension frame in the top layer, in a closed shadow root,
+ * so the page can't reach it or see what's typed. Kept tiny: it runs in every page.
  */
+const sameTyped = (a: Typed, b: Typed | undefined) =>
+  !!b && a.text === b.text && a.start === b.start && a.end === b.end && a.submit === b.submit;
+
 export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_idle',
@@ -26,7 +33,14 @@ export default defineContentScript({
     let switcher: HTMLIFrameElement | undefined;
     const held = trackModifiers(window);
 
-    function open(token: string, asSwitcher = false) {
+    function open(
+      token: string,
+      {
+        asSwitcher = false,
+        look,
+        address,
+      }: { asSwitcher?: boolean; look?: CommandLook; address?: string } = {},
+    ) {
       const previous = document.activeElement;
       const host = document.createElement('div');
       host.setAttribute('popover', 'manual');
@@ -47,17 +61,39 @@ export default defineContentScript({
       ]
         .map((rule) => `${rule} !important`)
         .join(';');
+      const frameStyle =
+        'position: absolute; inset: 0; display: block; width: 100%; height: 100%; border: 0; background: transparent; color-scheme: normal;';
       const frame = document.createElement('iframe');
       frame.src = `${browser.runtime.getURL('/command.html')}#${token}`;
       frame.allow = 'clipboard-write';
-      frame.style.cssText =
-        'display: block; width: 100%; height: 100%; border: 0; background: transparent; color-scheme: normal;';
-      host.attachShadow({ mode: 'closed' }).append(frame);
+      frame.style.cssText = frameStyle;
+      const shadow = host.attachShadow({ mode: 'closed' });
+      shadow.append(frame);
+      let standIn: StandIn | undefined;
+      // What the bar was last sent from the stand-in.
+      let sent: Typed | undefined;
 
       const onMessage = (event: MessageEvent) => {
         if (event.source !== frame.contentWindow) return;
-        const data = event.data as Partial<typeof CLOSE_MESSAGE> & Partial<SwitcherPost>;
+        const data = event.data as Partial<CommandBarPost> & Partial<SwitcherPost>;
         if (data?.arcCommandBar === CLOSE_MESSAGE.arcCommandBar) close?.();
+        if ((data?.arcCommandBar === 'ready' || data?.arcCommandBar === 'carried') && standIn) {
+          // The stand-in keeps the keyboard until the bar has everything typed
+          // into it; only then does the bar show and take over, so no key is lost.
+          const typed = standIn.typed();
+          if (data.arcCommandBar === 'carried' && sameTyped(typed, sent)) {
+            frame.style.opacity = '';
+            standIn.remove();
+            standIn = undefined;
+            frame.focus();
+            return;
+          }
+          sent = typed;
+          frame.contentWindow?.postMessage(
+            { arcCommandBar: 'typed', ...typed } satisfies CommandBarPost,
+            '*',
+          );
+        }
         if (data?.arcSwitcher === 'ready') {
           // Let go while it loaded, it switches without ever showing.
           const reply: SwitcherPost = { arcSwitcher: 'held', held: held() };
@@ -77,6 +113,15 @@ export default defineContentScript({
       addEventListener('message', onMessage);
       (document.body ?? document.documentElement).append(host);
       host.showPopover();
+      if (!asSwitcher && look) {
+        // Chrome takes a few frames to start the bar, so its field is drawn here at once.
+        const cover = document.createElement('iframe');
+        cover.style.cssText = frameStyle;
+        shadow.append(cover);
+        frame.style.opacity = '0';
+        standIn = drawStandIn(cover, { look, address, onClose: () => close?.() });
+        return;
+      }
       if (!asSwitcher) return frame.focus();
       // Hidden, keyboard still here to see the keys let go, until the list is drawn.
       switcher = frame;
@@ -96,7 +141,7 @@ export default defineContentScript({
           return;
         }
         if (close) close();
-        else open(message.token);
+        else open(message.token, { look: message.look, address: message.address });
         sendResponse(true);
       },
     );
@@ -108,7 +153,7 @@ export default defineContentScript({
       // Let go already: no list, just the previous tab.
       if (!held()) return 'quick';
       close?.();
-      open(token, true);
+      open(token, { asSwitcher: true });
       return 'opened';
     }
 

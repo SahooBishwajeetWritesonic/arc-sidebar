@@ -13,13 +13,13 @@
 
 .card {
   position: absolute;
-  top: clamp(16px, 24vh, 240px);
+  top: var(--command-top);
   left: 50%;
   translate: -50% 0;
   display: flex;
   flex-direction: column;
   width: min(var(--command-width), 100% - 32px);
-  max-height: calc(100% - clamp(16px, 24vh, 240px) - 16px);
+  max-height: calc(100% - var(--command-top) - 16px);
   overflow: hidden;
   border-radius: var(--command-radius);
   background: var(--sheet);
@@ -42,9 +42,9 @@
   flex: none;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--command-field-gap);
   height: var(--command-input-height);
-  padding: 0 20px;
+  padding: 0 var(--command-field-pad);
 }
 
 .layer[data-placement='sidebar'] .field {

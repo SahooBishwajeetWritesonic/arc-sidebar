@@ -92,6 +92,9 @@
   --command-width: 764px;
   --command-input-height: 64px;
   --command-input-size: 18px;
+  --command-top: clamp(16px, 24vh, 240px); /* the card's distance from the top */
+  --command-field-pad: 20px;
+  --command-field-gap: 12px;
   --command-row-height: 46px;
   --command-radius: 12px;
   --command-row-radius: 8px;

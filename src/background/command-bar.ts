@@ -1,7 +1,10 @@
 import { browser, type Browser } from 'wxt/browser';
+import { themeAccent } from '@/app/theme/engine';
+import type { SessionState, SidebarModel } from '@/model/types';
 import { addressLabel } from '@/model/urls';
 import type {
   CommandBarMessage,
+  CommandLook,
   HelloReply,
   PingReply,
   SwitcherReply,
@@ -22,13 +25,24 @@ export function canCoverPage(url: string | undefined): boolean {
   return !/^https:\/\/(chromewebstore\.google\.com|chrome\.google\.com\/webstore)/.test(url);
 }
 
+/** Sent with the overlay so the page can draw its field at once. */
+export function commandLook(
+  model: SidebarModel,
+  session: SessionState,
+  windowId: number,
+): CommandLook {
+  const shown = session.activeSpaces[String(windowId)];
+  const space = model.spaces.find((each) => each.id === shown) ?? model.spaces[0];
+  return { appearance: model.settings.appearance, accent: themeAccent(space?.theme) };
+}
+
 /**
  * Over the page as in Arc, else in the sidebar. A closed sidebar only opens synchronously,
  * inside the shortcut's gesture. `editAddress` is Arc's ⌘L.
  */
 export function onCommandBarShortcut(
   tab: Browser.tabs.Tab | undefined,
-  { editAddress = false } = {},
+  { editAddress = false, look }: { editAddress?: boolean; look?: CommandLook } = {},
 ) {
   if (tab?.id === undefined) return;
   const url = tab.url ?? '';
@@ -39,7 +53,7 @@ export function onCommandBarShortcut(
     void toggleInSidebar(tab.windowId, address);
     return;
   }
-  void coverPage(tab.id, tab.windowId, address);
+  void coverPage(tab.id, tab.windowId, address, look);
 }
 
 /**
@@ -69,13 +83,13 @@ async function switchToPrevious(windowId: number) {
   if (previous?.id !== undefined) await browser.tabs.update(previous.id, { active: true });
 }
 
-async function coverPage(tabId: number, windowId: number, address?: string) {
+async function coverPage(tabId: number, windowId: number, address?: string, look?: CommandLook) {
   const sidebar = await pingSidebar(windowId);
   if (sidebar?.focused) return void toggleInSidebar(windowId, address);
 
   const token = crypto.randomUUID();
   pending.set(tabId, { token, sidebarOpen: sidebar !== null, address });
-  const message: CommandBarMessage = { kind: 'command-bar:overlay', token };
+  const message: CommandBarMessage = { kind: 'command-bar:overlay', token, look, address };
   try {
     await browser.tabs.sendMessage(tabId, message);
   } catch {

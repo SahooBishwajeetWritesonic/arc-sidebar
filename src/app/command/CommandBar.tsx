@@ -40,6 +40,7 @@ import {
   type CSSProperties,
   type KeyboardEvent,
 } from 'react';
+import { flushSync } from 'react-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { Favicon } from '@/app/rows/Favicon';
 import { SpaceGlyph } from '@/app/spaces/icons';
@@ -48,6 +49,7 @@ import { usePreferredScheme } from '@/app/theme/looks';
 import type { CommandContext } from '@/command/actions';
 import { completeAddress, searchCommands } from '@/command/search';
 import type { ActionId, Command, Result } from '@/command/types';
+import type { Typed } from '@/platform/command-bar';
 import type { HistoryEntry } from '@/platform/types';
 import { useSidebar } from '@/state/sidebar';
 import {
@@ -67,6 +69,11 @@ export interface CommandHost {
   runInSidebar(command: Command): Promise<boolean>;
 }
 
+/** The drawn bar, for the page to hand over what was typed into its stand-in. */
+export interface CommandBarHandle {
+  carryOn(typed: Typed): void;
+}
+
 interface CommandBarProps {
   host: CommandHost;
   /** Whether this window's sidebar is open; actions that open something there need it. */
@@ -83,6 +90,8 @@ interface CommandBarProps {
    * where tabs, spaces and actions have nothing to act on.
    */
   pagesOnly?: boolean;
+  /** Once it's drawn, its field focused (over a page, where a stand-in took the first keys). */
+  onMount?: (bar: CommandBarHandle) => void;
 }
 
 const EMPTY: HistoryEntry[] = [];
@@ -97,6 +106,7 @@ export function CommandBar({
   placement,
   address,
   pagesOnly = false,
+  onMount,
 }: CommandBarProps) {
   const ctx = useCommandContext(sidebarOpen);
   const scheme = usePreferredScheme();
@@ -140,6 +150,10 @@ export function CommandBar({
       : found;
   }, [prompt, picking, query, ctx, history, actionsMode, completion, pagesOnly]);
 
+  // For the stand-in's Return, which picks the top result once its text is in.
+  const latestResults = useRef(results);
+  latestResults.current = results;
+
   // The selection goes back to the top whenever what's typed changes.
   const listKey = `${actionsMode}:${picking?.key}:${query}`;
   const [selection, setSelection] = useState({ listKey, index: 0 });
@@ -161,6 +175,22 @@ export function CommandBar({
     if (address) input.current?.select();
     addEventListener('focus', focus);
     return () => removeEventListener('focus', focus);
+  }, []);
+
+  // Over a page, the stand-in took the keys typed while this loaded: carry on
+  // from them. At once (flushSync), so a key typed next lands after them.
+  useLayoutEffect(() => {
+    onMount?.({
+      carryOn: ({ text, start, end, submit }) => {
+        flushSync(() => {
+          setTyped(text);
+          setCompleting(false);
+        });
+        input.current?.setSelectionRange(start, end);
+        if (submit) choose(latestResults.current[0]);
+      },
+    });
+    // Once, as it's drawn.
   }, []);
 
   // The completed part of the address stays selected, so typing replaces it.
