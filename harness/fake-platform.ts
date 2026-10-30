@@ -311,6 +311,19 @@ export class FakePlatform implements Platform {
     }
   }
 
+  /** The tab leaves for a new window, as Chrome reports it (one window here, so it's gone). */
+  moveToNewWindow(tabId: number) {
+    const index = this.tabs.findIndex((tab) => tab.id === tabId);
+    if (index === -1) return;
+    const [moved] = this.tabs.splice(index, 1);
+    this.emit({ type: 'remove', tabId });
+    void this.service.onTabDetached(tabId, WINDOW_ID);
+    if (moved?.active) {
+      const next = this.tabs[index] ?? this.tabs[index - 1];
+      if (next) this.activateTab(next.id);
+    }
+  }
+
   /** Selects the tab first, like the real one: Chrome makes the active tab the copy's opener. */
   async duplicateTab(tabId: number) {
     const tab = this.tabs.find((t) => t.id === tabId);

@@ -25,6 +25,7 @@ import {
   activateTab,
   duplicateTab,
   faviconFor,
+  moveToNewWindow,
   openInLittleArc,
   toggleMuted,
   useTabs,
@@ -80,6 +81,7 @@ export const TabRow = memo(function TabRow({ id, ref }: { id: number; ref?: Ref<
         ...(canFavorite ? [{ label: 'Add to Favorites', onSelect: () => favoriteTab(id) }] : []),
         { label: tab.muted ? 'Unmute Tab' : 'Mute Tab', onSelect: () => toggleMuted(id) },
         ...moveToSpaceMenu(spaces, spaceId, (target) => moveTabToSpace(id, target)),
+        { label: 'Move to New Window', onSelect: () => moveToNewWindow(id) },
         'separator',
         ...(tabsBelow([id]).length
           ? [{ label: 'Archive Tabs Below', onSelect: () => archiveTabsBelow([id]) }]

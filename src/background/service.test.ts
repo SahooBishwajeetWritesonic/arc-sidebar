@@ -508,6 +508,23 @@ describe('SidebarService', () => {
       expect(saved.session.lastActive).toMatchObject({ home: 1 });
     });
 
+    it('a tab moved to a window of its own keeps its space, which that window shows', async () => {
+      const { service, saved } = setup({
+        tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')],
+        model: twoSpaces(),
+      });
+      await service.handleIntent({ type: 'moveTabToSpace', tabId: 2, spaceId: 'work' });
+      await service.onTabDetached(2, 1);
+      await service.onTabAttached(2, 9);
+      expect(saved.session.orders['9']).toEqual([2]);
+      expect(saved.session.tabSpaces[2]).toBe('work');
+      expect(saved.session.activeSpaces['9']).toBe('work');
+      // Into a window that already shows a space, it joins that space.
+      await service.onTabDetached(2, 9);
+      await service.onTabAttached(2, 1);
+      expect(saved.session.tabSpaces[2]).toBe('home');
+    });
+
     it('opens a new tab in a space that has nothing to select', async () => {
       const { service, saved, calls } = setup({
         tabs: [tab(1, 'https://a.com')],

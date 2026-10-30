@@ -293,6 +293,10 @@ export function setSitePermission(
   return platform?.setSitePermission(url, kind, setting) ?? Promise.resolve();
 }
 
+export function moveToNewWindow(id: number) {
+  platform?.moveToNewWindow(id);
+}
+
 export function duplicateTab(id: number): Promise<void> {
   return platform?.duplicateTab(id) ?? Promise.resolve();
 }

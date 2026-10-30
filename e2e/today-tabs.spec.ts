@@ -165,3 +165,11 @@ test('a link or text dropped onto the sidebar opens as a new tab, or a search', 
   await expect(today(page)).toHaveCount(6);
   await expect(today(page).first()).toContainText('side panel docs');
 });
+
+test('Move to New Window takes the tab out of this window’s Today', async ({ page }) => {
+  await ready(page);
+  await today(page).filter({ hasText: 'Sidebar explorations' }).click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Move to New Window' }).click();
+  await expect(today(page)).toHaveCount(3);
+  await expect(today(page).filter({ hasText: 'Sidebar explorations' })).toHaveCount(0);
+});

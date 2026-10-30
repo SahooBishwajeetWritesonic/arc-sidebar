@@ -156,6 +156,10 @@ export const chromePlatform: Platform = {
       .catch(() => {});
   },
 
+  moveToNewWindow(tabId) {
+    void browser.windows.create({ tabId, focused: true });
+  },
+
   openInLittleArc(windowId, what) {
     void browser.runtime
       .sendMessage({ kind: 'peek:little', windowId, ...what } satisfies PeekMessage)

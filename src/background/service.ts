@@ -780,13 +780,24 @@ export class SidebarService {
     }
     if (Object.values(this.session.bindings).includes(tabId)) return;
     const key = String(newWindowId);
+    // A window of its own (Move to New Window) shows the tab's space; any
+    // other window takes the tab into the space it shows.
+    const own = this.session.tabSpaces[tabId];
+    const alone = Object.entries(this.details).every(
+      ([id, other]) => Number(id) === tabId || other.windowId !== newWindowId,
+    );
+    const fresh = alone && own !== undefined && this.hasSpace(own);
+    const space = fresh ? own : this.activeSpaceOf(newWindowId);
     this.writeSession({
       ...this.session,
       orders: {
         ...this.session.orders,
         [key]: withTabOnTop(this.session.orders[key] ?? [], tabId),
       },
-      tabSpaces: { ...this.session.tabSpaces, [tabId]: this.activeSpaceOf(newWindowId) },
+      tabSpaces: { ...this.session.tabSpaces, [tabId]: space },
+      activeSpaces: fresh
+        ? { ...this.session.activeSpaces, [key]: space }
+        : this.session.activeSpaces,
     });
   }
 

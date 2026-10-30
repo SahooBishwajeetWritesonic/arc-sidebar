@@ -118,6 +118,8 @@ export interface Platform {
   historyStep(tabId: number, by: -1 | 1, inNewTab?: boolean): void;
   reloadTab(tabId: number): void;
   stopLoading(tabId: number): void;
+  /** Arc's Move to New Window: the tab, as it is, in a new window. */
+  moveToNewWindow(tabId: number): void;
   /** Arc's Little Arc: the tab, or a page, in a small window of its own. */
   openInLittleArc(windowId: number, what: { tabId: number } | { url: string }): void;
 
