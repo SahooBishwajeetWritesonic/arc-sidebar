@@ -13,6 +13,7 @@ import {
   type TabDetails,
 } from '@/model/types';
 import type { SyncState } from '@/model/sync';
+import type { CalendarState } from './calendar';
 import type { CommandBarRequest } from './command-bar';
 import type { Recording } from './types';
 import type { FloatingKind } from './peek';
@@ -63,6 +64,11 @@ export const restoreSnapshotItem = storage.defineItem<RestoreSnapshot>('local:to
 /** Tabs using the microphone or camera (only those that are), by id. */
 export const recordingItem = storage.defineItem<Record<string, Recording>>('session:recording', {
   fallback: {},
+});
+
+/** Live Calendar's coming meetings, as last read from its feed; null while it's off. */
+export const calendarItem = storage.defineItem<CalendarState | null>('local:calendar', {
+  fallback: null,
 });
 
 /** Each tab's latest URL and title, for archiving tabs closed in Chrome. */

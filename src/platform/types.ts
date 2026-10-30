@@ -6,6 +6,7 @@ import type {
   SessionState,
   SidebarModel,
 } from '@/model/types';
+import type { CalendarState } from './calendar';
 import type { GmailInbox } from './gmail';
 
 /** The slice of a Chrome tab the sidebar renders. */
@@ -100,6 +101,8 @@ export interface Platform {
   loadBackups(): Promise<Backup[]>;
   /** Tabs using the microphone or camera, by id; told now and on each change. */
   onRecordingChange(listener: (recording: Record<number, Recording>) => void): () => void;
+  /** Live Calendar's meetings as last read (null while it's off); told now and on each change. */
+  onCalendarChange(listener: (calendar: CalendarState | null) => void): () => void;
   /** Gmail's unread mail for an account (/u/N/); null when it won't say (signed out). */
   gmailInbox(account: number): Promise<GmailInbox | null>;
   /** Why Arc Sync's last try didn't go through, if it didn't. */

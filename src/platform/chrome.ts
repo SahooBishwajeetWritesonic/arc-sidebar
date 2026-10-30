@@ -4,6 +4,7 @@ import { readMedia, runMedia } from './media-page';
 import {
   archiveItem,
   backupsItem,
+  calendarItem,
   modelItem,
   recordingItem,
   sessionItem,
@@ -107,6 +108,11 @@ export const chromePlatform: Platform = {
   onRecordingChange(listener) {
     void recordingItem.getValue().then(listener);
     return recordingItem.watch((recording) => listener(recording ?? {}));
+  },
+
+  onCalendarChange(listener) {
+    void calendarItem.getValue().then(listener);
+    return calendarItem.watch((calendar) => listener(calendar ?? null));
   },
 
   async sendIntent(intent) {

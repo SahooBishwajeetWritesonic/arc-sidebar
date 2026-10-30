@@ -1,6 +1,7 @@
 import { generateNKeysBetween } from 'fractional-indexing';
 import { SidebarService, type LiveTab } from '@/background/service';
 import type { PullRequest } from '@/model/live';
+import { feedOwner, meetingsIn, type CalendarState } from '@/platform/calendar';
 import type { GmailInbox } from '@/platform/gmail';
 import type { Synced, SyncState } from '@/model/sync';
 import { startCaptureTool } from '@/platform/capture-tool';
@@ -84,6 +85,9 @@ export class FakePlatform implements Platform {
   /** Tabs a test says are using the mic or camera (no page here asks for them). */
   private recording: Record<number, Recording> = {};
   private recordingListeners = new Set<(recording: Record<number, Recording>) => void>();
+  private calendar: CalendarState | null = null;
+  private calendarRead: string | null | undefined;
+  private calendarListeners = new Set<(calendar: CalendarState | null) => void>();
   /** Each tab's pages behind it and ahead of it, nearest last. */
   private pages = new Map<number, { back: Fixture[]; forward: Fixture[] }>();
   /** Titles seen per URL, so a reopened tab gets its page title back. */
@@ -112,6 +116,8 @@ export class FakePlatform implements Platform {
     pullRequests: (PullRequest & { mine: boolean })[] = [],
     /** What Gmail's feed says; null as if signed out. Tests may change it. */
     public inbox: GmailInbox | null = null,
+    /** Any Live Calendar address's feed at a time; an address with "missing" gives a 404. */
+    private calendarFeed: (now: number) => string = () => 'BEGIN:VCALENDAR\r\nEND:VCALENDAR',
   ) {
     this.history = [...history];
     this.github = { signedIn: true, open: [...pullRequests] };
@@ -127,6 +133,7 @@ export class FakePlatform implements Platform {
       loadModel: async () => this.model,
       saveModel: async (model) => {
         this.model = model;
+        this.readCalendar(model.settings.calendar?.feed ?? null);
         localStorage.setItem(MODEL_KEY, JSON.stringify(model));
         this.later(12, () => this.modelListeners.forEach((listener) => listener(model)));
       },
@@ -229,6 +236,37 @@ export class FakePlatform implements Platform {
     listener(this.recording);
     this.recordingListeners.add(listener);
     return () => void this.recordingListeners.delete(listener);
+  }
+
+  onCalendarChange(listener: (calendar: CalendarState | null) => void) {
+    listener(this.calendar);
+    this.calendarListeners.add(listener);
+    return () => void this.calendarListeners.delete(listener);
+  }
+
+  /** Like the background, reads Live Calendar's feed shortly after its address changes. */
+  private readCalendar(feed: string | null) {
+    if (feed === this.calendarRead) return;
+    this.calendarRead = feed;
+    this.later(300, () => {
+      const now = Date.now();
+      const hour = 3600_000;
+      this.calendar = !feed
+        ? null
+        : feed.includes('missing')
+          ? { feed, meetings: [], checkedAt: now, problem: 'No calendar at this address' }
+          : {
+              feed,
+              meetings: meetingsIn(
+                this.calendarFeed(now),
+                now - 12 * hour,
+                now + 36 * hour,
+                feedOwner(feed),
+              ),
+              checkedAt: now,
+            };
+      this.calendarListeners.forEach((listener) => listener(this.calendar));
+    });
   }
 
   /** As a page starting or stopping its mic or camera would, for tests. */
@@ -569,6 +607,7 @@ export class FakePlatform implements Platform {
    */
   private async seed() {
     await this.service.ready;
+    this.readCalendar(this.model.settings.calendar?.feed ?? null);
     if (Object.keys(this.model.items).length > 0) return;
     const [gmail, calendar, linear, github] = this.tabs;
     if (!gmail || !calendar || !linear || !github) return;

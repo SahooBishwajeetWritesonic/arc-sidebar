@@ -1,4 +1,5 @@
 import { browser, type Browser } from 'wxt/browser';
+import { refreshCalendar, watchCalendar } from '@/background/calendar';
 import { onCommandBarHello } from '@/background/command-bar';
 import { cropVisibleTab } from '@/background/crop';
 import { fetchGitHubJson, fetchPullRequests } from '@/background/github';
@@ -62,6 +63,7 @@ export default defineBackground(() => {
     loadModel: () => modelItem.getValue(),
     saveModel: (model) => {
       void buildTabMenu(model.spaces);
+      watchCalendar(model.settings.calendar);
       return modelItem.setValue(model);
     },
     loadSession: () => sessionItem.getValue(),
@@ -125,12 +127,18 @@ export default defineBackground(() => {
     onBindingsChanged(new Set(Object.values(service.snapshot().session.bindings))),
   );
 
-  // Chrome can drop alarms on restart, so recreate it each time the worker starts.
+  void service.ready.then(() => watchCalendar(service.snapshot().model.settings.calendar));
+
+  // Auto-archive, the Live Folder and Live Calendar: check every few minutes. Alarms
+  // can be dropped when Chrome restarts, so make sure it exists each time the worker starts.
   browser.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name !== AUTO_ARCHIVE_ALARM) return;
     void service.archiveStale();
     void service.takeSnapshot(); // also catches pages navigated since the last change
     void service.refreshLiveFolder();
+    void service.ready.then(() =>
+      refreshCalendar(service.snapshot().model.settings.calendar?.feed ?? null),
+    );
   });
   void browser.alarms.get(AUTO_ARCHIVE_ALARM).then((alarm) => {
     if (!alarm) void browser.alarms.create(AUTO_ARCHIVE_ALARM, { periodInMinutes: 5 });

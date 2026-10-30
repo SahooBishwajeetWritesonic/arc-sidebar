@@ -314,6 +314,15 @@ describe('settings, undo and archive', () => {
     expect(applyIntent(ninth, { type: 'setNumbering', favorites: false })).toBe(ninth);
   });
 
+  it('turns Live Calendar on and off', () => {
+    const calendar = { feed: 'https://example.com/cal.ics', itemId: 'p1', before: 5 };
+    const on = applyIntent(emptyModel(), { type: 'setLiveCalendar', calendar });
+    expect(on.settings.calendar).toEqual(calendar);
+    expect(
+      applyIntent(on, { type: 'setLiveCalendar', calendar: null }).settings.calendar,
+    ).toBeNull();
+  });
+
   it('sets how long until Today tabs archive', () => {
     const model = applyIntent(emptyModel(), { type: 'setArchiveAfter', archiveAfter: '7d' });
     expect(model.settings.archiveAfter).toBe('7d');

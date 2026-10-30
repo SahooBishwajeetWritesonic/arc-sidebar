@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { FakePlatform } from './fake-platform';
 import {
+  calendarFeed,
   edgeTabs,
   gmailInbox,
   historyPages,
@@ -22,6 +23,7 @@ const platform = new FakePlatform(
   historyPages,
   pullRequests,
   gmailInbox,
+  calendarFeed,
 );
 window.harnessPlatform = platform;
 

@@ -186,3 +186,59 @@ export const gmailInbox: GmailInbox = {
     ),
   ],
 };
+
+/** iCalendar's UTC form: 20261030T100000Z. */
+const icsTime = (at: number) => new Date(at).toISOString().replace(/[-:]|\.\d{3}/g, '');
+const icsDate = (at: number) => icsTime(at).slice(0, 8);
+
+/**
+ * Live Calendar's feed around `now`, as Google's private iCal address gives it: a call in 3 min,
+ * a daily standup, tomorrow's planning, and two left out (a declined lunch, an all-day offsite).
+ */
+export function calendarFeed(now: number): string {
+  const minute = 60_000;
+  const start = Math.floor(now / minute) * minute;
+  const event = (uid: string, from: number, minutes: number, ...lines: string[]) => [
+    'BEGIN:VEVENT',
+    `UID:${uid}@google.com`,
+    `DTSTART:${icsTime(from)}`,
+    `DTEND:${icsTime(from + minutes * minute)}`,
+    ...lines,
+    'END:VEVENT',
+  ];
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Google Inc//Google Calendar 70.9054//EN',
+    ...event(
+      'review',
+      start + 3 * minute,
+      30,
+      'SUMMARY:Design review',
+      'X-GOOGLE-CONFERENCE:https://meet.google.com/abc-defg-hij',
+      'DESCRIPTION:Join with Google Meet: https://meet.google.com/abc-defg-hij',
+    ),
+    ...event(
+      'standup',
+      start + 2 * 60 * minute - 24 * 60 * minute,
+      15,
+      'SUMMARY:Standup',
+      'RRULE:FREQ=DAILY',
+      'LOCATION:https://us02web.zoom.us/j/123456789',
+    ),
+    ...event(
+      'lunch',
+      start + 60 * minute,
+      45,
+      'SUMMARY:Team lunch',
+      'ATTENDEE;PARTSTAT=DECLINED:mailto:me@example.com',
+    ),
+    ...event('planning', start + 20 * 60 * minute, 60, 'SUMMARY:Sprint planning'),
+    'BEGIN:VEVENT',
+    'UID:offsite@google.com',
+    `DTSTART;VALUE=DATE:${icsDate(now)}`,
+    'SUMMARY:Offsite',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+}

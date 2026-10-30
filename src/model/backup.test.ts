@@ -67,6 +67,7 @@ describe('repairModel', () => {
         sync: true,
         numberFavorites: false,
         nineIsLast: false,
+        calendar: { feed: 'https://example.com/cal.ics', itemId: 'p', before: 10 },
       },
     };
     expect(repairModel(structuredClone(model))).toEqual(model);
@@ -147,6 +148,14 @@ describe('export files', () => {
     const model = withItems(pin('p'));
     const file = JSON.parse(JSON.stringify(toExportFile(model, new Date(0))));
     expect(parseExportFile(file)).toEqual(model);
+  });
+
+  it('leaves out Live Calendar’s secret address', () => {
+    const model = withItems(pin('p'));
+    const calendar = { feed: 'https://example.com/private.ics', itemId: 'p', before: 5 };
+    const file = toExportFile({ ...model, settings: { ...model.settings, calendar } }, new Date(0));
+    expect(JSON.stringify(file)).not.toContain('private.ics');
+    expect(parseExportFile(file).settings.calendar).toBeNull();
   });
 
   it('rejects other files', () => {

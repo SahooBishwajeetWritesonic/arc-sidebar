@@ -29,11 +29,12 @@ export interface ExportFile {
   model: SidebarModel;
 }
 
+/** Live Calendar's address stays out: anyone with it can read the calendar. */
 export const toExportFile = (model: SidebarModel, now: Date): ExportFile => ({
   app: 'arc-sidebar',
   format: 1,
   exportedAt: now.toISOString(),
-  model,
+  model: { ...model, settings: { ...model.settings, calendar: null } },
 });
 
 export class NotSidebarExportError extends Error {}
@@ -243,6 +244,15 @@ function repairSettings(raw: unknown): Settings {
   if (raw.sync === true) settings.sync = true;
   if (raw.numberFavorites === false) settings.numberFavorites = false;
   if (raw.nineIsLast === false) settings.nineIsLast = false;
+  const calendar = raw.calendar;
+  if (
+    isRecord(calendar) &&
+    isString(calendar.feed) &&
+    isString(calendar.itemId) &&
+    typeof calendar.before === 'number'
+  ) {
+    settings.calendar = { feed: calendar.feed, itemId: calendar.itemId, before: calendar.before };
+  }
   if (Array.isArray(raw.developerSites))
     settings.developerSites = raw.developerSites.filter(isString);
   if (Array.isArray(raw.routes)) {

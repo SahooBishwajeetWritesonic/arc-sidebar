@@ -46,6 +46,17 @@ export interface Settings {
   numberFavorites: boolean;
   /** ⌘9 goes to the last tab, as in Chrome; off, to the ninth. */
   nineIsLast: boolean;
+  calendar: LiveCalendar | null;
+}
+
+/** Arc's Live Calendar, read from the calendar's private iCal address. */
+export interface LiveCalendar {
+  /** The calendar's iCal address. Anyone with it can read the calendar, so it's never exported. */
+  feed: string;
+  /** The pinned tab or favorite it's shown for (Google Calendar, say). */
+  itemId: string;
+  /** How many minutes before a meeting its countdown shows. */
+  before: number;
 }
 
 /** One of Air Traffic Control's rules. The first that matches a new tab decides its space. */
@@ -67,6 +78,7 @@ export const defaultSettings = (): Settings => ({
   sync: false,
   numberFavorites: true,
   nineIsLast: true,
+  calendar: null,
 });
 
 export interface Space {
@@ -354,6 +366,7 @@ export type Intent =
   | { type: 'setSync'; on: boolean }
   /** How ⌘1–9 count; what's left out stays as it is. */
   | { type: 'setNumbering'; favorites?: boolean; nineIsLast?: boolean }
+  | { type: 'setLiveCalendar'; calendar: LiveCalendar | null }
   | { type: 'moveSpace'; spaceId: string; index: number }
   /**
    * Removes a space and its pins and folders (`itemIds`). Its Today tabs, and

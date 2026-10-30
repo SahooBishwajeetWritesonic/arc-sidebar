@@ -400,6 +400,9 @@ export function applyIntent(
       return { ...model, settings: { ...model.settings, ...next } };
     }
 
+    case 'setLiveCalendar':
+      return { ...model, settings: { ...model.settings, calendar: intent.calendar } };
+
     case 'moveSpace': {
       const from = model.spaces.findIndex((space) => space.id === intent.spaceId);
       if (from === -1) return model;
