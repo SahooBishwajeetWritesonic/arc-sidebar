@@ -24,6 +24,7 @@ import { Title, useDeveloperHost } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { iconMenu, SpaceGlyph } from '@/app/spaces/icons';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
+import { isCalendarPage } from '@/platform/calendar';
 import { gmailAccountOf } from '@/platform/gmail';
 import { GmailPreview } from './GmailPreview';
 import { CiBadge } from './LiveIcons';
@@ -31,7 +32,7 @@ import { FAVORITES_ID, FAVORITES_LIMIT, type PinItem } from '@/model/types';
 import { isSamePage } from '@/model/urls';
 import { useSidebar } from '@/state/sidebar';
 import { faviconFor, openInLittleArc, toggleMuted, useTabs } from '@/state/tabs';
-import { startEditing, stopEditing, useUi } from '@/state/ui';
+import { setLiveCalendarFor, startEditing, stopEditing, useUi } from '@/state/ui';
 
 const stop = (event: PointerEvent) => event.stopPropagation();
 
@@ -85,6 +86,9 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
               { label: 'Back to Pinned URL', onSelect: () => resetPin(itemId) },
               { label: 'Replace Pinned URL with Current', onSelect: () => replacePinUrl(itemId) },
             ]
+          : []),
+        ...(isCalendarPage(pin.url)
+          ? [{ label: 'Live Calendar…', onSelect: () => setLiveCalendarFor(itemId) }]
           : []),
         { label: 'New Folder with Tab', onSelect: () => newFolderWith(itemId) },
         ...(canFavorite

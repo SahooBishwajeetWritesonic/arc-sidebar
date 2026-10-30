@@ -16,6 +16,8 @@ interface UiState {
   clearingArchive: boolean;
   /** Air Traffic Control's rules are being edited. */
   editingRoutes: boolean;
+  /** The pin Live Calendar is being set up for. */
+  liveCalendarFor: string | null;
   /** The command bar is open inside the sidebar. */
   commandBar: boolean;
   /** The selected tab's address, when the URL bar opened the bar to edit it. */
@@ -32,6 +34,7 @@ export const useUi = create<UiState>()(() => ({
   restoring: null,
   clearingArchive: false,
   editingRoutes: false,
+  liveCalendarFor: null,
   commandBar: false,
   commandBarAddress: null,
 }));
@@ -43,6 +46,8 @@ export const setImporting = (importing: boolean) => useUi.setState({ importing }
 export const setRestoring = (restoring: Backup[] | null) => useUi.setState({ restoring });
 export const setClearingArchive = (clearingArchive: boolean) => useUi.setState({ clearingArchive });
 export const setEditingRoutes = (editingRoutes: boolean) => useUi.setState({ editingRoutes });
+export const setLiveCalendarFor = (liveCalendarFor: string | null) =>
+  useUi.setState({ liveCalendarFor });
 export const setCommandBar = (commandBar: boolean) =>
   useUi.setState({ commandBar, commandBarAddress: null });
 export const toggleCommandBar = () =>

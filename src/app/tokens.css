@@ -88,6 +88,9 @@
   --danger: light-dark(#d70015, #ff6961);
   --badge: light-dark(#ff3b30, #ff453a); /* a Mac's red notification badge */
   --copy-badge: light-dark(#28a745, #30d158); /* a Mac's green copy badge */
+  /* The highlight as text (a link, a meeting under way), lifted on dark to stay readable. */
+  --accent-ink: light-dark(#3970c5, #7aa7f0);
+  /* A Mac's privacy indicators: orange while the mic is on, green for the camera. */
   --recording-mic: light-dark(#ff9500, #ff9f0a);
   --recording-camera: light-dark(#28cd41, #30d158);
 

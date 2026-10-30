@@ -25,10 +25,12 @@ import { iconMenu, SpaceGlyph } from '@/app/spaces/icons';
 import { childrenOf, partnerOf } from '@/model/tree';
 import { FAVORITES_ID, type PinItem } from '@/model/types';
 import { isSamePage } from '@/model/urls';
+import { isCalendarPage } from '@/platform/calendar';
 import { gmailAccountOf } from '@/platform/gmail';
 import { useRecording } from '@/state/recording';
 import { useSidebar } from '@/state/sidebar';
 import { faviconFor, toggleMuted, useTabs } from '@/state/tabs';
+import { setLiveCalendarFor } from '@/state/ui';
 import styles from './favorites.module.css';
 import { unreadCount } from './unread';
 
@@ -168,6 +170,9 @@ function Tile({ favorite, partner, ref }: TileItem & { ref?: React.Ref<HTMLLIEle
             ]
           : []),
         changeIcon,
+        ...(isCalendarPage(favorite.url)
+          ? [{ label: 'Live Calendar…', onSelect: () => setLiveCalendarFor(favorite.id) }]
+          : []),
         { label: 'Move to Pinned', onSelect: () => unfavoriteToPinned(favorite.id) },
         'separator',
         ...(tab ? [{ label: 'Close Tab', onSelect: () => closePin(favorite.id) }] : []),

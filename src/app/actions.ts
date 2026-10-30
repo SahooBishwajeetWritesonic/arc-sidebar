@@ -19,13 +19,16 @@ import {
   type ArchiveAfter,
   type ArchiveEntry,
   type GitHubFilters,
+  type LiveCalendar,
   type Route,
   type SidebarModel,
   type SpaceIcon,
   type SpaceTheme,
 } from '@/model/types';
 import { isSamePage } from '@/model/urls';
+import { meetingToJoin, type Meeting } from '@/platform/calendar';
 import type { TabInfo } from '@/platform/types';
+import { calendarMeetings } from '@/state/calendar';
 import { dispatch, newId, useSidebar } from '@/state/sidebar';
 import {
   activateTab,
@@ -1007,6 +1010,22 @@ export function setNavButtons(on: boolean) {
 export function setSync(on: boolean) {
   dispatch({ type: 'setSync', on });
   if (on) showToast('Spaces now sync through Chrome');
+}
+
+/** Arc's Live Calendar, on a pinned tab and read from its iCal address; null turns it off. */
+export function setLiveCalendar(calendar: LiveCalendar | null) {
+  dispatch({ type: 'setLiveCalendar', calendar });
+}
+
+/** Opens a meeting's call in a new tab: Live Calendar's Join, or ⌃⌘J's live meeting. */
+export function joinMeeting(meeting?: Meeting) {
+  const { calendar } = useSidebar.getState().model.settings;
+  const target =
+    meeting ??
+    (calendar && meetingToJoin(calendarMeetings(), Date.now(), calendar.before * 60_000));
+  if (target?.joinUrl) openUrl(target.joinUrl);
+  else
+    showToast(calendar ? 'No meeting to join right now' : 'Turn on Live Calendar to join meetings');
 }
 
 /** How ⌘1–9 count: with or without Favorites, ⌘9 the last or the ninth. */

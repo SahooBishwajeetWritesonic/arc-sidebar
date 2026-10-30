@@ -27,6 +27,8 @@ import { BottomBar } from './chrome/BottomBar';
 import { SidebarCommandBar } from './command/SidebarCommandBar';
 import { UrlBar } from './chrome/UrlBar';
 import { DragLayer } from './drag/DragLayer';
+import { LiveCalendar } from './calendar/LiveCalendar';
+import { LiveCalendarDialog } from './calendar/LiveCalendarDialog';
 import { Favorites } from './favorites/Favorites';
 import { ImportDialog } from './import/ImportDialog';
 import { MediaTray } from './media/MediaTray';
@@ -257,6 +259,9 @@ export function App() {
                   <Boundary region="favorites" what="Favorites">
                     <Favorites />
                   </Boundary>
+                  <Boundary region="live calendar">
+                    <LiveCalendar />
+                  </Boundary>
                   <SpacePager looks={looks} />
                 </motion.div>
               )}
@@ -286,6 +291,7 @@ export function App() {
         <RestoreDialog />
         <ClearArchiveDialog />
         <RoutesDialog />
+        <LiveCalendarDialog />
       </Boundary>
       <Boundary region="command bar">
         <SidebarCommandBar />
