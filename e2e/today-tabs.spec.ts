@@ -138,3 +138,30 @@ test('⌘-clicking a pinned tab’s icon resets it and keeps the page in a new t
   await expect(today(page).first()).toContainText('Another page');
   await expect(today(page).first()).toHaveAttribute('data-selected', 'true');
 });
+
+test('a link or text dropped onto the sidebar opens as a new tab, or a search', async ({
+  page,
+}) => {
+  await ready(page);
+  const frame = page.frames().find((f) => f.url().includes('panel'))!;
+  const drop = async (type: string, value: string) => {
+    const data = await frame.evaluateHandle(
+      ([type, value]) => {
+        const transfer = new DataTransfer();
+        transfer.setData(type!, value!);
+        return transfer;
+      },
+      [type, value],
+    );
+    const sidebar = panel(page).locator('[data-sidebar]');
+    await sidebar.dispatchEvent('dragover', { dataTransfer: data });
+    await sidebar.dispatchEvent('drop', { dataTransfer: data });
+  };
+
+  await drop('text/uri-list', 'https://example.com/dropped');
+  await expect(today(page)).toHaveCount(5);
+  await expect(today(page).first()).toContainText('example.com');
+  await drop('text/plain', 'side panel docs');
+  await expect(today(page)).toHaveCount(6);
+  await expect(today(page).first()).toContainText('side panel docs');
+});

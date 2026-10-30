@@ -36,6 +36,7 @@ import { SpacePager } from './spaces/SpacePager';
 import { Backdrop } from './theme/Backdrop';
 import { useRootScheme, useSpaceLooks } from './theme/looks';
 import { ThemePicker } from './theme/ThemePicker';
+import { useTextDrop } from './drop';
 import { pasteAsNewTab } from './paste';
 import { dismissUndone } from './toast/toast';
 import { ToastLayer } from './toast/ToastLayer';
@@ -189,6 +190,7 @@ export function App() {
   const spaceId = useSidebar((state) => state.spaceId);
   const looks = useSpaceLooks();
   useRootScheme(ready ? looks[spaceId]?.scheme : undefined);
+  const drop = useTextDrop();
 
   return (
     // reducedMotion="user": with Reduce Motion on, movement is skipped and fades stay.
@@ -207,9 +209,13 @@ export function App() {
         )}
         <main
           data-sidebar
+          data-dropping={drop.dropping || undefined}
           className={styles.sidebar}
           onKeyDown={onKeyDown}
           onPointerDown={onPointerDown}
+          onDragOver={drop.onDragOver}
+          onDragLeave={drop.onDragLeave}
+          onDrop={drop.onDrop}
         >
           {ready && (
             <AnimatePresence mode="wait" initial={false}>

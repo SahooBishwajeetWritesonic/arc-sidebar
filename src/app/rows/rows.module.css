@@ -104,6 +104,11 @@
 /* Press: the pill shrinks to 0.99 over 70 ms (CSS `scale`, so it never fights
    Motion's transform on the row). Not when the press is on a button inside. */
 .row:active:not(:has(button:active, input)) .plate,
+/* A link or text dragged over the sidebar opens as a new tab, here. */
+[data-dropping] .newTab .plate {
+  background: var(--row-hover);
+}
+
 .newTab:active .plate {
   scale: 0.99;
 }
