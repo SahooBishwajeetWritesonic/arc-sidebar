@@ -209,3 +209,15 @@ test('dragging a space’s icon sideways reorders the spaces; so does ⌥← and
   await page.reload();
   await expect.poll(() => spaceOrder(page)).toEqual(['Work', 'Home', 'Space']);
 });
+
+test('the mouse’s back and forward buttons step through the spaces', async ({ page }) => {
+  await ready(page);
+  await newSpace(page, 'Work');
+  const shown = panel(page).locator('[data-active-page]');
+  await expect(shown).toHaveAttribute('aria-label', 'Work');
+  const sidebar = panel(page).locator('[data-sidebar]');
+  await sidebar.dispatchEvent('mouseup', { button: 3, bubbles: true });
+  await expect(shown).toHaveAttribute('aria-label', 'Space');
+  await sidebar.dispatchEvent('mouseup', { button: 4, bubbles: true });
+  await expect(shown).toHaveAttribute('aria-label', 'Work');
+});

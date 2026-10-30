@@ -1,5 +1,5 @@
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
-import type { KeyboardEvent, PointerEvent } from 'react';
+import type { KeyboardEvent, MouseEvent, PointerEvent } from 'react';
 import {
   clearToday,
   closePin,
@@ -61,6 +61,13 @@ function remove(kind: string, id: string) {
     if (pair) closePinnedSplit(pair);
     else closePin(id);
   }
+}
+
+/** The mouse's back and forward buttons step through the spaces, as in Arc. */
+function onMouseUp(event: MouseEvent<HTMLElement>) {
+  if (event.button !== 3 && event.button !== 4) return;
+  event.preventDefault();
+  if (useUi.getState().view === 'sidebar') switchSpaceBy(event.button === 3 ? -1 : 1);
 }
 
 function onKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -179,7 +186,7 @@ export function App() {
     // reducedMotion="user": with Reduce Motion on, movement is skipped and fades stay.
     <MotionConfig reducedMotion="user">
       {/* As in Arc, the sidebar scrolls above a transparent bottom bar. */}
-      <div className={styles.shell} data-swipe-area>
+      <div className={styles.shell} data-swipe-area onMouseUp={onMouseUp}>
         {ready && (
           <Boundary region="backdrop">
             <Backdrop looks={looks} />
