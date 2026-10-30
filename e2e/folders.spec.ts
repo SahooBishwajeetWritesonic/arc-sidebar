@@ -128,3 +128,28 @@ test('Paste URL as New Tab pins the copied address in the folder; ⌘⌥V opens 
   await expect(today).toHaveCount(5);
   await expect(today.first()).toContainText('example.org');
 });
+
+test('hovering a closed folder’s name previews its tabs; picking one peeks it out', async ({
+  page,
+}) => {
+  await ready(page);
+  await dev(page).click();
+  await expect.poll(() => rows(page)).not.toContain('pin:1:My issues · Linear');
+  await dev(page).locator('span[class*="title"]').hover();
+  const preview = panel(page).getByRole('list', { name: 'Tabs in Dev' });
+  await expect(preview).toBeVisible();
+  await expect(preview.getByRole('button')).toHaveText([
+    'My issues · Linear',
+    'Pull requests · GitHub',
+  ]);
+
+  const search = panel(page).getByRole('searchbox', { name: 'Search Dev' });
+  await search.click();
+  await search.fill('pull');
+  await expect(preview.getByRole('button')).toHaveText(['Pull requests · GitHub']);
+  await search.press('Enter');
+  await expect(preview).toHaveCount(0);
+  // The folder stays closed, with the tab picked peeking out under it.
+  await expect.poll(() => rows(page)).toContain('pin:1:Pull requests · Gi');
+  await expect(dev(page)).not.toHaveAttribute('data-open');
+});

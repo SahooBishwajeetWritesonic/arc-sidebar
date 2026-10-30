@@ -16,6 +16,7 @@ import { pasteIntoFolder } from '@/app/paste';
 import { Favicon } from '@/app/rows/Favicon';
 import { IconSwap } from '@/app/rows/IconSwap';
 import { InlineEdit } from '@/app/rows/InlineEdit';
+import { FolderPreview } from './FolderPreview';
 import { GitHubFolderIcon } from './LiveIcons';
 import type { MenuEntry } from '@/app/rows/RowMenu';
 import { Row } from '@/app/rows/Row';
@@ -139,6 +140,10 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
           }}
           onCancel={stopEditing}
         />
+      ) : folder.collapsed ? (
+        <FolderPreview folderId={itemId} name={folder.name}>
+          <Title text={folder.name} className={styles.folderTitle} />
+        </FolderPreview>
       ) : (
         <Title text={folder.name} className={styles.folderTitle} />
       )}
