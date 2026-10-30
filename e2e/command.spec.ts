@@ -160,9 +160,9 @@ test('Copy URL as Markdown puts the current tab’s link on the clipboard', asyn
   await expect(panel(page).getByRole('status')).toContainText('Copied URL as Markdown');
   // Only a focused page may read the clipboard.
   await page.getByRole('heading', { name: 'Arc Sidebar harness' }).click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-    '[Inbox (3) - Gmail](https://mail.google.com/mail/u/0/#inbox)',
-  );
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toBe('[Inbox (3) - Gmail](https://mail.google.com/mail/u/0/#inbox)');
 });
 
 test('Reset Space sends every pinned tab back to its pinned page', async ({ page }) => {
