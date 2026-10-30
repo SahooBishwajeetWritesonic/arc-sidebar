@@ -53,6 +53,14 @@ test('hovering the calendar lists the coming meetings, leaving out what isn’t 
   await expect(today(page).filter({ hasText: 'zoom.us' })).toHaveCount(1);
 });
 
+test('⌃⌘J joins the live meeting', async ({ page }) => {
+  await turnOn(page);
+  await expect(live(page)).toBeVisible();
+  await today(page).first().focus();
+  await page.keyboard.press('Control+Meta+KeyJ');
+  await expect(today(page).filter({ hasText: 'meet.google.com' })).toHaveCount(1);
+});
+
 test('an address with no calendar says so; Turn Off takes the meeting away', async ({ page }) => {
   await turnOn(page);
   await expect(live(page)).toBeVisible();

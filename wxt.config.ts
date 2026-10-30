@@ -64,6 +64,7 @@ export default defineConfig({
         [1, 2, 3, 4, 5, 6, 7, 8].map((n) => [`tab-${n}`, { description: `Go to tab ${n}` }]),
       ),
       'tab-9': { description: 'Go to the last tab (or tab 9, as set in the sidebar)' },
+      'join-meeting': { description: 'Join the meeting about to start (Live Calendar)' },
     },
     web_accessible_resources: [{ resources: ['command.html'], matches: ['<all_urls>'] }],
   },

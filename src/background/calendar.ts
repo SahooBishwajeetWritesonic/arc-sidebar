@@ -1,12 +1,15 @@
+import { browser } from 'wxt/browser';
 import type { LiveCalendar } from '@/model/types';
 import {
   NotACalendarError,
   feedOwner,
+  meetingToJoin,
   meetingsIn,
   type CalendarState,
   type Meeting,
 } from '@/platform/calendar';
 import { calendarItem } from '@/platform/storage-items';
+import { showNote } from './copy';
 
 /** Meetings are kept this far ahead, so a missed read or two still leaves the next ones… */
 const AHEAD_MS = 36 * 3600_000;
@@ -64,4 +67,18 @@ async function meetingsAt(feed: string, fetchFeed: typeof fetch, now: number): P
     if (error instanceof NotACalendarError) throw new Problem('This address isn’t a calendar');
     throw error;
   }
+}
+
+/** Arc's ⌃⌘J: opens the call of the meeting about to start, or under way. */
+export async function joinMeeting(
+  windowId: number,
+  calendar: LiveCalendar | null,
+  now = Date.now(),
+) {
+  if (!calendar) return showNote(windowId, 'Turn on Live Calendar to join meetings');
+  const state = await calendarItem.getValue();
+  const meetings = state?.feed === calendar.feed ? state.meetings : [];
+  const url = meetingToJoin(meetings, now, calendar.before * 60_000)?.joinUrl;
+  if (url) await browser.tabs.create({ windowId, url });
+  else await showNote(windowId, 'No meeting to join right now');
 }

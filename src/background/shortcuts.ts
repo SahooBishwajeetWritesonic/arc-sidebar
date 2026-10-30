@@ -1,6 +1,7 @@
 import { browser, type Browser } from 'wxt/browser';
 import type { Command } from '@/command/types';
 import type { CommandBarMessage } from '@/platform/command-bar';
+import { joinMeeting } from './calendar';
 import { commandLook, onCommandBarShortcut, onRecentTabsShortcut } from './command-bar';
 import { copyFromShortcut, showNote } from './copy';
 import { openLittleArc } from './peek';
@@ -55,6 +56,9 @@ async function run(command: string, tab: Browser.tabs.Tab, tabId: number, servic
       return inSidebarOr(windowId, { type: 'action', action: 'clearToday' }, () =>
         service.clearToday(windowId),
       );
+    case 'join-meeting':
+      await service.ready;
+      return joinMeeting(windowId, service.snapshot().model.settings.calendar);
     case 'next-space':
     case 'previous-space': {
       const next = command === 'next-space';

@@ -7,6 +7,7 @@ import {
   closeTodayTab,
   closeTodayTabs,
   goToNumbered,
+  joinMeeting,
   moveByKeyboard,
   pairOf,
   pressPin,
@@ -96,6 +97,13 @@ function onKeyDown(event: KeyboardEvent<HTMLElement>) {
   if (event.metaKey && event.altKey && event.code === 'KeyV') {
     event.preventDefault();
     void pasteAsNewTab();
+    return;
+  }
+
+  // Arc's ⌃⌘J: joins the meeting Live Calendar shows.
+  if (event.ctrlKey && event.metaKey && event.code === 'KeyJ') {
+    event.preventDefault();
+    joinMeeting();
     return;
   }
 

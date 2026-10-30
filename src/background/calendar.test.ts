@@ -3,6 +3,15 @@ import type { CalendarState } from '@/platform/calendar';
 
 const stored = vi.hoisted(() => ({
   calendar: null as CalendarState | null,
+  opened: [] as { windowId: number; url: string }[],
+  notes: [] as string[],
+}));
+vi.mock('wxt/browser', () => ({
+  browser: {
+    tabs: {
+      create: async (tab: { windowId: number; url: string }) => void stored.opened.push(tab),
+    },
+  },
 }));
 vi.mock('@/platform/storage-items', () => ({
   calendarItem: {
@@ -10,8 +19,11 @@ vi.mock('@/platform/storage-items', () => ({
     setValue: async (value: CalendarState | null) => void (stored.calendar = value),
   },
 }));
+vi.mock('./copy', () => ({
+  showNote: async (_windowId: number, text: string) => void stored.notes.push(text),
+}));
 
-const { refreshCalendar } = await import('./calendar');
+const { joinMeeting, refreshCalendar } = await import('./calendar');
 
 const FEED = 'https://calendar.google.com/calendar/ical/me%40example.com/private-abc/basic.ics';
 const NOW = Date.parse('2026-10-30T09:55:00Z');
@@ -32,7 +44,7 @@ const answer = (body: string, status = 200) =>
 
 describe('Live Calendar in the background', () => {
   beforeEach(() => {
-    Object.assign(stored, { calendar: null });
+    Object.assign(stored, { calendar: null, opened: [], notes: [] });
   });
 
   it('keeps the feed’s coming meetings, and forgets them when turned off', async () => {
@@ -56,5 +68,18 @@ describe('Live Calendar in the background', () => {
     }) as unknown as typeof fetch;
     await refreshCalendar('https://example.com/other.ics', offline, () => NOW);
     expect(stored.calendar).toMatchObject({ problem: 'Couldn’t reach the calendar', meetings: [] });
+  });
+
+  it('joins the meeting about to start, or says there’s none', async () => {
+    await refreshCalendar(FEED, answer(ICS), () => NOW);
+    const calendar = { feed: FEED, itemId: 'p1', before: 5 };
+    await joinMeeting(1, calendar, NOW);
+    expect(stored.opened).toEqual([{ windowId: 1, url: 'https://meet.google.com/abc-defg-hij' }]);
+    await joinMeeting(1, calendar, NOW - 3600_000);
+    await joinMeeting(1, null, NOW);
+    expect(stored.notes).toEqual([
+      'No meeting to join right now',
+      'Turn on Live Calendar to join meetings',
+    ]);
   });
 });
