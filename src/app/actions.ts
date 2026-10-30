@@ -415,10 +415,12 @@ export function clearToday() {
   }));
   forgetTabs(tabs.map((tab) => tab.id));
   dispatch({ type: 'archiveTabs', windowId, tabs: archived });
-  showToast(`Cleared ${tabs.length} ${tabs.length === 1 ? 'tab' : 'tabs'}`, {
-    label: 'Undo',
-    run: () => restoreArchived(archived.map(({ entry }) => entry.id)),
-  });
+  const count = (n: number) => `${n} ${n === 1 ? 'tab' : 'tabs'}`;
+  showToast(
+    `Cleared ${count(tabs.length)}`,
+    { label: 'Undo', run: () => restoreArchived(archived.map(({ entry }) => entry.id)) },
+    { key: 'clear', amount: tabs.length, message: (total) => `Cleared ${count(total)}` },
+  );
 }
 
 export function restoreArchived(entryIds: string[]) {
@@ -444,26 +446,30 @@ export function unpinWithUndo(itemId: string) {
   if (item?.kind !== 'pin') return;
   const tabId = session.bindings[itemId];
   unpin(itemId);
-  showToast(`Unpinned “${item.customTitle ?? item.title}”`, {
-    label: 'Undo',
-    run: () => {
-      if (tabId === undefined || !useTabs.getState().tabs.has(tabId)) {
-        dispatch({ type: 'restoreItems', items: [item] });
-        return;
-      }
-      dispatch({
-        type: 'pinTab',
-        itemId: item.id,
-        tabId,
-        spaceId: item.spaceId,
-        parentId: item.parentId,
-        order: item.order,
-        url: item.url,
-        title: item.title,
-      });
-      if (item.customTitle) renameItem(item.id, item.customTitle);
+  showToast(
+    `Unpinned “${item.customTitle ?? item.title}”`,
+    {
+      label: 'Undo',
+      run: () => {
+        if (tabId === undefined || !useTabs.getState().tabs.has(tabId)) {
+          dispatch({ type: 'restoreItems', items: [item] });
+          return;
+        }
+        dispatch({
+          type: 'pinTab',
+          itemId: item.id,
+          tabId,
+          spaceId: item.spaceId,
+          parentId: item.parentId,
+          order: item.order,
+          url: item.url,
+          title: item.title,
+        });
+        if (item.customTitle) renameItem(item.id, item.customTitle);
+      },
     },
-  });
+    { key: 'unpin', amount: 1, message: (total) => `Unpinned ${total} tabs` },
+  );
 }
 
 /** Downloads spaces, pins, folders and settings as JSON, for Restore Sidebar. */
@@ -582,10 +588,11 @@ export function deleteSpace(spaceId: string) {
     itemIds: items.map((item) => item.id),
     windowId,
   });
-  showToast(`Deleted “${space.name}”`, {
-    label: 'Undo',
-    run: () => dispatch({ type: 'restoreSpace', space, index, items }),
-  });
+  showToast(
+    `Deleted “${space.name}”`,
+    { label: 'Undo', run: () => dispatch({ type: 'restoreSpace', space, index, items }) },
+    { key: 'deleteSpace', amount: 1, message: (total) => `Deleted ${total} spaces` },
+  );
 }
 
 /** Moves a Today tab to another space; if it was selected, its neighbour takes over here. */

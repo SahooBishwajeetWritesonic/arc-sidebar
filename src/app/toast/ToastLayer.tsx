@@ -19,6 +19,12 @@ export function ToastLayer() {
 function ToastView({ toast }: { toast: Toast }) {
   const [paused, setPaused] = useState(false);
   const remaining = useRef(VISIBLE_MS);
+  const total = toast.merge?.total;
+
+  // Another Undo merged in: its time starts again.
+  useEffect(() => {
+    remaining.current = VISIBLE_MS;
+  }, [total]);
 
   useEffect(() => {
     if (paused) return;
@@ -28,7 +34,7 @@ function ToastView({ toast }: { toast: Toast }) {
       clearTimeout(timer);
       remaining.current -= Date.now() - started;
     };
-  }, [paused, toast.id]);
+  }, [paused, toast.id, total]);
 
   return (
     <motion.div
