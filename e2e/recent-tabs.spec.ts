@@ -53,6 +53,8 @@ test('W closes the highlighted tab; Esc closes the list and stays put', async ({
   await page.keyboard.down('Control');
   await page.keyboard.press('Period');
   await expect(highlighted(page)).toContainText('Sidebar explorations');
+  // Drawn before it's shown: W goes to the list only once it has the keyboard.
+  await expect(page.locator('iframe[title="Recent tabs"]')).toBeFocused();
   await page.keyboard.press('KeyW');
   await expect(row(page, 'Sidebar explorations')).toHaveCount(0);
   await expect(highlighted(page)).toContainText('Engineering Wiki');
