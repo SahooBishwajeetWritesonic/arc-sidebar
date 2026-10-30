@@ -24,7 +24,11 @@ async function ready(page: Page) {
 
 async function newSpace(page: Page, name: string) {
   await panel(page).getByRole('button', { name: 'More', exact: true }).click();
-  await panel(page).getByRole('menuitem', { name: 'New Space' }).click();
+  // In the + menu: a space's own menu, still fading out, has New Space too.
+  await panel(page)
+    .getByRole('menu', { name: 'More' })
+    .getByRole('menuitem', { name: 'New Space' })
+    .click();
   const field = panel(page).getByRole('textbox', { name: 'Name' });
   await field.fill(name);
   await field.press('Enter');
