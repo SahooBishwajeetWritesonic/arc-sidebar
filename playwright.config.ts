@@ -6,6 +6,9 @@ export default defineConfig({
   testDir: 'e2e',
   fullyParallel: false,
   workers: 1,
+  // The harness loads unbundled from Vite, and on a busy Mac that alone can
+  // take past the default 5 s; waits get longer rather than retried.
+  expect: { timeout: 10_000 },
   use: {
     baseURL: 'http://localhost:5199',
     channel: 'chrome',
