@@ -24,6 +24,7 @@ import { Title, useDeveloperHost } from '@/app/rows/Title';
 import styles from '@/app/rows/rows.module.css';
 import { iconMenu, SpaceGlyph } from '@/app/spaces/icons';
 import { moveToSpaceMenu } from '@/app/spaces/move-menu';
+import { CalendarPreview } from '@/app/calendar/CalendarPreview';
 import { isCalendarPage } from '@/platform/calendar';
 import { gmailAccountOf } from '@/platform/gmail';
 import { GmailPreview } from './GmailPreview';
@@ -172,7 +173,9 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
           account={pin.live ? undefined : gmailAccountOf(pin.url)}
           anchor="[data-nav-row]"
         >
-          <Title text={title} subtitle={developerHost} />
+          <CalendarPreview itemId={itemId} anchor="[data-nav-row]">
+            <Title text={title} subtitle={developerHost} />
+          </CalendarPreview>
         </GmailPreview>
       )}
       <RecordingBadge tabIds={[tab?.id]} />

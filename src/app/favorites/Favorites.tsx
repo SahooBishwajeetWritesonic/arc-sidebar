@@ -19,6 +19,7 @@ import { beginPress, isPress, useDrag } from '@/app/drag/drag';
 import { fade, spring } from '@/app/motion';
 import { Favicon } from '@/app/rows/Favicon';
 import { RecordingBadge } from '@/app/rows/RecordingBadge';
+import { CalendarPreview } from '@/app/calendar/CalendarPreview';
 import { GmailPreview } from '@/app/pinned/GmailPreview';
 import { RowMenu, type MenuEntry } from '@/app/rows/RowMenu';
 import { iconMenu, SpaceGlyph } from '@/app/spaces/icons';
@@ -200,87 +201,96 @@ function Tile({ favorite, partner, ref }: TileItem & { ref?: React.Ref<HTMLLIEle
           anchor="[data-favorites-grid]"
           triggerClassName={styles.previewTrigger}
         >
-          <button
-            type="button"
-            className={styles.tile}
-            data-selected={selected || undefined}
-            data-favorite-id={favorite.id}
-            data-split={pair ? true : undefined}
-            data-unread={unread ? true : undefined}
-            aria-label={title}
-            aria-pressed={selected}
-            title={title}
-            // Open tabs select on press; an unloaded favorite opens on a tap, so a
-            // drag never opens it. A split opens both, side by side.
-            onPointerDown={(event) => {
-              if (!isPress(event)) return;
-              const ready = pair
-                ? tab !== undefined && partnerTab !== undefined
-                : tab !== undefined;
-              if (ready) pressPin(favorite.id);
-              beginPress(event, {
-                source: { kind: 'favorite', itemId: favorite.id, bound: ready },
-                ghost: () => ({
-                  title,
-                  faviconUrl: faviconFor(tab?.url ?? favorite.url),
-                  folder: false,
-                  icon: favorite.icon,
-                }),
-                onTap: ready ? undefined : () => pressPin(favorite.id),
-                onDrop: dropOn,
-              });
-            }}
-            onMouseDown={(event) => event.button === 1 && event.preventDefault()}
-            onAuxClick={(event) =>
-              event.button === 1 && (pair ? closePinnedSplit(pair) : closePin(favorite.id))
-            }
-            onDoubleClick={() => awayFromPin && resetPin(favorite.id)}
+          <CalendarPreview
+            itemId={favorite.id}
+            anchor="[data-favorites-grid]"
+            triggerClassName={styles.previewTrigger}
           >
-            {favorite.icon ? (
-              <SpaceGlyph icon={favorite.icon} />
-            ) : partner ? (
-              <span className={styles.split}>
+            <button
+              type="button"
+              className={styles.tile}
+              data-selected={selected || undefined}
+              data-favorite-id={favorite.id}
+              data-split={pair ? true : undefined}
+              data-unread={unread ? true : undefined}
+              aria-label={title}
+              aria-pressed={selected}
+              title={title}
+              // Open tabs select on press; an unloaded favorite opens on a tap, so a
+              // drag never opens it. A split opens both, side by side.
+              onPointerDown={(event) => {
+                if (!isPress(event)) return;
+                const ready = pair
+                  ? tab !== undefined && partnerTab !== undefined
+                  : tab !== undefined;
+                if (ready) pressPin(favorite.id);
+                beginPress(event, {
+                  source: { kind: 'favorite', itemId: favorite.id, bound: ready },
+                  ghost: () => ({
+                    title,
+                    faviconUrl: faviconFor(tab?.url ?? favorite.url),
+                    folder: false,
+                    icon: favorite.icon,
+                  }),
+                  onTap: ready ? undefined : () => pressPin(favorite.id),
+                  onDrop: dropOn,
+                });
+              }}
+              onMouseDown={(event) => event.button === 1 && event.preventDefault()}
+              onAuxClick={(event) =>
+                event.button === 1 && (pair ? closePinnedSplit(pair) : closePin(favorite.id))
+              }
+              onDoubleClick={() => awayFromPin && resetPin(favorite.id)}
+            >
+              {favorite.icon ? (
+                <SpaceGlyph icon={favorite.icon} />
+              ) : partner ? (
+                <span className={styles.split}>
+                  <Favicon
+                    url={tab?.url ?? favorite.url}
+                    loading={!!tab?.loading && !tab.favIconUrl}
+                  />
+                  <span className={styles.splitLine} aria-hidden />
+                  <Favicon
+                    url={partnerTab?.url ?? partner.url}
+                    loading={!!partnerTab?.loading && !partnerTab.favIconUrl}
+                  />
+                </span>
+              ) : (
                 <Favicon
                   url={tab?.url ?? favorite.url}
                   loading={!!tab?.loading && !tab.favIconUrl}
                 />
-                <span className={styles.splitLine} aria-hidden />
-                <Favicon
-                  url={partnerTab?.url ?? partner.url}
-                  loading={!!partnerTab?.loading && !partnerTab.favIconUrl}
-                />
-              </span>
-            ) : (
-              <Favicon url={tab?.url ?? favorite.url} loading={!!tab?.loading && !tab.favIconUrl} />
-            )}
-            {unread && (
-              <span className={styles.unread} aria-hidden>
-                {unread}
-              </span>
-            )}
-            {recording ? (
-              <RecordingBadge
-                tabIds={[tab?.id, partnerTab?.id]}
-                size={10}
-                className={styles.badge}
-              />
-            ) : (
-              sounding && (
-                <span
-                  className={styles.badge}
-                  role="button"
-                  aria-label={sounding.muted ? 'Unmute' : 'Mute'}
-                  onPointerDown={stop}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    toggleMuted(sounding.id);
-                  }}
-                >
-                  {sounding.muted ? <VolumeX size={10} /> : <Volume2 size={10} />}
+              )}
+              {unread && (
+                <span className={styles.unread} aria-hidden>
+                  {unread}
                 </span>
-              )
-            )}
-          </button>
+              )}
+              {recording ? (
+                <RecordingBadge
+                  tabIds={[tab?.id, partnerTab?.id]}
+                  size={10}
+                  className={styles.badge}
+                />
+              ) : (
+                sounding && (
+                  <span
+                    className={styles.badge}
+                    role="button"
+                    aria-label={sounding.muted ? 'Unmute' : 'Mute'}
+                    onPointerDown={stop}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleMuted(sounding.id);
+                    }}
+                  >
+                    {sounding.muted ? <VolumeX size={10} /> : <Volume2 size={10} />}
+                  </span>
+                )
+              )}
+            </button>
+          </CalendarPreview>
         </GmailPreview>
       </RowMenu>
     </motion.li>

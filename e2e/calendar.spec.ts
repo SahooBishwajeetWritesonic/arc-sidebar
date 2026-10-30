@@ -35,6 +35,24 @@ test('Live Calendar counts down to the next meeting, and Join opens its call', a
   await expect(today(page).filter({ hasText: 'meet.google.com' })).toHaveCount(1);
 });
 
+test('hovering the calendar lists the coming meetings, leaving out what isn’t one', async ({
+  page,
+}) => {
+  await turnOn(page);
+  await expect(live(page)).toBeVisible();
+  await calendar(page).locator('span[class*="title"]').first().hover();
+  const card = panel(page).getByRole('button', { name: 'Join Standup' });
+  await expect(card).toBeVisible();
+  for (const title of ['Design review', 'Standup', 'Sprint planning']) {
+    await expect(panel(page).getByRole('listitem').filter({ hasText: title })).toHaveCount(1);
+  }
+  for (const title of ['Team lunch', 'Offsite']) {
+    await expect(panel(page).getByRole('listitem').filter({ hasText: title })).toHaveCount(0);
+  }
+  await card.click();
+  await expect(today(page).filter({ hasText: 'zoom.us' })).toHaveCount(1);
+});
+
 test('an address with no calendar says so; Turn Off takes the meeting away', async ({ page }) => {
   await turnOn(page);
   await expect(live(page)).toBeVisible();
