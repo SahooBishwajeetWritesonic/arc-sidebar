@@ -28,6 +28,7 @@ import {
   type SidebarModel,
   type TabDetails,
 } from '@/model/types';
+import { numberedAt, type Numbered } from '@/model/numbered';
 import { routeFor } from '@/model/routes';
 import { isSamePage, isSamePath } from '@/model/urls';
 import {
@@ -474,6 +475,27 @@ export class SidebarService {
     const order = this.sidebarOrder(windowId, tabId);
     const next = order[order.indexOf(tabId) + delta];
     if (next !== undefined) await this.deps.activateTab(next);
+  }
+
+  /** Arc's ⌘1–9: the Nth of the window's sidebar tabs, as the sidebar counts them. */
+  async numberedTab(windowId: number, selected: number, n: number): Promise<Numbered | undefined> {
+    await this.ready;
+    // Which tabs are split, which only Chrome knows.
+    const splits = new Map((await this.deps.queryTabs()).map((tab) => [tab.id, tab.splitViewId]));
+    const spaceId = this.activeSpaceOf(windowId);
+    return numberedAt(
+      n,
+      this.model,
+      spaceId,
+      (item) => this.session.bindings[item.id] === selected,
+      this.todayOf(windowId, spaceId),
+      (tabId) => splits.get(tabId),
+    );
+  }
+
+  async selectNumbered(windowId: number, target: Numbered) {
+    if (target.kind === 'tab') await this.deps.activateTab(target.tabId);
+    else await this.handleIntent({ type: 'openPin', itemId: target.itemId, windowId });
   }
 
   /** Arc's ⌘D: pins the tab, or unpins it back to the top of Today. */

@@ -6,6 +6,7 @@ import {
   closePinnedSplit,
   closeTodayTab,
   closeTodayTabs,
+  goToNumbered,
   moveByKeyboard,
   pairOf,
   pressPin,
@@ -102,6 +103,19 @@ function onKeyDown(event: KeyboardEvent<HTMLElement>) {
   if (event.metaKey && !event.shiftKey && event.key.toLowerCase() === 'z' && !typing) {
     event.preventDefault();
     if (undoLast()) dismissUndone();
+    return;
+  }
+
+  // Arc's ⌘1–9: the Nth tab in the sidebar, the last for 9.
+  if (
+    event.metaKey &&
+    !event.ctrlKey &&
+    !event.altKey &&
+    !event.shiftKey &&
+    /^Digit[1-9]$/.test(event.code)
+  ) {
+    goToNumbered(Number(event.code.slice(5)));
+    event.preventDefault();
     return;
   }
 

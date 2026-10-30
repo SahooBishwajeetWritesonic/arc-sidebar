@@ -60,6 +60,10 @@ export default defineConfig({
       ...Object.fromEntries(
         [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => [`space-${n}`, { description: `Go to space ${n}` }]),
       ),
+      ...Object.fromEntries(
+        [1, 2, 3, 4, 5, 6, 7, 8].map((n) => [`tab-${n}`, { description: `Go to tab ${n}` }]),
+      ),
+      'tab-9': { description: 'Go to the last tab' },
     },
     web_accessible_resources: [{ resources: ['command.html'], matches: ['<all_urls>'] }],
   },

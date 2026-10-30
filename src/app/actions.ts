@@ -3,6 +3,7 @@ import type { ArcSidebar } from '@/import/arc';
 import { planImport, type ImportChoice } from '@/import/plan';
 import { toExportFile } from '@/model/backup';
 import { githubFolderOf } from '@/model/live';
+import { numberedAt } from '@/model/numbered';
 import {
   childrenOf,
   descendants,
@@ -60,6 +61,22 @@ export function pressPin(itemId: string) {
   } else {
     dispatch({ type: 'openPin', itemId, windowId: useSidebar.getState().windowId! });
   }
+}
+
+/** Arc's ⌘1–9: the Nth sidebar tab (⌘9 the last), opening it if it's a pin. */
+export function goToNumbered(n: number) {
+  const { model, session, spaceId } = useSidebar.getState();
+  const state = useTabs.getState();
+  const target = numberedAt(
+    n,
+    model,
+    spaceId,
+    (item) => session.bindings[item.id] === state.activeId,
+    selectTodayIds(state, spaceId),
+    (tabId) => state.tabs.get(tabId)?.splitViewId,
+  );
+  if (target?.kind === 'pin') pressPin(target.itemId);
+  else if (target) activateTab(target.tabId);
 }
 
 // Pinned splits: two pins that name each other (model/tree.ts partnerOf).

@@ -959,6 +959,24 @@ describe('SidebarService', () => {
       ]);
     });
 
+    it('numbers tabs for ⌘1–9 as the sidebar shows them: a split once, 9 the last', async () => {
+      const { service, calls } = setup({
+        tabs: [
+          tab(1, 'https://1.com'),
+          tab(2, 'https://2.com', 2, { splitViewId: 7 }),
+          tab(3, 'https://3.com', 3, { splitViewId: 7 }),
+          tab(4, 'https://4.com'),
+        ],
+      });
+      await service.pinTabs([1]);
+      expect(await service.numberedTab(1, 4, 1)).toEqual({ kind: 'pin', itemId: 'id0' });
+      expect(await service.numberedTab(1, 4, 2)).toEqual({ kind: 'tab', tabId: 2 });
+      expect(await service.numberedTab(1, 4, 3)).toEqual({ kind: 'tab', tabId: 4 });
+      expect(await service.numberedTab(1, 4, 9)).toEqual({ kind: 'tab', tabId: 4 });
+      await service.selectNumbered(1, { kind: 'pin', itemId: 'id0' });
+      expect(calls).toContain('activate 1');
+    });
+
     it('pins the current tab, and unpins it back to the top of Today', async () => {
       const { service, saved } = setup({
         tabs: [tab(1, 'https://a.com'), tab(2, 'https://b.com')],

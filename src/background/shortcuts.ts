@@ -65,6 +65,18 @@ async function run(command: string, tab: Browser.tabs.Tab, tabId: number, servic
       );
     }
   }
+  // Arc's ⌘1–9: Chrome won't suggest its own keys; set them at chrome://extensions/shortcuts.
+  const tabN = /^tab-([1-9])$/.exec(command);
+  if (tabN) {
+    const target = await service.numberedTab(windowId, tabId, Number(tabN[1]));
+    if (!target) return;
+    // In the sidebar when it's open, so a pinned split opens side by side.
+    const chosen: Command =
+      target.kind === 'pin'
+        ? { type: 'openPin', itemId: target.itemId }
+        : { type: 'switchToTab', tabId: target.tabId };
+    return inSidebarOr(windowId, chosen, () => service.selectNumbered(windowId, target));
+  }
   const nth = /^space-([1-9])$/.exec(command);
   if (nth) {
     await service.ready;

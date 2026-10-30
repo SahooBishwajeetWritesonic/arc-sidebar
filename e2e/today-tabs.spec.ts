@@ -173,3 +173,17 @@ test('Move to New Window takes the tab out of this window’s Today', async ({ p
   await expect(today(page)).toHaveCount(3);
   await expect(today(page).filter({ hasText: 'Sidebar explorations' })).toHaveCount(0);
 });
+
+test('⌘1–9 select the sidebar’s tabs top to bottom, ⌘9 the last', async ({ page }) => {
+  await ready(page);
+  await today(page).first().focus();
+  await page.keyboard.press('Meta+1');
+  await expect(pins(page).first()).toHaveAttribute('data-selected');
+  // Gmail, Calendar, then Dev's Linear and GitHub: the folder itself isn't counted.
+  await page.keyboard.press('Meta+4');
+  await expect(pins(page).filter({ hasText: 'GitHub' })).toHaveAttribute('data-selected');
+  await page.keyboard.press('Meta+5');
+  await expect(today(page).first()).toHaveAttribute('data-selected');
+  await page.keyboard.press('Meta+9');
+  await expect(today(page).last()).toHaveAttribute('data-selected');
+});
