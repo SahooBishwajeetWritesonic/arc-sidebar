@@ -144,3 +144,53 @@ test('Alt+Down moves a pinned tab with the keyboard', async ({ page }) => {
     .toEqual(['pin:0:Google Calendar - ', 'pin:0:Inbox (3) - Gmail']);
   await expect(row(page, 'Inbox (3)')).toBeFocused();
 });
+
+/** Presses a row and moves just past the drag threshold, leaving the pointer down. */
+async function pickUp(page: Page, title: string) {
+  const source = (await row(page, title).boundingBox())!;
+  await page.mouse.move(source.x + 60, source.y + source.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(source.x + 60, source.y + source.height / 2 - 8, { steps: 4 });
+}
+
+const todayTitles = (page: Page) =>
+  rows(page).then((all) => all.filter((r) => r.startsWith('tab:')).map((r) => r.slice(6)));
+
+test('a tab Chrome opens mid-drag doesn’t throw the drop off', async ({ page }) => {
+  await ready(page);
+  await pickUp(page, 'Lo-fi beats');
+  // A new tab lands on top of Today, pushing the rows down under the pointer.
+  await page.evaluate(() =>
+    window.harnessPlatform.openTab(
+      { title: 'Opened mid-drag', url: 'https://example.com/' },
+      false,
+    ),
+  );
+  await expect(row(page, 'Opened mid-drag')).toBeVisible();
+  await page.waitForTimeout(300); // the rows slide into place
+  const wiki = (await row(page, 'Engineering Wiki').boundingBox())!;
+  await page.mouse.move(wiki.x + 60, wiki.y + wiki.height * 0.1, { steps: 4 });
+  await page.mouse.up();
+  await expect
+    .poll(() => todayTitles(page))
+    .toEqual([
+      'Opened mid-drag',
+      'Lo-fi beats to cod',
+      'Engineering Wiki',
+      'Sidebar exploratio',
+      'chrome.sidePanel |',
+    ]);
+});
+
+test('a drag ends when Chrome closes the tab being dragged', async ({ page }) => {
+  await ready(page);
+  const id = Number(await row(page, 'Lo-fi beats').getAttribute('data-row-id'));
+  await pickUp(page, 'Lo-fi beats');
+  const calendar = (await row(page, 'Google Calendar').boundingBox())!;
+  await page.mouse.move(calendar.x + 60, calendar.y + calendar.height * 0.25, { steps: 6 });
+  await expect(panel(page).locator('[data-drop-line]')).toBeVisible();
+  await page.evaluate((tabId) => window.harnessPlatform.closeTab(tabId), id);
+  await expect(panel(page).locator('[data-drop-line]')).toHaveCount(0);
+  await page.mouse.up();
+  await expect(panel(page).locator('[data-active-page] [data-nav-row="pin"]')).toHaveCount(4);
+});

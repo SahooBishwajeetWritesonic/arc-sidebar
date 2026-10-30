@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { isWithin } from '@/model/tree';
 import { FAVORITES_LIMIT, type SpaceIcon } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
+import { useTabs } from '@/state/tabs';
 import {
   findTarget,
   type DragSource,
@@ -32,6 +33,8 @@ export const useDrag = create<{
 const THRESHOLD = 4;
 /** Distance from the sidebar's top or bottom edge where it starts scrolling. */
 const SCROLL_EDGE = 40;
+/** Rows changed mid-drag have finished sliding by then (spring.row: ~105 ms). */
+const SETTLE_MS = 150;
 
 type GhostContent = Omit<Ghost, 'width'>;
 
@@ -52,6 +55,9 @@ interface Tracking {
   slots: Slot[];
   favorites?: FavoritesZone;
   scrollFrame: number;
+  /** Stops watching for rows changing under the drag. */
+  unwatch?: () => void;
+  remeasure?: ReturnType<typeof setTimeout>;
 }
 
 let tracking: Tracking | null = null;
@@ -121,6 +127,44 @@ function start(t: Tracking) {
   t.sidebar.dataset.dragging = '';
   const width = t.row.getBoundingClientRect().width;
   useDrag.setState({ source: t.source, ghost: { ...t.ghost(), width }, target: null });
+  const unwatchTabs = useTabs.subscribe(onRowsChanged);
+  const unwatchSidebar = useSidebar.subscribe(onRowsChanged);
+  t.unwatch = () => {
+    unwatchTabs();
+    unwatchSidebar();
+  };
+}
+
+/**
+ * Tabs or the sidebar changed mid-drag: end the drag if its source is gone, else re-measure
+ * once rows have slid into place, so the drop lands where the line shows.
+ */
+function onRowsChanged() {
+  const t = tracking;
+  if (!t?.started) return;
+  if (!exists(t.source)) return cancel();
+  clearTimeout(t.remeasure);
+  t.remeasure = setTimeout(() => {
+    if (tracking !== t) return;
+    t.slots = measure(t.sidebar);
+    t.favorites = measureFavorites(t.sidebar);
+    updateTarget();
+  }, SETTLE_MS);
+}
+
+function exists(source: DragSource): boolean {
+  const { tabs } = useTabs.getState();
+  const { items } = useSidebar.getState().model;
+  switch (source.kind) {
+    case 'tab':
+      return tabs.has(source.tabId);
+    case 'split':
+      return source.tabIds.every((id) => tabs.has(id));
+    case 'many':
+      return source.tabIds.every((id) => tabs.has(id)) && source.itemIds.every((id) => items[id]);
+    default:
+      return items[source.itemId] !== undefined;
+  }
 }
 
 /** The top of the sidebar's content in viewport coordinates (it scrolls). */
@@ -256,6 +300,8 @@ function cancel() {
 function finish() {
   if (!tracking) return;
   cancelAnimationFrame(tracking.scrollFrame);
+  clearTimeout(tracking.remeasure);
+  tracking.unwatch?.();
   delete tracking.sidebar.dataset.dragging;
   tracking = null;
   window.removeEventListener('pointermove', onMove);
