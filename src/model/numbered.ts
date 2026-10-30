@@ -6,8 +6,8 @@ import { FAVORITES_ID, type Item, type SidebarModel } from './types';
 export type Numbered = { kind: 'pin'; itemId: string } | { kind: 'tab'; tabId: number };
 
 /**
- * Arc's ⌘1–9: tabs numbered top to bottom as shown (Favorites, Pinned, Today), a split
- * counting once. ⌘9 is the last, as in Chrome.
+ * Arc's ⌘1–9: tabs numbered as shown (Favorites, Pinned, Today), a split counting once.
+ * ⌘9 is the last, as in Chrome; settings can skip Favorites or make ⌘9 the ninth.
  */
 export function numberedAt(
   n: number,
@@ -17,10 +17,13 @@ export function numberedAt(
   today: readonly number[],
   splitOf: (tabId: number) => number | undefined,
 ): Numbered | undefined {
-  const favorites = pairUp(
-    model,
-    childrenOf(model, FAVORITES_ID, null).map((item) => ({ item, depth: 0 })),
-  );
+  const { numberFavorites, nineIsLast } = model.settings;
+  const favorites = numberFavorites
+    ? pairUp(
+        model,
+        childrenOf(model, FAVORITES_ID, null).map((item) => ({ item, depth: 0 })),
+      )
+    : [];
   const pins = [...favorites, ...pinnedRows(model, spaceId, isActive)].filter(
     ({ item }) => item.kind === 'pin',
   );
@@ -31,5 +34,5 @@ export function numberedAt(
       tabId: row.kind === 'tab' ? row.id : row.ids[0],
     })),
   ];
-  return n === 9 ? all.at(-1) : all[n - 1];
+  return n === 9 && nineIsLast ? all.at(-1) : all[n - 1];
 }

@@ -241,6 +241,8 @@ function repairSettings(raw: unknown): Settings {
   if (raw.githubFolder === false) settings.githubFolder = false;
   if (raw.navButtons === true) settings.navButtons = true;
   if (raw.sync === true) settings.sync = true;
+  if (raw.numberFavorites === false) settings.numberFavorites = false;
+  if (raw.nineIsLast === false) settings.nineIsLast = false;
   if (Array.isArray(raw.developerSites))
     settings.developerSites = raw.developerSites.filter(isString);
   if (Array.isArray(raw.routes)) {

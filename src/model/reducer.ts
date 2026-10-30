@@ -390,6 +390,16 @@ export function applyIntent(
       if (model.settings.sync === intent.on) return model;
       return { ...model, settings: { ...model.settings, sync: intent.on } };
 
+    case 'setNumbering': {
+      const { numberFavorites, nineIsLast } = model.settings;
+      const next = {
+        numberFavorites: intent.favorites ?? numberFavorites,
+        nineIsLast: intent.nineIsLast ?? nineIsLast,
+      };
+      if (next.numberFavorites === numberFavorites && next.nineIsLast === nineIsLast) return model;
+      return { ...model, settings: { ...model.settings, ...next } };
+    }
+
     case 'moveSpace': {
       const from = model.spaces.findIndex((space) => space.id === intent.spaceId);
       if (from === -1) return model;

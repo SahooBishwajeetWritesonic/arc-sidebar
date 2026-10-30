@@ -54,6 +54,15 @@ describe('numberedAt', () => {
     expect(at(7, model, splitOf)).toEqual({ kind: 'tab', tabId: 13 });
   });
 
+  it('can leave Favorites out, and make 9 the ninth', () => {
+    const settings = { ...model.settings, numberFavorites: false, nineIsLast: false };
+    const set = { ...model, settings };
+    expect(at(1, set)).toEqual({ kind: 'pin', itemId: 'p2' });
+    expect(at(7, set)).toEqual({ kind: 'tab', tabId: 13 });
+    expect(at(9, set)).toBeUndefined();
+    expect(at(9, { ...model, settings: { ...model.settings, nineIsLast: false } })).toBeUndefined();
+  });
+
   it('skips what a closed folder or collapsed Pinned hides', () => {
     const closed = applyIntent(model, {
       type: 'setFolderCollapsed',

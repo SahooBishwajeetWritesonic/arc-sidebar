@@ -306,6 +306,14 @@ describe('settings, undo and archive', () => {
     expect(applyIntent(on, { type: 'setNavButtons', on: true })).toBe(on);
   });
 
+  it('sets how ⌘1–9 count, leaving what isn’t given', () => {
+    const model = applyIntent(emptyModel(), { type: 'setNumbering', favorites: false });
+    expect(model.settings).toMatchObject({ numberFavorites: false, nineIsLast: true });
+    const ninth = applyIntent(model, { type: 'setNumbering', nineIsLast: false });
+    expect(ninth.settings).toMatchObject({ numberFavorites: false, nineIsLast: false });
+    expect(applyIntent(ninth, { type: 'setNumbering', favorites: false })).toBe(ninth);
+  });
+
   it('sets how long until Today tabs archive', () => {
     const model = applyIntent(emptyModel(), { type: 'setArchiveAfter', archiveAfter: '7d' });
     expect(model.settings.archiveAfter).toBe('7d');

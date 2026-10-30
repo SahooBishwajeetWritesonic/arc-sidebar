@@ -42,6 +42,10 @@ export interface Settings {
   routes: Route[];
   /** Arc Sync: spaces and pinned tabs kept the same on each computer signed in to Chrome. */
   sync: boolean;
+  /** Arc's "Include Favorites in Ordering": ⌘1–9 count Favorites before Pinned. */
+  numberFavorites: boolean;
+  /** ⌘9 goes to the last tab, as in Chrome; off, to the ninth. */
+  nineIsLast: boolean;
 }
 
 /** One of Air Traffic Control's rules. The first that matches a new tab decides its space. */
@@ -61,6 +65,8 @@ export const defaultSettings = (): Settings => ({
   navButtons: false,
   routes: [],
   sync: false,
+  numberFavorites: true,
+  nineIsLast: true,
 });
 
 export interface Space {
@@ -346,6 +352,8 @@ export type Intent =
   /** Air Traffic Control's rules, as edited; ones with no text are dropped. */
   | { type: 'setRoutes'; routes: Route[] }
   | { type: 'setSync'; on: boolean }
+  /** How ⌘1–9 count; what's left out stays as it is. */
+  | { type: 'setNumbering'; favorites?: boolean; nineIsLast?: boolean }
   | { type: 'moveSpace'; spaceId: string; index: number }
   /**
    * Removes a space and its pins and folders (`itemIds`). Its Today tabs, and

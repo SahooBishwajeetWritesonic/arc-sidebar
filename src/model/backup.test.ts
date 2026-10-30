@@ -65,6 +65,8 @@ describe('repairModel', () => {
         navButtons: true,
         routes: [{ id: 'r1', match: 'contains', text: 'figma.com', spaceId: 'default' }],
         sync: true,
+        numberFavorites: false,
+        nineIsLast: false,
       },
     };
     expect(repairModel(structuredClone(model))).toEqual(model);
