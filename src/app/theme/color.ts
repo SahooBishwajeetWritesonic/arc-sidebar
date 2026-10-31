@@ -61,3 +61,9 @@ export function rotateHue(hex: string, degrees: number): string {
   const [h, s, l] = rgbToHsl(hexToRgb(hex));
   return rgbToHex(hslToRgb([(h + degrees + 360) % 360, s, l]));
 }
+
+/** Black or white, whichever reads better on `hex`. */
+export function readableOn(hex: string): string {
+  const rgb = hexToRgb(hex);
+  return contrast(rgb, [255, 255, 255]) >= contrast(rgb, [17, 17, 17]) ? '#fff' : '#111';
+}

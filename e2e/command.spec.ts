@@ -192,9 +192,12 @@ test('a site’s keyword and Tab search that site', async ({ page }) => {
   await ready(page);
   await openBar(page);
   await field(page).pressSequentially('yt');
-  await expect(bar(page).getByText('Tab to search YouTube')).toBeVisible();
+  await expect(bar(page).locator('[class*="keyHint"]')).toHaveText(/^Search\s*YouTube\s*Tab$/);
   await field(page).press('Tab');
-  await expect(bar(page).getByText('YouTube', { exact: true })).toBeVisible();
+  const badge = bar(page).getByText('YouTube', { exact: true });
+  await expect(badge).toBeVisible();
+  await expect(badge).toHaveCSS('background-color', 'rgb(255, 0, 51)');
+  await expect(bar(page).locator('[class*="keyHint"]')).toHaveCount(0);
   await expect(field(page)).toHaveValue('');
   await field(page).pressSequentially('lofi beats');
   await expect(selected(page)).toContainText('lofi beats');

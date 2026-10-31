@@ -49,6 +49,7 @@ import { flushSync } from 'react-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { Favicon } from '@/app/rows/Favicon';
 import { SpaceGlyph } from '@/app/spaces/icons';
+import { readableOn } from '@/app/theme/color';
 import { themeAccent, themeLook } from '@/app/theme/engine';
 import { usePreferredScheme } from '@/app/theme/looks';
 import type { CommandContext } from '@/command/actions';
@@ -350,7 +351,20 @@ export function CommandBar({
       <div className={styles.card} role="dialog" aria-label="Command bar">
         <div className={styles.field}>
           <Search className={styles.fieldIcon} size={16} strokeWidth={2} aria-hidden />
-          {chip && <span className={styles.chip}>{chip}</span>}
+          {chip && (
+            <span
+              key={site?.name ?? 'chip'}
+              className={styles.chip}
+              data-site={site ? '' : undefined}
+              style={
+                site
+                  ? ({ '--site': site.color, '--on-site': readableOn(site.color) } as CSSProperties)
+                  : undefined
+              }
+            >
+              {chip}
+            </span>
+          )}
           <input
             ref={input}
             className={styles.input}
@@ -366,7 +380,16 @@ export function CommandBar({
             onChange={onChange}
             onKeyDown={onKeyDown}
           />
-          {keyword && <span className={styles.keyHint}>Tab to search {keyword.name}</span>}
+          {keyword && (
+            <span
+              key={keyword.name}
+              className={styles.keyHint}
+              style={{ '--site': keyword.color } as CSSProperties}
+            >
+              Search <b className={styles.keySite}>{keyword.name}</b>
+              <kbd className={styles.key}>Tab</kbd>
+            </span>
+          )}
         </div>
         {results.length > 0 && (
           <ul ref={list} id="command-results" className={styles.list} role="listbox">
