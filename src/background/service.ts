@@ -122,6 +122,9 @@ const DETAILS_DELAY_MS = 1_000;
 const LIVE_MIN_INTERVAL_MS = 30_000;
 /** A pull request just opened takes GitHub's search a moment to show. */
 const LIVE_AFTER_PAGE_MS = 4_000;
+/** GitHub couldn't be asked (often its search's rate limit): try again after this. */
+const LIVE_RETRY_MS = 20_000;
+const LIVE_RETRIES = 2;
 /** How long Chrome's own pick after a close is ignored while the space's next tab opens. */
 const STAY_MS = 1_000;
 const GITHUB_PAGE = /^https:\/\/github\.com\//;
@@ -157,6 +160,8 @@ export class SidebarService {
   /** The filters changed while GitHub was being asked: ask again after. */
   private liveAgain = false;
   private liveQueued = false;
+  /** Retries since GitHub last answered. */
+  private liveRetries = 0;
   readonly ready: Promise<void>;
 
   constructor(private readonly deps: ServiceDeps) {
@@ -458,8 +463,14 @@ export class SidebarService {
     this.liveRefresh = this.deps
       .fetchPullRequests(filters)
       .then(
-        (result) => this.applyPullRequests(folder.id, filters, result),
-        () => {},
+        (result) => {
+          this.liveRetries = 0;
+          return this.applyPullRequests(folder.id, filters, result);
+        },
+        () => {
+          if (this.liveRetries++ >= LIVE_RETRIES) return;
+          this.deps.defer(() => void this.refreshLiveFolder(true), LIVE_RETRY_MS);
+        },
       )
       .finally(() => {
         this.liveRefresh = null;

@@ -913,6 +913,37 @@ describe('SidebarService', () => {
       expect(github.asked).toBe(2);
     });
 
+    it('a filter change takes out what it now leaves out at once, and retries GitHub soon', async () => {
+      const { service, saved, github, flush } = setup({ tabs: [tab(1, 'https://a.com')] });
+      const other = {
+        ...pullRequest(13),
+        repo: 'acme/api',
+        url: 'https://github.com/acme/api/pull/13',
+      };
+      github.answer = { signedIn: true, pullRequests: [pullRequest(12), other] };
+      await service.onTabUpdated(1, { url: PR });
+      await service.refreshLiveFolder();
+      expect(pinsIn(saved.model)).toHaveLength(2);
+      const folder = folderOf(saved.model)!;
+      if (folder.kind !== 'folder' || !folder.live) throw new Error('no live folder');
+
+      // GitHub's search is rate-limited: the other repository's pull request goes anyway.
+      github.answer = new Error('rate limited');
+      await service.handleIntent({
+        type: 'setLiveFilters',
+        itemId: folder.id,
+        filters: { ...folder.live.filters, repos: ['acme/app'] },
+      });
+      expect(pinsIn(saved.model).map((pin) => pin.kind === 'pin' && pin.url)).toEqual([PR]);
+
+      github.answer = { signedIn: true, pullRequests: [pullRequest(12), pullRequest(14), other] };
+      const asked = github.asked;
+      flush();
+      await service.refreshLiveFolder();
+      expect(github.asked).toBe(asked + 1);
+      expect(pinsIn(saved.model)).toHaveLength(2);
+    });
+
     it('keeps its pull requests when GitHub can’t be reached', async () => {
       const { service, saved, github, advance } = setup({ tabs: [tab(1, 'https://a.com')] });
       github.answer = { signedIn: true, pullRequests: [pullRequest(12)] };
