@@ -1,10 +1,10 @@
-import { Archive } from 'lucide-react';
+import { Archive, ArrowLeft } from 'lucide-react';
 import { motion, useMotionValueEvent, useReducedMotion, useTransform } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { ArchiveView } from '@/app/archive/ArchiveView';
 import { Boundary } from '@/app/chrome/Boundary';
 import { useUi } from '@/state/ui';
-import { libraryShown, settleLibrary } from './slide';
+import { libraryShown, settleLibrary, slideLibrary } from './slide';
 import styles from './library.module.css';
 
 /** Arc's Library, left of the first space. */
@@ -26,6 +26,14 @@ export function Library() {
             Archived Tabs
           </button>
         </div>
+        <button
+          type="button"
+          className={styles.back}
+          aria-label="Back to sidebar"
+          onClick={() => slideLibrary(false)}
+        >
+          <ArrowLeft size={16} strokeWidth={2} />
+        </button>
       </nav>
       <div className={styles.content}>
         <Boundary region="archive" what="The archive">

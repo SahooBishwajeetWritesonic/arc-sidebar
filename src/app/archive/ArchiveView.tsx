@@ -1,14 +1,14 @@
 import { Menu } from '@base-ui/react/menu';
-import { Check, ChevronLeft, Ellipsis, X } from 'lucide-react';
+import { Check, ListFilter, Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { forgetArchived, restoreArchived } from '@/app/actions';
 import { Favicon } from '@/app/rows/Favicon';
 import menu from '@/app/rows/menu.module.css';
 import rows from '@/app/rows/rows.module.css';
 import { Title } from '@/app/rows/Title';
-import type { ArchiveEntry } from '@/model/types';
+import { byDay } from '@/app/library/days';
 import { useSidebar } from '@/state/sidebar';
-import { setClearingArchive, showView } from '@/state/ui';
+import { setClearingArchive } from '@/state/ui';
 import styles from './archive.module.css';
 
 /** Arc's archive filters: by how a tab left Today, and by space. */
@@ -20,20 +20,13 @@ const HOW: { value: How; label: string }[] = [
 ];
 const ALL_SPACES = '';
 
-const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
-const date = new Intl.DateTimeFormat(undefined, {
-  weekday: 'long',
-  month: 'short',
-  day: 'numeric',
-});
-
-function dayLabel(timestamp: number, now: Date): string {
-  const day = new Date(timestamp).toDateString();
-  if (day === now.toDateString()) return 'Today';
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  if (day === yesterday.toDateString()) return 'Yesterday';
-  return date.format(timestamp);
+function shortUrl(url: string): string {
+  try {
+    const { host, pathname, search } = new URL(url);
+    return `${host.replace(/^www\./, '')}${pathname === '/' ? '' : pathname}${search}`;
+  } catch {
+    return url;
+  }
 }
 
 export function ArchiveView() {
@@ -49,41 +42,38 @@ export function ArchiveView() {
 
   const groups = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    const now = new Date();
-    const out: { label: string; entries: ArchiveEntry[] }[] = [];
-    for (const entry of entries) {
-      if (needle && !`${entry.title} ${entry.url}`.toLowerCase().includes(needle)) continue;
-      // Cleared counts as closed: you did it, not the timer.
-      if (how !== 'all' && (entry.reason === 'auto') !== (how === 'auto')) continue;
-      if (spaceId !== ALL_SPACES && entry.spaceId !== spaceId) continue;
-      const label = dayLabel(entry.archivedAt, now);
-      const group = out.at(-1);
-      if (group?.label === label) group.entries.push(entry);
-      else out.push({ label, entries: [entry] });
-    }
-    return out;
+    const shown = entries.filter(
+      (entry) =>
+        (!needle || `${entry.title} ${entry.url}`.toLowerCase().includes(needle)) &&
+        // Cleared counts as closed: you did it, not the timer.
+        (how === 'all' || (entry.reason === 'auto') === (how === 'auto')) &&
+        (spaceId === ALL_SPACES || entry.spaceId === spaceId),
+    );
+    return byDay(shown, (entry) => entry.archivedAt);
   }, [entries, query, how, spaceId]);
 
   return (
     <section aria-label="Archive" className={styles.archive}>
-      <header className={styles.header}>
-        <button
-          type="button"
-          className={styles.back}
-          aria-label="Back to sidebar"
-          onClick={() => showView('sidebar')}
-        >
-          <ChevronLeft size={16} strokeWidth={2} />
-        </button>
-        <h1 className={styles.heading}>Archive</h1>
-        {filters && <span className={styles.filters}>{filters}</span>}
+      <div className={styles.toolbar}>
+        <label className={styles.searchBox}>
+          <Search className={styles.searchIcon} size={14} strokeWidth={2} aria-hidden />
+          <input
+            className={styles.search}
+            type="search"
+            placeholder="Search Archive…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            aria-label="Search archived tabs"
+          />
+        </label>
         <Menu.Root>
           <Menu.Trigger
-            className={`${styles.back} ${styles.options}`}
+            className={styles.filter}
             aria-label="Archive options"
             data-filtered={filters ? '' : undefined}
           >
-            <Ellipsis size={16} strokeWidth={2} />
+            <ListFilter size={14} strokeWidth={2} aria-hidden />
+            Filter
           </Menu.Trigger>
           <Menu.Portal>
             <Menu.Positioner className={menu.positioner} align="end" sideOffset={4}>
@@ -139,15 +129,8 @@ export function ArchiveView() {
             </Menu.Positioner>
           </Menu.Portal>
         </Menu.Root>
-      </header>
-      <input
-        className={styles.search}
-        type="search"
-        placeholder="Search archived tabs"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        aria-label="Search archived tabs"
-      />
+      </div>
+      {filters && <p className={styles.filters}>{filters}</p>}
 
       {groups.length === 0 && (
         <p className={styles.empty}>
@@ -161,17 +144,16 @@ export function ArchiveView() {
         <div key={group.label} className={styles.group}>
           <h2 className={styles.day}>{group.label}</h2>
           <ul className={rows.list}>
-            {group.entries.map((entry) => (
+            {group.items.map((entry) => (
               <li
                 key={entry.id}
-                className={rows.row}
+                className={`${rows.row} ${styles.entry}`}
                 data-archive-entry={entry.id}
                 onClick={() => restoreArchived([entry.id])}
               >
                 <div className={rows.plate}>
                   <Favicon url={entry.url} />
-                  <Title text={entry.title} />
-                  <span className={styles.time}>{time.format(entry.archivedAt)}</span>
+                  <Title text={entry.title} subtitle={shortUrl(entry.url)} />
                   <button
                     type="button"
                     className={`${rows.accessory} ${rows.close}`}
