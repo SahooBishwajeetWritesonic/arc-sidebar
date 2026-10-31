@@ -57,7 +57,7 @@ function CalendarCard({ itemId, anchor, triggerClassName = card.trigger, childre
     >
       <PreviewCard.Trigger
         ref={(element: HTMLElement | null) => void (trigger.current = element)}
-        render={<span />}
+        render={<span data-previewed />}
         className={triggerClassName}
       >
         {children}

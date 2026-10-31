@@ -25,11 +25,14 @@ test('long, right-to-left and missing titles stay readable on one line', async (
   await expect(title('مرحبا بالعالم')).toHaveCSS('direction', 'rtl');
   await expect(title('Engineering Wiki')).toHaveCSS('direction', 'ltr');
 
-  // The full title shows as a tooltip only when it's cut off.
+  await expect(title('Pneumono')).toHaveCSS('text-overflow', 'ellipsis');
+  const tooltip = panel(page).locator('[data-title-tooltip]');
   await title('Pneumono').hover();
-  await expect(title('Pneumono')).toHaveAttribute('title', /^Pneumono.*Supercalifragilistic$/);
+  await expect(tooltip).toHaveText(/^Pneumono.*Supercalifragilistic$/);
+  const [row_, tip] = await Promise.all([title('Pneumono').boundingBox(), tooltip.boundingBox()]);
+  expect(tip!.y).toBeGreaterThan(row_!.y + row_!.height);
   await title('Engineering Wiki').hover();
-  await expect(title('Engineering Wiki')).toHaveAttribute('title', '');
+  await expect(tooltip).toHaveCount(0);
 });
 
 test('pages without a favicon and discarded tabs get a normal row', async ({ page }) => {

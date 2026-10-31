@@ -31,6 +31,7 @@ import { DragLayer } from './drag/DragLayer';
 import { LiveCalendar } from './calendar/LiveCalendar';
 import { LiveCalendarDialog } from './calendar/LiveCalendarDialog';
 import { Favorites } from './favorites/Favorites';
+import { TitleTooltip } from './rows/TitleTooltip';
 import { ImportDialog } from './import/ImportDialog';
 import { MediaTray } from './media/MediaTray';
 import { RestoreDialog } from './restore/RestoreDialog';
@@ -288,6 +289,9 @@ export function App() {
           <BottomBar />
         </Boundary>
       </div>
+      <Boundary region="title tooltip">
+        <TitleTooltip />
+      </Boundary>
       <Boundary region="toasts">
         <ToastLayer />
       </Boundary>

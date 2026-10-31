@@ -1,0 +1,47 @@
+/* Below menus (30); never takes the pointer, so the next row stays hoverable. */
+.positioner {
+  z-index: 25;
+  outline: none;
+  pointer-events: none;
+}
+
+.popup {
+  max-width: min(320px, var(--available-width));
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: var(--menu-bg);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  backdrop-filter: blur(24px) saturate(1.8);
+  box-shadow:
+    0 0 0 0.5px var(--menu-edge),
+    0 6px 18px rgb(0 0 0 / 0.18);
+  color: var(--ink);
+  font-size: var(--tooltip-size);
+  line-height: 16px;
+  overflow-wrap: anywhere;
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity var(--popup-in) var(--ease-out),
+    transform var(--popup-in) var(--ease-out);
+}
+
+.popup[data-starting-style],
+.popup[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.97);
+}
+
+.popup[data-ending-style] {
+  transition-duration: var(--popup-out);
+}
+
+.popup[data-instant] {
+  transition-duration: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popup[data-starting-style],
+  .popup[data-ending-style] {
+    transform: none;
+  }
+}

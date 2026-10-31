@@ -79,6 +79,7 @@
   --menu-highlight: #3970c5;
   --on-accent: #fff; /* text and marks on the highlight */
   --menu-size: 13px;
+  --tooltip-size: 12px;
 
   /* Dialogs: an opaque sheet over a dimmed sidebar */
   --sheet: light-dark(#f6f6f8, #2c2c2f);
