@@ -215,6 +215,42 @@ describe('the GitHub Live Folder', () => {
   });
 });
 
+describe('taking pull requests out by hand', () => {
+  /** Takes pins out as the sidebar does: here, not as GitHub's answer. */
+  function remove(model: SidebarModel, urls: string[]) {
+    const folder = githubFolderOf(model)!;
+    const pins = livePins(model, folder).filter((pin) => urls.includes(pin.url));
+    return applyIntent(model, {
+      type: 'syncLiveFolder',
+      itemId: F,
+      items: [],
+      removedIds: pins.map((pin) => pin.id),
+      signedOut: false,
+      repos: [],
+      spaceId: S,
+      windowId: 1,
+      hidden: [...(folder.live.hidden ?? []), ...urls],
+      local: true,
+    });
+  }
+
+  it('keeps one out while it is open, then forgets it once closed', () => {
+    let { model } = sync(withFolder(), [pr(1, '2026-10-01'), pr(2, '2026-10-02')]);
+    const filled = githubFolderOf(model)!.live;
+    model = remove(model, [pr(1, '').url]);
+    expect(titles(model)).toEqual(['Change 2']);
+    // Made here: what it was filled with, and its repositories, stay.
+    expect(githubFolderOf(model)!.live).toMatchObject({
+      filledFor: filled.filledFor,
+      repos: filled.repos,
+    });
+    ({ model } = sync(model, [pr(1, '2026-10-01'), pr(2, '2026-10-02')]));
+    expect(titles(model)).toEqual(['Change 2']);
+    ({ model } = sync(model, [pr(2, '2026-10-02')]));
+    expect(githubFolderOf(model)!.live.hidden).toBeUndefined();
+  });
+});
+
 describe('pullRequestKey', () => {
   it('names the pull request a page is part of, ignoring case', () => {
     const key = pullRequestKey('https://github.com/acme/app/pull/7');

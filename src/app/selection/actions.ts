@@ -4,6 +4,7 @@ import {
   closeTodayTabs,
   moveItemToSpace,
   moveTabsToSpace,
+  removeFromLiveFolder,
   unpinSplit,
   unpinWithUndo,
 } from '@/app/actions';
@@ -81,6 +82,9 @@ const openTabOf = (pin: PinItem): TabInfo | undefined => {
   return tabId === undefined ? undefined : useTabs.getState().tabs.get(tabId);
 };
 
+/** Live Folder pull requests: they can only be taken out. */
+const livePulls = (pins: PinItem[]) => pins.filter((pin) => pin.live);
+
 /** Pinned tabs that can move: a Live Folder's pull requests stay in it. */
 const movable = (pins: PinItem[]) => pins.filter((pin) => !pin.live);
 
@@ -102,6 +106,17 @@ export function selectionMenu(): MenuEntry[] {
       : []),
     ...(movable(pins).length
       ? [{ label: `Unpin ${count(movable(pins).length)}`, onSelect: unpinSelection }]
+      : []),
+    ...(livePulls(pins).length
+      ? [
+          {
+            label: `Remove ${livePulls(pins).length} from Folder`,
+            onSelect: () => {
+              clearSelection();
+              removeFromLiveFolder(livePulls(pins).map((pin) => pin.id));
+            },
+          },
+        ]
       : []),
     ...(tabs.length || movable(pins).length
       ? moveToSpaceMenu(model.spaces, spaceId, moveSelectionToSpace)

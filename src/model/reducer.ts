@@ -272,12 +272,16 @@ export function applyIntent(
         if (known && (known.kind !== 'pin' || known.parentId !== item.id)) continue;
         next[pin.id] = { ...pin, spaceId: item.spaceId, parentId: item.id };
       }
-      const { signedOut: _old, ...live } = item.live;
+      const { signedOut: _old, hidden: _hidden, ...rest } = item.live;
+      const hidden = intent.hidden ?? item.live.hidden;
+      const live = hidden?.length ? { ...rest, hidden } : rest;
       next[item.id] = {
         ...item,
-        live: intent.signedOut
-          ? { ...live, signedOut: true }
-          : { ...live, filledFor: filtersKey(live.filters), repos: intent.repos },
+        live: intent.local
+          ? { ...live, ...(item.live.signedOut && { signedOut: true as const }) }
+          : intent.signedOut
+            ? { ...live, signedOut: true }
+            : { ...live, filledFor: filtersKey(live.filters), repos: intent.repos },
       };
       return { ...model, items: next };
     }

@@ -96,7 +96,12 @@ export function syncIntent(
   // GitHub is asked for every repository, so the menu can offer them all.
   const { repos: chosen } = folder.live.filters;
   const repos = sortedUnique(result.pullRequests.map((pr) => pr.repo));
-  const shown = result.pullRequests.filter((pr) => !chosen.length || chosen.includes(pr.repo));
+  // Ones taken out by hand stay out; once closed they're forgotten.
+  const hiddenBefore = folder.live.hidden ?? [];
+  const hidden = hiddenBefore.filter((url) => result.pullRequests.some((pr) => pr.url === url));
+  const shown = result.pullRequests.filter(
+    (pr) => (!chosen.length || chosen.includes(pr.repo)) && !hidden.includes(pr.url),
+  );
   const current = livePins(model, folder);
   const open = new Map(shown.map((pr) => [pr.url, pr]));
   const removedIds = current.filter((pin) => !open.has(pin.url)).map((pin) => pin.id);
@@ -157,7 +162,15 @@ export function syncIntent(
     !removedIds.length &&
     sameFilters &&
     !folder.live.signedOut &&
-    (folder.live.repos ?? []).join() === repos.join();
+    (folder.live.repos ?? []).join() === repos.join() &&
+    hidden.length === hiddenBefore.length;
   if (nothing) return null;
-  return { ...base, items: [...added, ...changed], removedIds, signedOut: false, repos };
+  return {
+    ...base,
+    items: [...added, ...changed],
+    removedIds,
+    signedOut: false,
+    repos,
+    ...(hidden.length !== hiddenBefore.length && { hidden }),
+  };
 }

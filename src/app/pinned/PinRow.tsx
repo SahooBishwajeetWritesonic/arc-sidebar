@@ -10,6 +10,7 @@ import {
   replacePinUrl,
   resetPin,
   resetPinKeepingPage,
+  removeFromLiveFolder,
   setPinIcon,
   unpinWithUndo,
 } from '@/app/actions';
@@ -73,9 +74,9 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
   const liveMenu: MenuEntry[] = [
     { label: 'Rename…', onSelect: () => startEditing(itemId) },
     ...(awayFromPin ? [{ label: 'Back to Pull Request', onSelect: () => resetPin(itemId) }] : []),
-    ...(tab
-      ? ['separator' as const, { label: 'Close Tab', onSelect: () => closePin(itemId) }]
-      : []),
+    'separator',
+    ...(tab ? [{ label: 'Close Tab', onSelect: () => closePin(itemId) }] : []),
+    { label: 'Remove from Folder', onSelect: () => removeFromLiveFolder([itemId]), danger: true },
   ];
   const menu: MenuEntry[] = pin.live
     ? liveMenu
@@ -204,18 +205,16 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
         </button>
       ) : (
         // Arc's − on a pinned tab that's closed: a second press takes it out of Pinned.
-        !pin.live && (
-          <button
-            type="button"
-            className={`${styles.accessory} ${styles.close}`}
-            aria-label="Unpin"
-            tabIndex={-1}
-            onPointerDown={stop}
-            onClick={() => unpinWithUndo(itemId)}
-          >
-            <Minus size={14} />
-          </button>
-        )
+        <button
+          type="button"
+          className={`${styles.accessory} ${styles.close}`}
+          aria-label={pin.live ? 'Remove from folder' : 'Unpin'}
+          tabIndex={-1}
+          onPointerDown={stop}
+          onClick={() => (pin.live ? removeFromLiveFolder([itemId]) : unpinWithUndo(itemId))}
+        >
+          <Minus size={14} />
+        </button>
       )}
     </Row>
   );

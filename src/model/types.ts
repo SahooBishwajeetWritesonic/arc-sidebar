@@ -178,6 +178,8 @@ export interface LiveFolder {
   repos?: string[];
   /** GitHub said nobody was signed in, the last time it was asked. */
   signedOut?: true;
+  /** Pull requests (URLs) taken out by hand: they stay out while they're open. */
+  hidden?: string[];
 }
 
 export interface LivePin {
@@ -459,6 +461,10 @@ export type Intent =
       repos: string[];
       spaceId: string;
       windowId: number;
+      /** The pull requests taken out by hand, when that changes. */
+      hidden?: string[];
+      /** Made here, not GitHub's answer: what it was filled with stays as it was. */
+      local?: true;
     }
   /**
    * Deletes a Live Folder with what it holds (`itemIds`), and stops Arc

@@ -170,3 +170,22 @@ test('deleted, it stays gone until made again from the + menu', async ({ page })
   await panel(page).getByRole('menuitem', { name: 'New GitHub Live Folder' }).click();
   await expect.poll(() => inFolder(page)).toHaveLength(4);
 });
+
+test('a pull request taken out of the folder stays out, with Undo', async ({ page }) => {
+  await withFolder(page);
+  const row = pinned(page).filter({ hasText: 'New space icons' });
+  await row.click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Remove from Folder' }).click();
+  await expect.poll(() => inFolder(page)).toHaveLength(3);
+  await panel(page).getByRole('button', { name: 'Undo' }).click();
+  await expect.poll(() => inFolder(page)).toHaveLength(4);
+
+  // A closed one has − on hover; it stays out when GitHub is asked again.
+  await row.hover();
+  await row.getByRole('button', { name: 'Remove from folder' }).click();
+  await expect.poll(() => inFolder(page)).toHaveLength(3);
+  await folder(page).click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Refresh' }).click();
+  await expect(folder(page).locator('[class*="spinner"]')).toHaveCount(0);
+  expect(await inFolder(page)).not.toContain('New space icons');
+});

@@ -187,11 +187,13 @@ function repairLiveFolder(raw: unknown): LiveFolder | undefined {
       : [],
   };
   const seen = Array.isArray(raw.repos) ? raw.repos.filter(isString) : undefined;
+  const hidden = Array.isArray(raw.hidden) ? raw.hidden.filter(isString) : [];
   return {
     source: 'github',
     filters,
     ...(isString(raw.filledFor) && { filledFor: raw.filledFor }),
     ...(seen && { repos: seen }),
+    ...(hidden.length && { hidden }),
   };
 }
 

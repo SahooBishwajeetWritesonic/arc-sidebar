@@ -20,6 +20,7 @@ import {
   type ArchiveEntry,
   type GitHubFilters,
   type LiveCalendar,
+  type PinItem,
   type Route,
   type SidebarModel,
   type SpaceIcon,
@@ -383,6 +384,43 @@ export function newLiveFolder() {
 
 export function setLiveFilters(itemId: string, filters: GitHubFilters) {
   dispatch({ type: 'setLiveFilters', itemId, filters });
+}
+
+/** The folder keeps them out while they're open. */
+export function removeFromLiveFolder(itemIds: readonly string[]) {
+  const { model, windowId } = useSidebar.getState();
+  const folder = githubFolderOf(model);
+  if (!folder || windowId === null) return;
+  const pins = itemIds
+    .map((id) => model.items[id])
+    .filter(
+      (item): item is PinItem => item?.kind === 'pin' && !!item.live && item.parentId === folder.id,
+    );
+  if (!pins.length) return;
+  const before = folder.live.hidden ?? [];
+  const sync = (change: { items?: PinItem[]; removedIds?: string[]; hidden: string[] }) =>
+    dispatch({
+      type: 'syncLiveFolder',
+      itemId: folder.id,
+      items: [],
+      removedIds: [],
+      signedOut: false,
+      repos: [],
+      spaceId: folder.spaceId,
+      windowId,
+      local: true,
+      ...change,
+    });
+  sync({
+    removedIds: pins.map((pin) => pin.id),
+    hidden: [...before, ...pins.map((pin) => pin.url)],
+  });
+  const message = (total: number) => `Removed ${total} pull requests`;
+  showUndoToast(
+    pins.length === 1 ? `Removed “${pins[0]!.title}”` : message(pins.length),
+    () => sync({ items: pins, hidden: before }),
+    { key: 'removeFromLiveFolder', amount: pins.length, message },
+  );
 }
 
 /** Asks GitHub again now; settles once the folder is up to date. */

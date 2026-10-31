@@ -408,6 +408,10 @@ export class SidebarService {
       case 'setLiveFilters':
         void this.refreshLiveFolder(true);
         break;
+      case 'syncLiveFolder':
+        // Pull requests put back (Undo) take their open tabs with them.
+        if (intent.local) this.adoptPullRequestTabs();
+        break;
       case 'refreshLiveFolder':
         await this.refreshLiveFolder(true);
         break;
