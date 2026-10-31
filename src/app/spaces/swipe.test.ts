@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { constrainTrack, releaseTarget, rubberBand } from './swipe';
+import {
+  constrainLibrary,
+  constrainTrack,
+  libraryStaysOpen,
+  releaseTarget,
+  rubberBand,
+} from './swipe';
 
 const W = 360;
 
@@ -45,5 +51,20 @@ describe('releaseTarget', () => {
   it('never goes past the ends or more than one page', () => {
     expect(releaseTarget(40, 0.5, 0, 3, W)).toBe(0);
     expect(releaseTarget(-2 * W, -0.5, 2, 3, W)).toBe(2);
+  });
+});
+
+describe('the Library, left of the first space', () => {
+  it('follows the swipe from closed to open, resisting past open', () => {
+    expect(constrainLibrary(-40, W)).toBe(0);
+    expect(constrainLibrary(200, W)).toBe(200);
+    expect(constrainLibrary(W + 100, W)).toBeCloseTo(W + rubberBand(100));
+  });
+
+  it('stays open after a flick right or past halfway, and closes otherwise', () => {
+    expect(libraryStaysOpen(60, 0.02, W)).toBe(true);
+    expect(libraryStaysOpen(300, -0.02, W)).toBe(false);
+    expect(libraryStaysOpen(W * 0.6, 0, W)).toBe(true);
+    expect(libraryStaysOpen(W * 0.4, 0, W)).toBe(false);
   });
 });

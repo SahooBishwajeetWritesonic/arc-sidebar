@@ -126,6 +126,27 @@ test('swiping left goes to the next space and right comes back', async ({ page }
   await expect(panel(page).locator('[data-active-page]')).toHaveAttribute('aria-label', 'Space');
 });
 
+test('swiping right from the first space opens the Library on the archive; left closes it', async ({
+  page,
+}) => {
+  await ready(page);
+  const library = panel(page).getByRole('region', { name: 'Library' });
+  await swipe(page, 'right');
+  await expect(library).toBeVisible();
+  await expect(library.getByRole('searchbox', { name: 'Search archived tabs' })).toBeVisible();
+  await expect(library.getByRole('button', { name: 'Archived Tabs' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await swipe(page, 'left');
+  await expect(library).toHaveCount(0);
+  await expect(panel(page).locator('[data-active-page]')).toHaveAttribute('aria-label', 'Space');
+
+  await panel(page).getByRole('button', { name: 'Archive', exact: true }).click();
+  await library.getByRole('button', { name: 'Back to sidebar' }).click();
+  await expect(library).toHaveCount(0);
+});
+
 test('swiping works anywhere in the sidebar, not only over the rows', async ({ page }) => {
   await ready(page);
   await newSpace(page, 'Work');

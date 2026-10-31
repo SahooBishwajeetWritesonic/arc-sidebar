@@ -3,15 +3,23 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { WheelGestures } from 'wheel-gestures';
 import { switchSpace } from '@/app/actions';
 import { Boundary } from '@/app/chrome/Boundary';
+import { libraryShown, slideLibrary } from '@/app/library/slide';
 import { spring } from '@/app/motion';
 import { Pinned } from '@/app/pinned/Pinned';
 import type { ThemeLook } from '@/app/theme/engine';
 import { Today } from '@/app/today/Today';
 import type { Space } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
+import { useUi } from '@/state/ui';
 import { pagerWidth, pagerX } from './pager';
 import { SpaceHeader } from './SpaceHeader';
-import { constrainTrack, releaseTarget, SWIPE_SCALE } from './swipe';
+import {
+  constrainLibrary,
+  constrainTrack,
+  libraryStaysOpen,
+  releaseTarget,
+  SWIPE_SCALE,
+} from './swipe';
 import styles from './spaces.module.css';
 
 /** A wheel notch from a mouse (Shift+scroll) rather than a trackpad's stream. */
@@ -28,14 +36,22 @@ export function SpacePager({ looks }: { looks: Record<string, ThemeLook> }) {
     0,
     spaces.findIndex((space) => space.id === spaceId),
   );
+  const library = useUi((state) => state.view === 'archive');
   const viewport = useRef<HTMLDivElement>(null);
   const x = pagerX;
   const reduced = useReducedMotion();
 
   // Read by the wheel handler, which is set up once.
-  const live = useRef({ index, spaces, width: 0, releaseVelocity: null as number | null });
+  const live = useRef({
+    index,
+    spaces,
+    library,
+    width: 0,
+    releaseVelocity: null as number | null,
+  });
   live.current.index = index;
   live.current.spaces = spaces;
+  live.current.library = library;
 
   // Pages crossed by a slide stay rendered until it settles.
   const [crossing, setCrossing] = useState<[number, number] | null>(null);
@@ -109,10 +125,12 @@ export function SpacePager({ looks }: { looks: Record<string, ThemeLook> }) {
   );
 }
 
+type Samples = { t: number; x: number }[];
 type Swipe =
   | { kind: 'ignore' }
   | { kind: 'done' }
-  | { kind: 'track'; start: number; base: number; samples: { t: number; x: number }[] };
+  | { kind: 'track'; start: number; base: number; samples: Samples }
+  | { kind: 'library'; base: number; samples: Samples };
 
 /**
  * Two-finger swipes move the track; when fingers lift it commits to a page, ignoring momentum.
@@ -122,7 +140,13 @@ function trackSwipes(
   element: HTMLElement,
   x: MotionValue<number>,
   live: {
-    current: { index: number; spaces: Space[]; width: number; releaseVelocity: number | null };
+    current: {
+      index: number;
+      spaces: Space[];
+      library: boolean;
+      width: number;
+      releaseVelocity: number | null;
+    };
   },
 ) {
   const gestures = WheelGestures({ preventWheelAction: 'x' });
@@ -151,34 +175,47 @@ function trackSwipes(
     }
   };
 
+  // The Library lies left of the first space: its reveal adds to the track's position.
+  const position = () => x.get() + libraryShown.get() * live.current.width;
+  const settle = (velocity: number) => {
+    const { width } = live.current;
+    const open = libraryStaysOpen(libraryShown.get() * width, velocity, width);
+    const towards = open === velocity > 0;
+    slideLibrary(open, towards && width ? (velocity * 1000) / width : 0);
+  };
+
   const off = gestures.on('wheel', (state) => {
     if (state.isStart) swipe = null;
     const [dx, dy] = state.axisMovement;
 
     if (!swipe) {
       if (Math.abs(dx) < 3 && Math.abs(dy) < 3) return; // too early to tell the axis
-      if (Math.abs(dy) > Math.abs(dx) || live.current.spaces.length < 2) {
+      if (Math.abs(dy) > Math.abs(dx)) {
         swipe = { kind: 'ignore' };
         return;
       }
+      const { index, library } = live.current;
       const delta = state.event.deltaX;
       if (Math.abs(delta) >= MOUSE_NOTCH && Number.isInteger(delta)) {
         // A mouse: one space per burst.
         swipe = { kind: 'done' };
-        goTo(live.current.index + (dx < 0 ? 1 : -1), 0);
+        const step = dx < 0 ? 1 : -1;
+        if (library) {
+          if (step === 1) slideLibrary(false);
+        } else if (index === 0 && step === -1) slideLibrary(true);
+        else goTo(index + step, 0);
         return;
       }
       x.stop();
+      libraryShown.stop();
       setSwiping(true);
-      swipe = {
-        kind: 'track',
-        start: live.current.index,
-        base: x.get() - SWIPE_SCALE * dx,
-        samples: [],
-      };
+      const base = position() - SWIPE_SCALE * dx;
+      swipe = library
+        ? { kind: 'library', base, samples: [] }
+        : { kind: 'track', start: index, base, samples: [] };
     }
 
-    if (swipe.kind !== 'track') {
+    if (swipe.kind !== 'track' && swipe.kind !== 'library') {
       if (state.isEnding) swipe = null;
       return;
     }
@@ -190,16 +227,24 @@ function trackSwipes(
       const velocity =
         first && last && last.t > first.t ? (last.x - first.x) / (last.t - first.t) : 0;
       const { spaces, width } = live.current;
-      goTo(releaseTarget(x.get(), velocity, swipe.start, spaces.length, width), velocity);
+      if (swipe.kind === 'library' || libraryShown.get() > 0) settle(velocity);
+      else goTo(releaseTarget(x.get(), velocity, swipe.start, spaces.length, width), velocity);
       setSwiping(false);
       swipe = state.isEnding ? null : { kind: 'done' };
       return;
     }
 
     const { spaces, width } = live.current;
-    x.set(constrainTrack(swipe.base + SWIPE_SCALE * dx, swipe.start, spaces.length, width));
+    const raw = swipe.base + SWIPE_SCALE * dx;
+    if (swipe.kind === 'library' || (swipe.start === 0 && raw > 0)) {
+      if (swipe.kind === 'track') x.set(0);
+      libraryShown.set(width ? constrainLibrary(raw, width) / width : 0);
+    } else {
+      if (libraryShown.get() !== 0) libraryShown.set(0);
+      x.set(constrainTrack(raw, swipe.start, spaces.length, width));
+    }
     const now = performance.now();
-    swipe.samples.push({ t: now, x: x.get() });
+    swipe.samples.push({ t: now, x: position() });
     while (swipe.samples.length > 2 && now - swipe.samples[0]!.t > 100) swipe.samples.shift();
   });
 

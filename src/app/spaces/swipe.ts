@@ -47,3 +47,15 @@ export function releaseTarget(
   const highest = Math.min(count - 1, startIndex + 1);
   return Math.max(lowest, Math.min(highest, target));
 }
+
+/** px from 0 (closed) to `width` (open), resisted past open. */
+export function constrainLibrary(raw: number, width: number): number {
+  if (raw > width) return width + rubberBand(raw - width);
+  return Math.max(0, raw);
+}
+
+/** A flick decides; else whichever side it's nearer. */
+export function libraryStaysOpen(reveal: number, velocity: number, width: number): boolean {
+  if (Math.abs(velocity) >= COMMIT_VELOCITY) return velocity > 0;
+  return reveal > width / 2;
+}
