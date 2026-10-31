@@ -1,4 +1,6 @@
+import { inflateSync } from 'node:zlib';
 import { expect, test, type Page } from '@playwright/test';
+import { FRAME_SCHEME } from '../src/platform/command-bar';
 
 /** The sidebar runs in a frame on the harness page, as in Chrome's side panel. */
 const panel = (page: Page) => page.frameLocator('iframe[title="Sidebar"]');
@@ -209,4 +211,38 @@ test('Backspace in an empty site search goes back to searching everything', asyn
   await field(page).press('Backspace');
   await expect(bar(page).getByText('GitHub', { exact: true })).toHaveCount(0);
   await expect(field(page)).toHaveAttribute('placeholder', 'Search or Enter URL…');
+});
+
+/** The colour of a 1×1 screenshot. */
+function pixel(png: Buffer): [number, number, number] {
+  const data: Buffer[] = [];
+  for (let at = 8; at < png.length;) {
+    const length = png.readUInt32BE(at);
+    if (png.toString('ascii', at + 4, at + 8) === 'IDAT')
+      data.push(png.subarray(at + 8, at + 8 + length));
+    at += 12 + length;
+  }
+  const raw = inflateSync(Buffer.concat(data));
+  return [raw[1]!, raw[2]!, raw[3]!];
+}
+
+test('the bar’s frame stays see-through over a page that offers light and dark, in dark mode', async ({
+  page,
+  baseURL,
+}) => {
+  // Google's results page in dark mode: Chrome paints a frame opaque if its scheme differs.
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.setContent(
+    `<!doctype html><meta name="color-scheme" content="light dark">` +
+      `<style>body{margin:0;background:rgb(255,0,0)}</style>` +
+      `<iframe src="${baseURL}/command.html" style="border:0;width:400px;height:300px;` +
+      `background:transparent;color-scheme:${FRAME_SCHEME}"></iframe>`,
+  );
+  await page.frameLocator('iframe').locator('html').waitFor({ state: 'attached' });
+  await page.waitForTimeout(500);
+  const [red, green] = pixel(
+    await page.screenshot({ clip: { x: 380, y: 280, width: 1, height: 1 } }),
+  );
+  expect(red).toBeGreaterThan(200);
+  expect(green).toBeLessThan(60);
 });

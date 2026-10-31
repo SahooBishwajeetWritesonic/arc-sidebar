@@ -1,9 +1,6 @@
-/*
- * Chrome paints a frame opaque if its colour scheme differs from the embedder's (`normal`),
- * so the root stays `normal` and the bar sets its own. Doubled selectors outrank global.css.
- */
+/* Matches FRAME_SCHEME on its frame, or Chrome paints the frame opaque; the bar sets its own. */
 html:root {
-  color-scheme: normal;
+  color-scheme: light;
 }
 
 html:root,

@@ -1,5 +1,6 @@
 import {
   CLOSE_MESSAGE,
+  FRAME_SCHEME,
   type CommandBarMessage,
   type CommandBarPost,
   type CommandLook,
@@ -57,12 +58,11 @@ export default defineContentScript({
         'border: 0',
         'background: transparent',
         'overflow: hidden',
-        'color-scheme: normal',
+        `color-scheme: ${FRAME_SCHEME}`,
       ]
         .map((rule) => `${rule} !important`)
         .join(';');
-      const frameStyle =
-        'position: absolute; inset: 0; display: block; width: 100%; height: 100%; border: 0; background: transparent; color-scheme: normal;';
+      const frameStyle = `position: absolute; inset: 0; display: block; width: 100%; height: 100%; border: 0; background: transparent; color-scheme: ${FRAME_SCHEME};`;
       const frame = document.createElement('iframe');
       frame.src = `${browser.runtime.getURL('/command.html')}#${token}`;
       frame.allow = 'clipboard-read; clipboard-write';

@@ -1,6 +1,9 @@
 import type { Command } from '@/command/types';
 import type { Appearance } from '@/model/types';
 
+/** Shared by the bar's frame and its page (page.css), or Chrome paints the frame opaque. */
+export const FRAME_SCHEME = 'light';
+
 /**
  * Messages that open and run the command bar, over the page (in an overlay frame) or in the
  * sidebar. Chosen commands always run in the sidebar, with its toasts and Undo.
