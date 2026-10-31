@@ -1,6 +1,7 @@
 import { applyArchiveIntent, applyIntent, applySessionIntent } from '@/model/reducer';
 import { repairModel } from '@/model/backup';
 import {
+  filteredOut,
   filtersKey,
   githubFolderOf,
   livePins,
@@ -405,9 +406,28 @@ export class SidebarService {
         if (intent.openNewTab) await this.deps.createTab(intent.windowId, 'chrome://newtab/', true);
         break;
       case 'createLiveFolder':
-      case 'setLiveFilters':
         void this.refreshLiveFolder(true);
         break;
+      case 'setLiveFilters': {
+        // What the filters now leave out goes at once; GitHub is asked for the rest.
+        const folder = githubFolderOf(this.model);
+        const out = folder ? filteredOut(this.model, folder) : [];
+        if (folder && out.length) {
+          await this.handleIntent({
+            type: 'syncLiveFolder',
+            itemId: folder.id,
+            items: [],
+            removedIds: out,
+            signedOut: false,
+            repos: [],
+            spaceId: folder.spaceId,
+            windowId: Number(Object.keys(this.session.orders)[0] ?? -1),
+            local: true,
+          });
+        }
+        await this.refreshLiveFolder(true);
+        break;
+      }
       case 'syncLiveFolder':
         // Pull requests put back (Undo) take their open tabs with them.
         if (intent.local) this.adoptPullRequestTabs();

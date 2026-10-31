@@ -189,3 +189,15 @@ test('a pull request taken out of the folder stays out, with Undo', async ({ pag
   await expect(folder(page).locator('[class*="spinner"]')).toHaveCount(0);
   expect(await inFolder(page)).not.toContain('New space icons');
 });
+
+test('a filter change shows at once, even when GitHub can’t answer', async ({ page }) => {
+  await withFolder(page);
+  // Signed out, GitHub gives nothing; the repository filter still takes the others out.
+  await page.getByRole('button', { name: 'Sign out of GitHub' }).click();
+  await filter(page, 'Pull Requests', 'acme/web');
+  await expect
+    .poll(() => inFolder(page))
+    .toEqual(['Keep the sidebar open across restarts', 'Draft: try a denser tab row']);
+  await filter(page, 'Pull Requests', 'Drafts');
+  await expect.poll(() => inFolder(page)).toEqual(['Keep the sidebar open across restarts']);
+});

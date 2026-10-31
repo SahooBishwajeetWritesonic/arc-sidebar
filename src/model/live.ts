@@ -174,3 +174,13 @@ export function syncIntent(
     ...(hidden.length !== hiddenBefore.length && { hidden }),
   };
 }
+
+/** What the filters leave out, as far as it can tell without asking GitHub. */
+export function filteredOut(model: SidebarModel, folder: LiveFolderItem): string[] {
+  const { repos, drafts } = folder.live.filters;
+  return livePins(model, folder)
+    .filter(
+      (pin) => (repos.length && !repos.includes(pin.live.repo)) || (!drafts && pin.live.draft),
+    )
+    .map((pin) => pin.id);
+}

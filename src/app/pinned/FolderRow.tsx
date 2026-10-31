@@ -49,10 +49,16 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
   const folder = last.current;
   if (!folder) return null;
 
-  const refresh = () => {
+  // Refresh, or a filter change: the spinner shows until GitHub has answered them all.
+  const asking = useRef(0);
+  const whileAsking = (asked: Promise<unknown>) => {
+    asking.current++;
     setRefreshing(true);
-    void refreshLiveFolder(itemId).finally(() => setRefreshing(false));
+    void asked.finally(() => {
+      if (--asking.current === 0) setRefreshing(false);
+    });
   };
+  const refresh = () => whileAsking(refreshLiveFolder(itemId));
   return (
     <Row
       ref={ref}
@@ -73,7 +79,7 @@ export const FolderRow = memo(function FolderRow({ itemId, depth, ref }: FolderR
         return [
           ...(folder.live
             ? [
-                pullRequestsMenu({ ...folder, live: folder.live }),
+                pullRequestsMenu({ ...folder, live: folder.live }, whileAsking),
                 { label: 'Refresh', onSelect: refresh },
                 'separator' as const,
               ]
@@ -164,10 +170,13 @@ async function copyLinks(links: Link[], markdown = false) {
 }
 
 /** Arc's filters for the GitHub Live Folder, ticked when on. */
-function pullRequestsMenu(folder: LiveFolderItem): MenuEntry {
+function pullRequestsMenu(
+  folder: LiveFolderItem,
+  whileAsking: (asked: Promise<unknown>) => void,
+): MenuEntry {
   const { filters } = folder.live;
   const set = (change: Partial<GitHubFilters>) =>
-    setLiveFilters(folder.id, { ...filters, ...change });
+    whileAsking(setLiveFilters(folder.id, { ...filters, ...change }));
   const toggleRepo = (repo: string) =>
     set({
       repos: filters.repos.includes(repo)

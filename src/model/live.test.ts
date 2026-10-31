@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  filteredOut,
   githubFolderOf,
   knownRepos,
   livePins,
@@ -248,6 +249,25 @@ describe('taking pull requests out by hand', () => {
     expect(titles(model)).toEqual(['Change 2']);
     ({ model } = sync(model, [pr(2, '2026-10-02')]));
     expect(githubFolderOf(model)!.live.hidden).toBeUndefined();
+  });
+
+  it('knows which of its pull requests the repositories and drafts filters now leave out', () => {
+    let { model } = sync(withFolder(), [
+      pr(1, '2026-10-01'),
+      pr(2, '2026-10-02', { repo: 'acme/api', url: 'https://github.com/acme/api/pull/2' }),
+      pr(3, '2026-10-03', { draft: true }),
+    ]);
+    const filters = githubFolderOf(model)!.live.filters;
+    model = applyIntent(model, {
+      type: 'setLiveFilters',
+      itemId: F,
+      filters: { ...filters, repos: ['acme/app'], drafts: false },
+    });
+    const out = filteredOut(model, githubFolderOf(model)!).map((id) => model.items[id]!);
+    expect(out.map((item) => (item.kind === 'pin' ? item.title : ''))).toEqual([
+      'Change 3',
+      'Change 2',
+    ]);
   });
 });
 

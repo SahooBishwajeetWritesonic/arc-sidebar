@@ -383,7 +383,7 @@ export function newLiveFolder() {
 }
 
 export function setLiveFilters(itemId: string, filters: GitHubFilters) {
-  dispatch({ type: 'setLiveFilters', itemId, filters });
+  return dispatch({ type: 'setLiveFilters', itemId, filters });
 }
 
 /** The folder keeps them out while they're open. */
