@@ -68,7 +68,7 @@ export const PinnedSplitRow = memo(function PinnedSplitRow({
       onPointerDown={() => (pressed.current = itemId)}
     >
       <Favicon url={tab?.url ?? pin.url} loading={!!tab?.loading && !tab.favIconUrl} />
-      <Title text={pin.customTitle ?? tab?.title ?? pin.title} className={styles.paneTitle} />
+      <Title text={pin.customTitle ?? tab?.title ?? pin.title} />
       <RecordingBadge tabIds={[tab?.id]} />
       {tab && (tab.audible || tab.muted) && (
         <button

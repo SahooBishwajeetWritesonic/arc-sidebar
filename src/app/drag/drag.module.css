@@ -45,11 +45,7 @@
   margin-left: var(--favicon-gap);
   overflow: hidden;
   white-space: nowrap;
-  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
-}
-
-.title:dir(rtl) {
-  mask-image: linear-gradient(to left, #000 calc(100% - 24px), transparent);
+  text-overflow: ellipsis;
 }
 
 /* A dragged selection: the other rows peek out beneath, and a badge counts them all. */

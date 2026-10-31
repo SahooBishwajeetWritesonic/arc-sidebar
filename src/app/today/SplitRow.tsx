@@ -59,7 +59,7 @@ export const SplitRow = memo(function SplitRow({ ids, splitViewId, ref }: SplitR
       onPointerDown={() => (pressed.current = id)}
     >
       <Favicon url={tab.url} loading={tab.loading && !tab.favIconUrl} />
-      <Title text={tab.title} className={styles.paneTitle} />
+      <Title text={tab.title} />
       <RecordingBadge tabIds={[id]} />
       {(tab.audible || tab.muted) && (
         <button

@@ -177,15 +177,13 @@
   margin-inline-start: var(--favicon-gap);
   overflow: hidden;
   white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: var(--title-size);
-  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
 }
 
-/* A right-to-left title (dir="auto") is cut and faded on the left. Its inline sides flip,
-   so its gap from the favicon is on its inline end. */
+/* An RTL title is cut on the left; its favicon gap moves to its inline end. */
 .title:dir(rtl) {
   margin-inline: 0 var(--favicon-gap);
-  mask-image: linear-gradient(to left, #000 calc(100% - 24px), transparent);
 }
 
 .folderTitle {
@@ -197,6 +195,11 @@
   display: flex;
   flex-direction: column;
   line-height: 17px;
+}
+
+.twoLines > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .subtitle {
@@ -240,12 +243,6 @@
   .row[data-selected] .pane:hover {
     background: var(--split-pane-hover);
   }
-}
-
-.title.paneTitle,
-.title.paneTitle:dir(rtl) {
-  mask-image: none;
-  text-overflow: ellipsis;
 }
 
 .edit {

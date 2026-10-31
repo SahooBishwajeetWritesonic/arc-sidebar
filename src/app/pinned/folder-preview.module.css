@@ -102,7 +102,7 @@
   overflow: hidden;
   white-space: nowrap;
   font-size: var(--label-size);
-  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+  text-overflow: ellipsis;
 }
 
 .empty {

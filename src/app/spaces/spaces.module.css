@@ -78,7 +78,7 @@
   white-space: nowrap;
   font-size: var(--label-size);
   font-weight: 600;
-  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+  text-overflow: ellipsis;
 }
 
 /* The switcher in the bottom bar: 34 × 32 pt cells, inactive spaces at 45%. */
