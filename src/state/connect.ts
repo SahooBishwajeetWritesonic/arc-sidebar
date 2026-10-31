@@ -1,5 +1,6 @@
 import type { Platform } from '@/platform/types';
 import { connectCalendar } from './calendar';
+import { connectDownloads } from './downloads';
 import { connectMedia } from './media';
 import { connectRecording } from './recording';
 import { connectSidebar } from './sidebar';
@@ -21,6 +22,7 @@ export async function connect(
   const offMedia = media ? connectMedia(platform) : () => {};
   const offRecording = connectRecording(platform);
   const offCalendar = connectCalendar(platform);
+  connectDownloads(platform);
   return () => {
     offTabs();
     offSidebar();

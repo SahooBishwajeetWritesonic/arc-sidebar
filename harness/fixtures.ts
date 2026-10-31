@@ -1,4 +1,5 @@
 import type { PullRequest } from '@/model/live';
+import type { DownloadEntry } from '@/platform/downloads';
 import type { GmailInbox } from '@/platform/gmail';
 import type { HistoryEntry } from '@/platform/types';
 import type { Fixture } from './fake-platform';
@@ -241,4 +242,48 @@ export function calendarFeed(now: number): string {
     'END:VEVENT',
     'END:VCALENDAR',
   ].join('\r\n');
+}
+
+/** One coming in, one failed, one deleted, two from yesterday. */
+export function downloadFixtures(now: number): DownloadEntry[] {
+  const minutes = (n: number) => now - n * 60_000;
+  const file = (
+    id: number,
+    name: string,
+    url: string,
+    startedAt: number,
+    patch: Partial<DownloadEntry> = {},
+  ): DownloadEntry => ({
+    id,
+    name,
+    url,
+    state: 'complete',
+    received: 2_400_000,
+    total: 2_400_000,
+    startedAt,
+    exists: true,
+    paused: false,
+    ...patch,
+  });
+  return [
+    file(1, 'design-assets.zip', 'https://www.figma.com/exports/design-assets.zip', minutes(1), {
+      state: 'in_progress',
+      received: 19_200_000,
+      total: 48_000_000,
+    }),
+    file(2, 'Q3 roadmap.pdf', 'https://docs.google.com/export/roadmap.pdf', minutes(20)),
+    file(3, 'screenshot.png', 'https://github.com/acme/web/raw/screenshot.png', minutes(180), {
+      received: 812_000,
+      total: 812_000,
+    }),
+    file(4, 'invoice-2391.pdf', 'https://billing.example.com/invoice-2391.pdf', minutes(60 * 26), {
+      exists: false,
+    }),
+    file(5, 'node-v22.pkg', 'https://nodejs.org/dist/node-v22.pkg', minutes(60 * 27), {
+      state: 'interrupted',
+      error: 'NETWORK_FAILED',
+      received: 9_000_000,
+      total: 80_000_000,
+    }),
+  ];
 }

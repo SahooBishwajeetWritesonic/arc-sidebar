@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { FakePlatform } from './fake-platform';
 import {
   calendarFeed,
+  downloadFixtures,
   edgeTabs,
   gmailInbox,
   historyPages,
@@ -24,6 +25,7 @@ const platform = new FakePlatform(
   pullRequests,
   gmailInbox,
   calendarFeed,
+  downloadFixtures,
 );
 window.harnessPlatform = platform;
 

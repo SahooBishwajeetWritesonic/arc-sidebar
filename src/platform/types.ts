@@ -7,6 +7,7 @@ import type {
   SidebarModel,
 } from '@/model/types';
 import type { CalendarState } from './calendar';
+import type { DownloadEntry } from './downloads';
 import type { GmailInbox } from './gmail';
 
 /** The slice of a Chrome tab the sidebar renders. */
@@ -103,6 +104,18 @@ export interface Platform {
   onRecordingChange(listener: (recording: Record<number, Recording>) => void): () => void;
   /** Live Calendar's meetings as last read (null while it's off); told now and on each change. */
   onCalendarChange(listener: (calendar: CalendarState | null) => void): () => void;
+  /** Chrome's downloads, newest first. */
+  downloads(): Promise<DownloadEntry[]>;
+  onDownloadsChange(listener: () => void): () => void;
+  openDownload(id: number): void;
+  /** In Finder. */
+  showDownload(id: number): void;
+  showDownloadsFolder(): void;
+  cancelDownload(id: number): void;
+  /** Off the list; the files stay. */
+  eraseDownloads(ids: number[]): void;
+  /** The system's icon for the file's type; undefined when Chrome has none. */
+  downloadIcon(id: number): Promise<string | undefined>;
   /** Gmail's unread mail for an account (/u/N/); null when it won't say (signed out). */
   gmailInbox(account: number): Promise<GmailInbox | null>;
   /** Why Arc Sync's last try didn't go through, if it didn't. */

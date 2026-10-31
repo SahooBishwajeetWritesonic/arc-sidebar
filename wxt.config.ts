@@ -13,6 +13,9 @@ export default defineConfig({
       'unlimitedStorage',
       'favicon',
       'alarms',
+      // The Library's Downloads.
+      'downloads',
+      'downloads.open',
       'history',
       'search',
       'scripting',

@@ -2,6 +2,7 @@ import { generateNKeysBetween } from 'fractional-indexing';
 import { SidebarService, type LiveTab } from '@/background/service';
 import type { PullRequest } from '@/model/live';
 import { feedOwner, meetingsIn, type CalendarState } from '@/platform/calendar';
+import type { DownloadEntry } from '@/platform/downloads';
 import type { GmailInbox } from '@/platform/gmail';
 import type { Synced, SyncState } from '@/model/sync';
 import { startCaptureTool } from '@/platform/capture-tool';
@@ -88,6 +89,15 @@ export class FakePlatform implements Platform {
   private calendar: CalendarState | null = null;
   private calendarRead: string | null | undefined;
   private calendarListeners = new Set<(calendar: CalendarState | null) => void>();
+  /** One comes in while the list is watched; tests read `downloadsAsked`. */
+  private downloadList: DownloadEntry[];
+  private downloadListeners = new Set<() => void>();
+  private downloading: ReturnType<typeof setInterval> | undefined;
+  readonly downloadsAsked: { opened: number[]; shown: number[]; folder: number } = {
+    opened: [],
+    shown: [],
+    folder: 0,
+  };
   /** Each tab's pages behind it and ahead of it, nearest last. */
   private pages = new Map<number, { back: Fixture[]; forward: Fixture[] }>();
   /** Titles seen per URL, so a reopened tab gets its page title back. */
@@ -118,8 +128,10 @@ export class FakePlatform implements Platform {
     public inbox: GmailInbox | null = null,
     /** Any Live Calendar address's feed at a time; an address with "missing" gives a 404. */
     private calendarFeed: (now: number) => string = () => 'BEGIN:VCALENDAR\r\nEND:VCALENDAR',
+    downloads: (now: number) => DownloadEntry[] = () => [],
   ) {
     this.history = [...history];
+    this.downloadList = downloads(Date.now());
     this.github = { signedIn: true, open: [...pullRequests] };
     this.tabs = fixtures.map((fixture, i) => this.makeTab(fixture, i === 0));
     for (const tab of this.tabs) if (tab.audible) this.tracks.set(tab.id, 0);
@@ -236,6 +248,62 @@ export class FakePlatform implements Platform {
     listener(this.recording);
     this.recordingListeners.add(listener);
     return () => void this.recordingListeners.delete(listener);
+  }
+
+  async downloads() {
+    return structuredClone(this.downloadList);
+  }
+
+  onDownloadsChange(listener: () => void) {
+    this.downloadListeners.add(listener);
+    this.downloading ??= setInterval(() => this.downloadStep(), 400);
+    return () => void this.downloadListeners.delete(listener);
+  }
+
+  private downloadStep() {
+    const coming = this.downloadList.find(
+      (entry) => entry.state === 'in_progress' && !entry.paused,
+    );
+    if (!coming) {
+      clearInterval(this.downloading);
+      this.downloading = undefined;
+      return;
+    }
+    coming.received = Math.min(coming.total, coming.received + 4_000_000);
+    if (coming.received === coming.total) coming.state = 'complete';
+    this.downloadListeners.forEach((listener) => listener());
+  }
+
+  private changeDownload(id: number, patch: Partial<DownloadEntry>) {
+    this.downloadList = this.downloadList.map((entry) =>
+      entry.id === id ? { ...entry, ...patch } : entry,
+    );
+    this.downloadListeners.forEach((listener) => listener());
+  }
+
+  openDownload(id: number) {
+    this.downloadsAsked.opened.push(id);
+  }
+
+  showDownload(id: number) {
+    this.downloadsAsked.shown.push(id);
+  }
+
+  showDownloadsFolder() {
+    this.downloadsAsked.folder++;
+  }
+
+  cancelDownload(id: number) {
+    this.changeDownload(id, { state: 'interrupted', error: 'USER_CANCELED' });
+  }
+
+  eraseDownloads(ids: number[]) {
+    this.downloadList = this.downloadList.filter((entry) => !ids.includes(entry.id));
+    this.downloadListeners.forEach((listener) => listener());
+  }
+
+  async downloadIcon() {
+    return undefined;
   }
 
   onCalendarChange(listener: (calendar: CalendarState | null) => void) {

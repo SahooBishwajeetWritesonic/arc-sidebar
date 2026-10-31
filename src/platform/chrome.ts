@@ -11,6 +11,7 @@ import {
   syncStateItem,
 } from './storage-items';
 import { fullPage, SITE_PERMISSION_DEFAULTS } from './capture';
+import { fileName, type DownloadEntry } from './downloads';
 import { gmailFeedUrl, parseGmailFeed } from './gmail';
 import type { PeekMessage } from './peek';
 import type {
@@ -96,6 +97,49 @@ export const chromePlatform: Platform = {
   loadSyncProblem: async () => (await syncStateItem.getValue()).problem,
 
   // With the browser's own Gmail sign-in: the panel may read mail.google.com.
+  async downloads() {
+    const items = await browser.downloads.search({ orderBy: ['-startTime'], limit: 200 });
+    // A download still picking its name has none yet.
+    return items.filter((item) => item.filename).map(toDownload);
+  },
+
+  onDownloadsChange(listener) {
+    const events = [
+      browser.downloads.onCreated,
+      browser.downloads.onChanged,
+      browser.downloads.onErased,
+    ] as const;
+    const notify = () => listener();
+    for (const event of events) event.addListener(notify);
+    return () => {
+      for (const event of events) event.removeListener(notify);
+    };
+  },
+
+  openDownload(id) {
+    void browser.downloads.open(id);
+  },
+
+  showDownload(id) {
+    browser.downloads.show(id);
+  },
+
+  showDownloadsFolder() {
+    browser.downloads.showDefaultFolder();
+  },
+
+  cancelDownload(id) {
+    void browser.downloads.cancel(id);
+  },
+
+  eraseDownloads(ids) {
+    for (const id of ids) void browser.downloads.erase({ id });
+  },
+
+  async downloadIcon(id) {
+    return browser.downloads.getFileIcon(id, { size: 32 }).catch(() => undefined);
+  },
+
   async gmailInbox(account) {
     try {
       const response = await fetch(gmailFeedUrl(account), { credentials: 'include' });
@@ -280,3 +324,19 @@ export const chromePlatform: Platform = {
     return `chrome-extension://${browser.runtime.id}/_favicon/?${params}`;
   },
 };
+
+function toDownload(item: Browser.downloads.DownloadItem): DownloadEntry {
+  const total = item.totalBytes > 0 ? item.totalBytes : Math.max(item.fileSize, 0);
+  return {
+    id: item.id,
+    name: fileName(item.filename),
+    url: item.finalUrl || item.url,
+    state: item.state as DownloadEntry['state'],
+    received: item.bytesReceived,
+    total,
+    startedAt: Date.parse(item.startTime),
+    exists: item.exists,
+    paused: item.paused,
+    error: item.error,
+  };
+}
