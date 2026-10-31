@@ -81,6 +81,9 @@
   --menu-size: 13px;
   --tooltip-size: 12px;
 
+  --library-rail-width: 84px;
+  --library-rail: light-dark(rgb(0 0 0 / 0.04), rgb(255 255 255 / 0.05));
+
   /* Dialogs: an opaque sheet over a dimmed sidebar */
   --sheet: light-dark(#f6f6f8, #2c2c2f);
   --sheet-radius: 12px;

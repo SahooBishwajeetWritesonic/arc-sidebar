@@ -1,4 +1,4 @@
-import { AnimatePresence, MotionConfig, motion } from 'motion/react';
+import { MotionConfig, motion, useTransform } from 'motion/react';
 import type { KeyboardEvent, MouseEvent, PointerEvent } from 'react';
 import {
   clearToday,
@@ -21,7 +21,6 @@ import { clearSelection, rowKey, useSelection } from '@/state/selection';
 import { useSidebar } from '@/state/sidebar';
 import { activateTab, openUrl, useTabs } from '@/state/tabs';
 import { setCommandBar, useUi } from '@/state/ui';
-import { ArchiveView } from './archive/ArchiveView';
 import { ClearArchiveDialog } from './archive/ClearArchiveDialog';
 import { Boundary } from './chrome/Boundary';
 import { BottomBar } from './chrome/BottomBar';
@@ -31,12 +30,13 @@ import { DragLayer } from './drag/DragLayer';
 import { LiveCalendar } from './calendar/LiveCalendar';
 import { LiveCalendarDialog } from './calendar/LiveCalendarDialog';
 import { Favorites } from './favorites/Favorites';
+import { Library } from './library/Library';
+import { libraryShown } from './library/slide';
 import { TitleTooltip } from './rows/TitleTooltip';
 import { ImportDialog } from './import/ImportDialog';
 import { MediaTray } from './media/MediaTray';
 import { RestoreDialog } from './restore/RestoreDialog';
 import { RoutesDialog } from './routes/RoutesDialog';
-import { fade } from './motion';
 import styles from './app.module.css';
 import { SpacePager } from './spaces/SpacePager';
 import { Backdrop } from './theme/Backdrop';
@@ -217,6 +217,7 @@ export function App() {
   const looks = useSpaceLooks();
   useRootScheme(ready ? looks[spaceId]?.scheme : undefined);
   const drop = useTextDrop();
+  const slideX = useTransform(libraryShown, (shown) => (shown === 0 ? 0 : `${shown * 100}%`));
 
   return (
     // reducedMotion="user": with Reduce Motion on, movement is skipped and fades stay.
@@ -228,66 +229,51 @@ export function App() {
             <Backdrop looks={looks} />
           </Boundary>
         )}
-        {ready && view === 'sidebar' && (
-          <Boundary region="URL bar">
-            <UrlBar />
-          </Boundary>
-        )}
-        <main
-          data-sidebar
-          data-dropping={drop.dropping || undefined}
-          className={styles.sidebar}
-          onKeyDown={onKeyDown}
-          onPointerDown={onPointerDown}
-          onDragOver={drop.onDragOver}
-          onDragLeave={drop.onDragLeave}
-          onDrop={drop.onDrop}
-        >
+        <motion.div className={styles.slide} style={{ x: slideX }} inert={view === 'archive'}>
           {ready && (
-            <AnimatePresence mode="wait" initial={false}>
-              {view === 'archive' ? (
-                <motion.div
-                  key="archive"
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -12 }}
-                  transition={fade}
-                >
-                  <Boundary region="archive" what="The archive">
-                    <ArchiveView />
-                  </Boundary>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="sidebar"
-                  initial={{ opacity: 0, x: 12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 12 }}
-                  transition={fade}
-                >
-                  <Boundary region="favorites" what="Favorites">
-                    <Favorites />
-                  </Boundary>
-                  <Boundary region="live calendar">
-                    <LiveCalendar />
-                  </Boundary>
-                  <SpacePager looks={looks} />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <Boundary region="URL bar">
+              <UrlBar />
+            </Boundary>
           )}
-          <Boundary region="drag">
-            <DragLayer />
+          <main
+            data-sidebar
+            data-dropping={drop.dropping || undefined}
+            className={styles.sidebar}
+            onKeyDown={onKeyDown}
+            onPointerDown={onPointerDown}
+            onDragOver={drop.onDragOver}
+            onDragLeave={drop.onDragLeave}
+            onDrop={drop.onDrop}
+          >
+            {ready && (
+              <>
+                <Boundary region="favorites" what="Favorites">
+                  <Favorites />
+                </Boundary>
+                <Boundary region="live calendar">
+                  <LiveCalendar />
+                </Boundary>
+                <SpacePager looks={looks} />
+              </>
+            )}
+            <Boundary region="drag">
+              <DragLayer />
+            </Boundary>
+          </main>
+          {ready && (
+            <Boundary region="media players">
+              <MediaTray />
+            </Boundary>
+          )}
+          <Boundary region="bottom bar">
+            <BottomBar />
           </Boundary>
-        </main>
+        </motion.div>
         {ready && (
-          <Boundary region="media players">
-            <MediaTray />
+          <Boundary region="library">
+            <Library />
           </Boundary>
         )}
-        <Boundary region="bottom bar">
-          <BottomBar />
-        </Boundary>
       </div>
       <Boundary region="title tooltip">
         <TitleTooltip />

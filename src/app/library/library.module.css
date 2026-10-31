@@ -1,0 +1,98 @@
+/* Beside the sliding sidebar, never over it. */
+.library {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  color: var(--ink);
+}
+
+.rail {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  width: var(--library-rail-width);
+  padding: 8px 6px;
+  background: var(--library-rail);
+}
+
+.sections {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 4px;
+  border: 0;
+  border-radius: 10px;
+  outline: none;
+  background: none;
+  color: var(--ink-secondary);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 13px;
+  text-align: center;
+  transition: scale var(--press-time) linear;
+}
+
+.section:active {
+  scale: var(--press-scale);
+}
+
+.section[aria-current] {
+  background: var(--tile);
+  color: var(--ink);
+}
+
+.section[aria-current] svg {
+  color: var(--accent-ink);
+}
+
+.back {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 0 2px 4px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--accessory-radius);
+  outline: none;
+  background: none;
+  color: var(--ink-secondary);
+  transition: scale var(--press-time) linear;
+}
+
+.back:active {
+  scale: var(--press-scale-icon);
+}
+
+.section:focus-visible,
+.back:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .section:not([aria-current]):hover,
+  .back:hover {
+    background: var(--accessory-hover);
+    color: var(--ink);
+  }
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 8px var(--pad-side);
+  scrollbar-width: none;
+}
