@@ -1,5 +1,12 @@
 import { generateNKeysBetween } from 'fractional-indexing';
-import { closePin, closeTodayTabs, moveItemToSpace, moveTabsToSpace } from '@/app/actions';
+import {
+  closePin,
+  closeTodayTabs,
+  moveItemToSpace,
+  moveTabsToSpace,
+  unpinSplit,
+  unpinWithUndo,
+} from '@/app/actions';
 import { copyText } from '@/app/command/run';
 import type { Ghost } from '@/app/drag/drag';
 import type { DragSource } from '@/app/drag/targets';
@@ -93,6 +100,9 @@ export function selectionMenu(): MenuEntry[] {
     ...(loose(tabs).length
       ? [{ label: `Pin ${count(loose(tabs).length)}`, onSelect: pinSelection }]
       : []),
+    ...(movable(pins).length
+      ? [{ label: `Unpin ${count(movable(pins).length)}`, onSelect: unpinSelection }]
+      : []),
     ...(tabs.length || movable(pins).length
       ? moveToSpaceMenu(model.spaces, spaceId, moveSelectionToSpace)
       : []),
@@ -136,6 +146,22 @@ export function pinSelection() {
   const orders = generateNKeysBetween(last?.order ?? null, null, tabs.length);
   clearSelection();
   undoable(() => tabs.forEach((tab, i) => pinInto(tab, null, orders[i]!)));
+}
+
+/** Open ones go to Today, closed ones go; one Undo for all. */
+export function unpinSelection() {
+  const pins = movable(picked().pins);
+  clearSelection();
+  const done = new Set<string>();
+  for (const pin of pins) {
+    if (done.has(pin.id)) continue;
+    // A pinned split is one row: both its pins go together.
+    if (pin.pair) {
+      unpinSplit([pin.id, pin.pair]);
+      done.add(pin.pair);
+    } else unpinWithUndo(pin.id);
+    done.add(pin.id);
+  }
 }
 
 /**

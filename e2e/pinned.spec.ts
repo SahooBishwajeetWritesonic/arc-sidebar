@@ -33,3 +33,20 @@ test('× closes a pinned tab and keeps it; then − takes it out of Pinned, with
   await panel(page).getByRole('button', { name: 'Undo' }).click();
   await expect(pins(page).filter({ hasText: 'Google Calendar' })).toHaveCount(1);
 });
+
+test('selected pinned tabs unpin together, open ones to Today, with one Undo', async ({ page }) => {
+  await ready(page);
+  // The first ⌘-click takes the tab in front along, as in Arc: Calendar, then Linear.
+  await pin(page, 'Google Calendar').click();
+  await expect(pin(page, 'Google Calendar')).toHaveAttribute('data-selected');
+  await pin(page, 'Linear').click({ modifiers: ['Meta'] });
+  await pin(page, 'Linear').click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Unpin 2 Tabs' }).click();
+  await expect(pins(page).filter({ hasText: /Google Calendar|Linear/ })).toHaveCount(0);
+  await expect(today(page).filter({ hasText: /Google Calendar|Linear/ })).toHaveCount(2);
+  await expect(panel(page).getByRole('status')).toContainText('Unpinned 2 tabs');
+
+  await panel(page).getByRole('button', { name: 'Undo' }).click();
+  await expect(pins(page).filter({ hasText: /Google Calendar|Linear/ })).toHaveCount(2);
+  await expect(today(page)).toHaveCount(4);
+});
