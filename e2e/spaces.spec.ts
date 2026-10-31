@@ -231,6 +231,16 @@ test('dragging a space’s icon sideways reorders the spaces; so does ⌥← and
   await page.keyboard.press('Alt+ArrowLeft');
   await expect.poll(() => spaceOrder(page)).toEqual(['Work', 'Home', 'Space']);
   await expect(icon('Home')).toBeFocused();
+  // Saved before reloading: the fake Chrome saves a moment after the change.
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (JSON.parse(localStorage.getItem('harness:model') ?? '{}').spaces ?? []).map(
+          (space: { name: string }) => space.name,
+        ),
+      ),
+    )
+    .toEqual(['Work', 'Home', 'Space']);
   await page.reload();
   await expect.poll(() => spaceOrder(page)).toEqual(['Work', 'Home', 'Space']);
 });
