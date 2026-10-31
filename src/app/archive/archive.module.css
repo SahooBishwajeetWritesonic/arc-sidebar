@@ -113,3 +113,8 @@
   font-size: var(--label-size);
   line-height: 1.4;
 }
+
+/* A download that won't open: failed, cancelled or deleted. */
+.entry[data-unavailable] :is(img, svg, [dir='auto']) {
+  opacity: 0.55;
+}

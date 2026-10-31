@@ -1,0 +1,22 @@
+.icon {
+  flex: none;
+  width: var(--favicon-size);
+  height: var(--favicon-size);
+  color: var(--ink-secondary);
+}
+
+.progress {
+  position: absolute;
+  right: var(--row-inset);
+  bottom: 5px;
+  left: calc(var(--row-inset) + var(--favicon-size) + var(--favicon-gap));
+  height: 2px;
+  border-radius: 1px;
+  background:
+    linear-gradient(
+      to right,
+      var(--accent-ink) calc(var(--done) * 100%),
+      transparent calc(var(--done) * 100%)
+    ),
+    var(--row-hover);
+}

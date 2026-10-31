@@ -185,6 +185,7 @@ export function availableActions(ctx: CommandContext): (Result & { words: string
       add({ action: 'revealTab', title: 'Reveal Tab in Sidebar', words: 'show find scroll' });
     }
     add({ action: 'viewArchive', title: 'View Archive', words: 'library archived closed' });
+    add({ action: 'viewDownloads', title: 'View Downloads', words: 'library files saved' });
     if (ctx.archiveCount) {
       add({ action: 'clearArchive', title: 'Clear Archive…', words: 'library archived empty' });
     }

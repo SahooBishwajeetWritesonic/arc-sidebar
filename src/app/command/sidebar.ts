@@ -4,7 +4,7 @@ import { showToast } from '@/app/toast/toast';
 import type { Command } from '@/command/types';
 import { copiedText } from '@/model/links';
 import { loadBackups, useSidebar } from '@/state/sidebar';
-import { setClearingArchive, setImporting, setRestoring, showView } from '@/state/ui';
+import { openLibrary, setClearingArchive, setImporting, setRestoring, showView } from '@/state/ui';
 import { runCommand } from './run';
 
 /** Arc's Reveal Tab in Sidebar: scrolls the selected row into view and gives it focus. */
@@ -32,9 +32,11 @@ export function runInSidebar(command: Command) {
       // The bar copied it (only a focused page can); this just says so.
       return showToast(copiedText(1, command.action === 'copyMarkdown'));
     case 'viewArchive':
-      return showView('archive');
+      return openLibrary('archive');
+    case 'viewDownloads':
+      return openLibrary('downloads');
     case 'clearArchive':
-      showView('archive');
+      openLibrary('archive');
       return setClearingArchive(true);
     case 'revealTab':
       showView('sidebar');

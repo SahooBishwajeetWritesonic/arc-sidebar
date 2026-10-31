@@ -27,6 +27,7 @@ export type ActionId =
   | 'togglePinned'
   | 'revealTab'
   | 'viewArchive'
+  | 'viewDownloads'
   | 'clearArchive'
   | 'editTheme'
   | 'appearance'

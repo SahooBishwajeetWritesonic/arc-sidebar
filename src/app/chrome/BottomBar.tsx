@@ -22,7 +22,14 @@ import spaces from '@/app/spaces/spaces.module.css';
 import { githubFolderOf } from '@/model/live';
 import type { ArchiveAfter } from '@/model/types';
 import { loadBackups, loadSyncProblem, useSidebar } from '@/state/sidebar';
-import { setEditingRoutes, setImporting, setRestoring, showView, useUi } from '@/state/ui';
+import {
+  openLibrary,
+  setEditingRoutes,
+  setImporting,
+  setRestoring,
+  showView,
+  useUi,
+} from '@/state/ui';
 import styles from './bottom-bar.module.css';
 
 const ARCHIVE_CHOICES: { value: ArchiveAfter; label: string }[] = [
@@ -44,7 +51,7 @@ export function BottomBar() {
         aria-label="Archive"
         aria-pressed={view === 'archive'}
         title="Archive"
-        onClick={() => showView(view === 'archive' ? 'sidebar' : 'archive')}
+        onClick={() => (view === 'archive' ? showView('sidebar') : openLibrary('archive'))}
       >
         <Archive size={16} strokeWidth={1.75} />
       </button>

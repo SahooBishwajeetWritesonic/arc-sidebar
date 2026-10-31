@@ -1,9 +1,13 @@
 import { create } from 'zustand';
 import type { Backup, SpaceTheme } from '@/model/types';
 
+export type LibrarySection = 'downloads' | 'archive';
+
 interface UiState {
   editingId: string | null;
+  /** 'archive' is the Library open, on `librarySection`. */
   view: 'sidebar' | 'archive';
+  librarySection: LibrarySection;
   /** The space whose theme picker is open. */
   themeEditor: string | null;
   /** A theme being edited, shown before it is saved (null: no theme). */
@@ -28,6 +32,7 @@ interface UiState {
 export const useUi = create<UiState>()(() => ({
   editingId: null,
   view: 'sidebar',
+  librarySection: 'archive',
   themeEditor: null,
   themePreview: null,
   importing: false,
@@ -42,6 +47,10 @@ export const useUi = create<UiState>()(() => ({
 export const startEditing = (itemId: string) => useUi.setState({ editingId: itemId });
 export const stopEditing = () => useUi.setState({ editingId: null });
 export const showView = (view: 'sidebar' | 'archive') => useUi.setState({ view });
+export const openLibrary = (librarySection: LibrarySection) =>
+  useUi.setState({ view: 'archive', librarySection });
+export const showLibrarySection = (librarySection: LibrarySection) =>
+  useUi.setState({ librarySection });
 export const setImporting = (importing: boolean) => useUi.setState({ importing });
 export const setRestoring = (restoring: Backup[] | null) => useUi.setState({ restoring });
 export const setClearingArchive = (clearingArchive: boolean) => useUi.setState({ clearingArchive });
