@@ -525,6 +525,46 @@ describe('SidebarService', () => {
       expect(saved.session.lastActive).toMatchObject({ home: 1 });
     });
 
+    it('closing the shown tab stays in its space, on the tab used last there, till none is left', async () => {
+      const { service, saved, calls, tabs } = setup({
+        tabs: [
+          tab(1, 'https://a.com', 1, { lastAccessed: 400 }),
+          tab(2, 'https://b.com', 2, { lastAccessed: 300 }),
+          tab(3, 'https://c.com', 3, { lastAccessed: 200 }),
+          tab(4, 'https://d.com', 4, { lastAccessed: 100 }),
+        ],
+        model: twoSpaces(),
+      });
+      await service.handleIntent({ type: 'moveTabToSpace', tabId: 2, spaceId: 'work' });
+      await service.onTabActivated(1, 1);
+      const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+      const close = async (id: number, chromePicks: number) => {
+        tabs.splice(
+          tabs.findIndex((t) => t.id === id),
+          1,
+        );
+        // As Chrome reports a close: the tab goes, then its neighbour in the tab strip shows.
+        await Promise.all([service.onTabRemoved(id, 1), service.onTabActivated(chromePicks, 1)]);
+        await settle();
+      };
+
+      calls.length = 0;
+      await close(1, 2); // Chrome picks Work's tab 2, beside it
+      expect(saved.session.activeSpaces['1']).toBe('home');
+      expect(calls).toEqual(['activate 3']); // Home's most recent, not tab 4
+      await service.onTabActivated(3, 1);
+
+      await close(3, 2);
+      expect(calls.at(-1)).toBe('activate 4');
+      await service.onTabActivated(4, 1);
+
+      // Home's last tab: now the sidebar follows Chrome to Work.
+      calls.length = 0;
+      await close(4, 2);
+      expect(calls).toEqual([]);
+      expect(saved.session.activeSpaces['1']).toBe('work');
+    });
+
     it('sends new tabs to the space Air Traffic Control names, even links from another space', async () => {
       const model = twoSpaces();
       model.settings = {

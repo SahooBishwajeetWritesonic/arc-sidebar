@@ -96,3 +96,21 @@ export function todayRows(
   }
   return rows;
 }
+
+/** The most recently used of `stays` once `closing` goes; unseen ones come last, in order. */
+export function nextAfterClose(
+  stays: readonly number[],
+  closing: readonly number[],
+  recent: readonly number[],
+): number | undefined {
+  const rank = (id: number) => {
+    const at = recent.indexOf(id);
+    return at === -1 ? Infinity : at;
+  };
+  let best: number | undefined;
+  for (const id of stays) {
+    if (closing.includes(id)) continue;
+    if (best === undefined || rank(id) < rank(best)) best = id;
+  }
+  return best;
+}

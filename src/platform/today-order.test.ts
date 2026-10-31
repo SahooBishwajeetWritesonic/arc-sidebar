@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  nextAfterClose,
   reconcileOrder,
   todayRows,
   withNewTab,
@@ -69,5 +70,21 @@ describe('todayRows', () => {
       { kind: 'tab', id: 5 },
       { kind: 'tab', id: 1 },
     ]);
+  });
+});
+
+describe('nextAfterClose', () => {
+  it('shows the most recently used tab that stays', () => {
+    expect(nextAfterClose([1, 2, 3, 4], [3], [3, 1, 4, 2])).toBe(1);
+    expect(nextAfterClose([1, 2, 3, 4], [3, 1], [3, 1, 4, 2])).toBe(4);
+  });
+
+  it('falls back to the first, in order, when none was used', () => {
+    expect(nextAfterClose([5, 6, 7], [5], [9, 8])).toBe(6);
+  });
+
+  it('has none when every tab goes', () => {
+    expect(nextAfterClose([1, 2], [1, 2], [1, 2])).toBeUndefined();
+    expect(nextAfterClose([], [1], [1])).toBeUndefined();
   });
 });

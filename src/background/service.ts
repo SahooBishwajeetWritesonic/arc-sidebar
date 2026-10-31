@@ -40,6 +40,7 @@ import {
 } from '@/model/sync';
 import { isSamePage, isSamePath } from '@/model/urls';
 import {
+  nextAfterClose,
   reconcileOrder,
   withNewTab,
   withTabBefore,
@@ -120,6 +121,8 @@ const DETAILS_DELAY_MS = 1_000;
 const LIVE_MIN_INTERVAL_MS = 30_000;
 /** A pull request just opened takes GitHub's search a moment to show. */
 const LIVE_AFTER_PAGE_MS = 4_000;
+/** How long Chrome's own pick after a close is ignored while the space's next tab opens. */
+const STAY_MS = 1_000;
 const GITHUB_PAGE = /^https:\/\/github\.com\//;
 
 /**
@@ -141,6 +144,8 @@ export class SidebarService {
   private syncQueued = false;
   /** Today tabs closed while the worker was stopped, with their spaces; onRemoved is coming. */
   private vanished = new Map<number, string | undefined>();
+  /** Windows whose shown tab just closed, held in that space. */
+  private staying = new Map<number, { spaceId: string; until: number }>();
   private opening: { itemId: string; url: string; expires: number }[] = [];
   /** Tab id → the tab it was opened from, for placing the next one opened from it. */
   private openers = new Map<number, number>();
@@ -768,6 +773,12 @@ export class SidebarService {
   async onTabActivated(tabId: number, windowId: number) {
     await this.ready;
     const space = this.spaceOfTab(tabId);
+    const staying = this.staying.get(windowId);
+    if (staying && staying.until > this.deps.now()) {
+      // Chrome's own pick after a close, elsewhere: the space's next tab is on its way.
+      if (space !== staying.spaceId) return;
+      this.staying.delete(windowId);
+    }
     if (!space) return;
     const key = String(windowId);
     if (this.session.activeSpaces[key] === space && this.session.lastActive[space] === tabId)
@@ -807,6 +818,7 @@ export class SidebarService {
    */
   async onTabRemoved(tabId: number, windowId: number, windowClosing = false) {
     await this.ready;
+    if (!windowClosing) this.stayInSpace(tabId, windowId);
     this.openers.delete(tabId);
     const details = this.details[tabId];
     if (details) {
@@ -853,6 +865,35 @@ export class SidebarService {
       orders: order
         ? { ...this.session.orders, [key]: withoutTab(order, tabId) }
         : this.session.orders,
+    });
+  }
+
+  /** Shows the space's most recent open tab rather than Chrome's neighbour, till none is left. */
+  private stayInSpace(tabId: number, windowId: number) {
+    const spaceId = this.session.activeSpaces[String(windowId)];
+    if (!spaceId || this.session.lastActive[spaceId] !== tabId) return;
+    const stays = Object.keys(this.details)
+      .map(Number)
+      .filter(
+        (id) =>
+          id !== tabId &&
+          this.details[id]!.windowId === windowId &&
+          this.spaceOfTab(id) === spaceId,
+      );
+    if (!stays.length) return;
+    this.staying.set(windowId, { spaceId, until: this.deps.now() + STAY_MS });
+    void this.deps.queryTabs().then(async (live) => {
+      const recent = live
+        .filter((tab) => tab.windowId === windowId)
+        .sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0))
+        .map((tab) => tab.id);
+      const next = nextAfterClose(
+        stays.filter((id) => recent.includes(id)),
+        [],
+        recent,
+      );
+      if (next === undefined) this.staying.delete(windowId);
+      else await this.deps.activateTab(next);
     });
   }
 
