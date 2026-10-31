@@ -1,5 +1,5 @@
 import { memo, useRef, type PointerEvent, type Ref } from 'react';
-import { Volume2, VolumeX, X } from 'lucide-react';
+import { Minus, Volume2, VolumeX, X } from 'lucide-react';
 import {
   closePin,
   closePinnedSplit,
@@ -82,7 +82,7 @@ export const PinnedSplitRow = memo(function PinnedSplitRow({
           <IconSwap on={tab.muted} off={<Volume2 size={14} />} to={<VolumeX size={14} />} />
         </button>
       )}
-      {tab && (
+      {tab ? (
         <button
           type="button"
           className={`${styles.accessory} ${styles.close}`}
@@ -93,6 +93,20 @@ export const PinnedSplitRow = memo(function PinnedSplitRow({
         >
           <X size={14} />
         </button>
+      ) : (
+        // Both closed: − takes the split out of Pinned.
+        !open && (
+          <button
+            type="button"
+            className={`${styles.accessory} ${styles.close}`}
+            aria-label="Unpin split"
+            tabIndex={-1}
+            onPointerDown={stop}
+            onClick={() => unpinSplit(pair)}
+          >
+            <Minus size={14} />
+          </button>
+        )
       )}
     </span>
   );

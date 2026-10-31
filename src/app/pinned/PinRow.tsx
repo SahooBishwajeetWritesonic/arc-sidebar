@@ -1,5 +1,5 @@
 import { memo, useRef, type PointerEvent, type Ref } from 'react';
-import { Volume2, VolumeX, X } from 'lucide-react';
+import { Minus, Volume2, VolumeX, X } from 'lucide-react';
 import {
   closePin,
   favoriteItem,
@@ -191,7 +191,7 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
           <IconSwap on={tab.muted} off={<Volume2 size={14} />} to={<VolumeX size={14} />} />
         </button>
       )}
-      {tab && (
+      {tab ? (
         <button
           type="button"
           className={`${styles.accessory} ${styles.close}`}
@@ -202,6 +202,20 @@ export const PinRow = memo(function PinRow({ itemId, depth, ref }: PinRowProps) 
         >
           <X size={14} />
         </button>
+      ) : (
+        // Arc's − on a pinned tab that's closed: a second press takes it out of Pinned.
+        !pin.live && (
+          <button
+            type="button"
+            className={`${styles.accessory} ${styles.close}`}
+            aria-label="Unpin"
+            tabIndex={-1}
+            onPointerDown={stop}
+            onClick={() => unpinWithUndo(itemId)}
+          >
+            <Minus size={14} />
+          </button>
+        )
       )}
     </Row>
   );
