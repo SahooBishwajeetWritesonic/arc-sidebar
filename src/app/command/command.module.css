@@ -22,7 +22,7 @@
   max-height: calc(100% - var(--command-top) - 16px);
   overflow: hidden;
   border-radius: var(--command-radius);
-  background: var(--sheet);
+  background: var(--command-card, var(--sheet));
   box-shadow:
     0 0 0 0.5px var(--command-edge),
     0 2px 6px var(--command-shadow),

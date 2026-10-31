@@ -213,6 +213,39 @@ test('Backspace in an empty site search goes back to searching everything', asyn
   await expect(field(page)).toHaveAttribute('placeholder', 'Search or Enter URL…');
 });
 
+test('the bar wears the space’s theme, as the sidebar does', async ({ page }) => {
+  await page.goto('/?theme=dark');
+  await expect(panel(page).locator('[data-active-page] [data-nav-row="tab"]')).toHaveCount(4);
+  await panel(page).locator('[data-active-page] [data-space-header]').click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Edit Theme…' }).click();
+  await panel(page).getByRole('button', { name: 'Next colours' }).click();
+  await panel(page).getByRole('button', { name: 'Pastel #fdfbfa' }).click();
+  await panel(page).getByRole('slider', { name: 'Intensity' }).focus();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Escape');
+  await expect(panel(page).getByRole('dialog')).toHaveCount(0);
+
+  const sidebar = await panel(page)
+    .locator('[aria-hidden] > div')
+    .evaluateAll((layers) => {
+      const shown = layers.find((layer) => Number(getComputedStyle(layer).opacity) > 0.99)!;
+      const style = getComputedStyle(shown);
+      return [style.backgroundColor, style.backgroundImage];
+    });
+  await openBar(page);
+  const card = bar(page).locator('[class*="card"]').first();
+  const look = await card.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      background: [style.backgroundColor, style.backgroundImage],
+      scheme: style.colorScheme,
+    };
+  });
+  expect(look.background).toEqual(sidebar);
+  // A bright theme turns the sidebar to dark text; the bar follows.
+  expect(look.scheme).toBe('light');
+});
+
 /** The colour of a 1×1 screenshot. */
 function pixel(png: Buffer): [number, number, number] {
   const data: Buffer[] = [];

@@ -1,5 +1,5 @@
 import { browser, type Browser } from 'wxt/browser';
-import { themeAccent } from '@/app/theme/engine';
+import { themeAccent, themeLook } from '@/app/theme/engine';
 import type { SessionState, SidebarModel } from '@/model/types';
 import { addressLabel } from '@/model/urls';
 import type {
@@ -33,7 +33,15 @@ export function commandLook(
 ): CommandLook {
   const shown = session.activeSpaces[String(windowId)];
   const space = model.spaces.find((each) => each.id === shown) ?? model.spaces[0];
-  return { appearance: model.settings.appearance, accent: themeAccent(space?.theme) };
+  const card = (preferred: 'light' | 'dark') => {
+    const { background, scheme } = themeLook(space?.theme, preferred);
+    return { background, scheme };
+  };
+  return {
+    appearance: model.settings.appearance,
+    accent: themeAccent(space?.theme),
+    card: { light: card('light'), dark: card('dark') },
+  };
 }
 
 /**

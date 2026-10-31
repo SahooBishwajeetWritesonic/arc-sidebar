@@ -27,8 +27,9 @@ export function drawStandIn(
   const layer = doc.querySelector<HTMLElement>('.layer')!;
   const input = doc.querySelector<HTMLInputElement>('.input')!;
   const dark = matchMedia('(prefers-color-scheme: dark)').matches;
-  layer.style.colorScheme =
-    look.appearance === 'auto' ? (dark ? 'dark' : 'light') : look.appearance;
+  const card = look.card[look.appearance === 'auto' ? (dark ? 'dark' : 'light') : look.appearance];
+  layer.style.colorScheme = card.scheme;
+  layer.style.setProperty('--command-card', card.background);
   layer.style.setProperty('--command-accent', look.accent);
 
   let submit = false;

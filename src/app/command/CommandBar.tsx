@@ -49,7 +49,7 @@ import { flushSync } from 'react-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { Favicon } from '@/app/rows/Favicon';
 import { SpaceGlyph } from '@/app/spaces/icons';
-import { themeAccent } from '@/app/theme/engine';
+import { themeAccent, themeLook } from '@/app/theme/engine';
 import { usePreferredScheme } from '@/app/theme/looks';
 import type { CommandContext } from '@/command/actions';
 import { completeAddress, searchCommands } from '@/command/search';
@@ -115,10 +115,12 @@ export function CommandBar({
   onMount,
 }: CommandBarProps) {
   const ctx = useCommandContext(sidebarOpen);
-  const scheme = usePreferredScheme();
+  const preferred = usePreferredScheme();
   const theme = useSidebar(
     (state) => state.model.spaces.find((space) => space.id === state.spaceId)?.theme,
   );
+  // The space's look, as the sidebar draws it.
+  const look = useMemo(() => themeLook(theme, preferred), [theme, preferred]);
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLUListElement>(null);
   const done = useRef(false);
@@ -330,7 +332,8 @@ export function CommandBar({
         ? 'Search actions…'
         : 'Search or Enter URL…';
   const layerStyle = {
-    colorScheme: scheme,
+    colorScheme: look.scheme,
+    '--command-card': look.background,
     '--command-accent': themeAccent(theme),
   } as CSSProperties;
 

@@ -33,6 +33,8 @@ export type CommandBarMessage =
 export interface CommandLook {
   appearance: Appearance;
   accent: string;
+  /** Per preferred scheme: only the page knows which applies. */
+  card: Record<'light' | 'dark', { background: string; scheme: 'light' | 'dark' }>;
 }
 
 /** What was typed into the stand-in before the bar was drawn, and whether Return was pressed. */
