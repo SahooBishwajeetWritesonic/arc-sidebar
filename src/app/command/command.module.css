@@ -146,6 +146,15 @@
   line-height: 18px;
 }
 
+/* Behind the card, over the whole layer. */
+.dust {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 /* About eight rows, with half of the next showing so it reads as scrollable. */
 .list {
   flex: 1 1 auto;

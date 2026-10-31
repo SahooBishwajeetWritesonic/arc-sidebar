@@ -11,6 +11,8 @@ export const spring = {
   space: { type: 'spring', stiffness: 1094, damping: 66, mass: 1 },
   /** Favorites making room during a drag: ~265 ms, critically damped. */
   room: { type: 'spring', stiffness: 625, damping: 50, mass: 1 },
+  /** The command bar let go after Site Search's press: the one bounce, as a button's. */
+  release: { type: 'spring', stiffness: 700, damping: 22, mass: 1 },
 } satisfies Record<string, Transition>;
 
 export const ease = {

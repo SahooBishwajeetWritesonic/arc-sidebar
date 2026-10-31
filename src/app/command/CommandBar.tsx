@@ -45,8 +45,10 @@ import {
   type CSSProperties,
   type KeyboardEvent,
 } from 'react';
+import { animate, useReducedMotion } from 'motion/react';
 import { flushSync } from 'react-dom';
 import { useShallow } from 'zustand/react/shallow';
+import { spring } from '@/app/motion';
 import { Favicon } from '@/app/rows/Favicon';
 import { SpaceGlyph } from '@/app/spaces/icons';
 import { readableOn } from '@/app/theme/color';
@@ -67,6 +69,7 @@ import {
   useTabs,
 } from '@/state/tabs';
 import { runCommand } from './run';
+import { SiteDust } from './SiteDust';
 import styles from './command.module.css';
 
 /** Where the bar is shown, and how it reaches the sidebar. */
@@ -124,6 +127,18 @@ export function CommandBar({
   const look = useMemo(() => themeLook(theme, preferred), [theme, preferred]);
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLUListElement>(null);
+  const card = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+  // Each Site Search start: the card is pressed like a button and dust bursts from behind it.
+  const [burst, setBurst] = useState(0);
+  const press = () => {
+    if (reduced || !card.current) return;
+    const element = card.current;
+    setBurst((count) => count + 1);
+    void animate(element, { scale: 0.97 }, { duration: 0.08, ease: 'easeOut' }).then(() =>
+      animate(element, { scale: 1 }, spring.release),
+    );
+  };
   const done = useRef(false);
 
   const [typed, setTyped] = useState(address ?? '');
@@ -301,6 +316,7 @@ export function CommandBar({
         setSite(keyword);
         setTyped('');
         setCompleting(false);
+        press();
       } else if (!prompt && !picking && !site) setActionsOnly(!actionsOnly);
     } else if (event.key === 'Backspace' && (actionsOnly || site) && !value) {
       setActionsOnly(false);
@@ -348,7 +364,8 @@ export function CommandBar({
         if (event.target === event.currentTarget) host.close();
       }}
     >
-      <div className={styles.card} role="dialog" aria-label="Command bar">
+      <SiteDust burst={burst} color={site?.color} card={card} />
+      <div ref={card} className={styles.card} role="dialog" aria-label="Command bar">
         <div className={styles.field}>
           <Search className={styles.fieldIcon} size={16} strokeWidth={2} aria-hidden />
           {chip && (
