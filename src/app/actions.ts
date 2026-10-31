@@ -33,7 +33,6 @@ import { dispatch, newId, useSidebar } from '@/state/sidebar';
 import {
   activateTab,
   duplicateTab,
-  forgetTab,
   forgetTabs,
   leaveTabs,
   openInSplit,
@@ -237,9 +236,19 @@ function dropPair(pair: readonly [string, string], target: DropTarget, windowId:
 /** Closes the pinned tab but keeps the pin, as in Arc. */
 export function closePin(itemId: string) {
   const tabId = boundTab(itemId);
+  // Before it's unbound (it would flash into Today), and before Chrome picks its neighbour.
+  if (tabId !== undefined) leaveTabs([tabId], spaceTabs());
   dispatch({ type: 'closePin', itemId });
-  // Once unbound, the closing tab would flash into Today; drop it now.
-  if (tabId !== undefined) forgetTab(tabId);
+}
+
+/** The shown space's open tabs, Today's and pinned. */
+function spaceTabs(): number[] {
+  const { model, session, spaceId } = useSidebar.getState();
+  const state = useTabs.getState();
+  const pinned = Object.entries(session.bindings)
+    .filter(([itemId, tabId]) => model.items[itemId]?.spaceId === spaceId && state.tabs.has(tabId))
+    .map(([, tabId]) => tabId);
+  return [...selectTodayIds(state, spaceId), ...pinned];
 }
 
 export function resetPin(itemId: string) {
@@ -701,7 +710,7 @@ export function closeTodayTabs(tabIds: readonly number[]) {
   if (windowId === null) return;
   // Must run before they leave the panel's list.
   const below = stayingBelow(tabIds);
-  const closing = leaveTabs(tabIds)
+  const closing = leaveTabs(tabIds, spaceTabs())
     .map((id) => tabs.get(id))
     .filter((tab): tab is TabInfo => tab !== undefined);
   if (!closing.length) return;

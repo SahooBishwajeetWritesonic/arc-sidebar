@@ -26,6 +26,7 @@ const state = (change: Partial<TabsState> = {}): TabsState => ({
   openingUrls: [],
   activeId: 1,
   previousId: null,
+  recent: [],
   ...change,
 });
 

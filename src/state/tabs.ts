@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { hostname, isSamePage } from '@/model/urls';
 import type { Platform, SitePermissionKind, TabEvent, TabInfo } from '@/platform/types';
-import { withNewTab } from '@/platform/today-order';
+import { nextAfterClose, withNewTab } from '@/platform/today-order';
 
 /** The window's live Chrome tabs, plus what the sidebar store tells us about them. */
 export interface TabsState {
@@ -21,6 +21,8 @@ export interface TabsState {
   activeId: number | null;
   /** The tab that was active before the current one; Arc tints it faintly. */
   previousId: number | null;
+  /** Most recently shown first. */
+  recent: readonly number[];
 }
 
 export const useTabs = create<TabsState>()(() => ({
@@ -34,6 +36,7 @@ export const useTabs = create<TabsState>()(() => ({
   openingUrls: [],
   activeId: null,
   previousId: null,
+  recent: [],
 }));
 
 /**
@@ -74,11 +77,12 @@ export function applyTabEvents(state: TabsState, events: readonly TabEvent[]): P
     }
     return tabs as Map<number, TabInfo>;
   };
-  let { activeId, previousId } = state;
+  let { activeId, previousId, recent } = state;
   const activate = (id: number) => {
     if (id === activeId) return;
     if (activeId !== null && tabs.has(activeId)) previousId = activeId;
     activeId = id;
+    recent = [id, ...recent.filter((other) => other !== id)];
   };
 
   for (const event of events) {
@@ -100,6 +104,7 @@ export function applyTabEvents(state: TabsState, events: readonly TabEvent[]): P
         if (tabs.has(event.tabId)) edit().delete(event.tabId);
         if (activeId === event.tabId) activeId = null;
         if (previousId === event.tabId) previousId = null;
+        recent = recent.filter((id) => id !== event.tabId);
         break;
       case 'activate':
         if (event.windowId === state.windowId) activate(event.tabId);
@@ -112,11 +117,12 @@ export function applyTabEvents(state: TabsState, events: readonly TabEvent[]): P
         }
         if (activeId === event.removedTabId) activeId = event.addedTabId;
         if (previousId === event.removedTabId) previousId = event.addedTabId;
+        recent = recent.map((id) => (id === event.removedTabId ? event.addedTabId : id));
         break;
       }
     }
   }
-  return { tabs, activeId, previousId };
+  return { tabs, activeId, previousId, recent };
 }
 
 let platform: Platform | undefined;
@@ -142,13 +148,17 @@ export async function connectTabs(source: Platform, windowId: number): Promise<(
   let live = false;
   const off = source.onTabEvent((event) => (live ? enqueue(event) : early.push(event)));
 
-  const tabs = await source.queryTabs(windowId);
+  const [tabs, recent] = await Promise.all([
+    source.queryTabs(windowId),
+    source.recentTabs(windowId).catch(() => []),
+  ]);
   useTabs.setState({
     ready: true,
     windowId,
     tabs: new Map(tabs.map((tab) => [tab.id, titled(tab)])),
     activeId: tabs.find((tab) => tab.active)?.id ?? null,
     previousId: null,
+    recent,
   });
   live = true;
   early.forEach(enqueue);
@@ -168,37 +178,26 @@ export function activateTab(id: number) {
   platform?.activateTab(id);
 }
 
-/**
- * Closes a Today tab. Like Arc, selection moves to the row below (or above,
- * for the last row) at once, rather than wherever Chrome's tab strip would go.
- */
+/** Selection stays in the space, not where Chrome's tab strip would go. */
 export function closeTab(id: number) {
   if (leaveTab(id)) platform?.closeTab(id);
 }
 
-/**
- * The panel side of closing a Today tab: selection moves to its neighbour
- * and the row goes at once. Returns false if the tab is already gone.
- */
+/** False if it's already gone. */
 export function leaveTab(id: number): boolean {
   return leaveTabs([id]).length > 0;
 }
 
 /**
- * The same for several tabs at once (a split row's two): selection moves to
- * the nearest row that stays. Returns the tabs that were still open.
+ * If the shown tab goes, the most recently used of `stays` (Today's by default) is shown,
+ * before Chrome picks its neighbour. Returns the tabs that were still open.
  */
-export function leaveTabs(ids: readonly number[]): number[] {
+export function leaveTabs(ids: readonly number[], stays?: readonly number[]): number[] {
   const state = useTabs.getState();
   const present = ids.filter((id) => state.tabs.has(id));
   if (!present.length) return present;
   if (state.activeId !== null && present.includes(state.activeId)) {
-    const today = selectTodayIds(state);
-    const index = today.indexOf(state.activeId);
-    const stays = (id: number | undefined) => id !== undefined && !present.includes(id);
-    const next =
-      today.slice(index + 1).find(stays) ??
-      today.slice(0, Math.max(index, 0)).reverse().find(stays);
+    const next = nextAfterClose(stays ?? selectTodayIds(state), present, state.recent);
     if (next !== undefined) activateTab(next);
   }
   forgetTabs(present);

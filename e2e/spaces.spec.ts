@@ -81,6 +81,32 @@ test('⌃1 and ⌃2 switch spaces when the panel has focus', async ({ page }) =>
   await expect.poll(() => titles(page, 'pin')).toEqual([]);
 });
 
+test('closing a tab stays in its space, on the tab used last there', async ({ page }) => {
+  await ready(page);
+  await newSpace(page, 'Work');
+  await panel(page).getByRole('button', { name: 'Space', exact: true }).click();
+  const shown = panel(page).locator('[data-active-page]');
+  await expect(shown).toHaveAttribute('aria-label', 'Space');
+  const row = (title: string) =>
+    panel(page).locator('[data-active-page] [data-nav-row]', { hasText: title }).first();
+  for (const title of ['Engineering Wiki', 'Sidebar explorations', 'Lo-fi beats']) {
+    await row(title).click();
+    await expect(row(title)).toHaveAttribute('data-selected');
+  }
+
+  // Closed in Chrome: its tab strip would go to Work's new tab, just beside it.
+  await page.getByRole('button', { name: 'Close active tab' }).click();
+  await expect(row('Sidebar explorations')).toHaveAttribute('data-selected');
+  await page.waitForTimeout(300);
+  await expect(shown).toHaveAttribute('aria-label', 'Space');
+
+  // Closed from the sidebar: the tab used before it, not the row beside it.
+  await row('Sidebar explorations').hover();
+  await row('Sidebar explorations').getByRole('button', { name: 'Close tab' }).click();
+  await expect(row('Engineering Wiki')).toHaveAttribute('data-selected');
+  await expect(shown).toHaveAttribute('aria-label', 'Space');
+});
+
 test('deleting a space can be undone', async ({ page }) => {
   await ready(page);
   await panel(page)
