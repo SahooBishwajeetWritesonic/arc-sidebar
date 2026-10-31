@@ -153,3 +153,38 @@ test('a space’s theme can be used for all spaces, with Undo', async ({ page })
   await panel(page).getByRole('button', { name: 'Undo' }).click();
   await expect.poll(themes).toEqual([null, '#7fb2d8']);
 });
+
+test('a saved theme shows as soon as the sidebar opens, though Chrome opens it from no width', async ({
+  page,
+}) => {
+  await ready(page);
+  await openPicker(page);
+  await panel(page).getByRole('button', { name: 'Muted #7fb2d8' }).click();
+  await page.keyboard.press('Escape');
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('harness:model') ?? ''))
+    .toContain('"theme"');
+  const themed = await backdrop(page);
+
+  // Chrome opens the side panel from no width.
+  await page.addInitScript(() => {
+    if (window === window.top) return;
+    const style = document.createElement('style');
+    style.id = 'closed-panel';
+    style.textContent = '[class*="viewport"] { width: 0 !important; min-width: 0 !important; }';
+    const add = () => document.documentElement.append(style);
+    if (document.documentElement) add();
+    else
+      new MutationObserver((_, observer) => {
+        if (!document.documentElement) return;
+        add();
+        observer.disconnect();
+      }).observe(document, { childList: true });
+  });
+  await page.reload();
+  await expect(panel(page).locator('[data-active-page] [data-nav-row="tab"]')).toHaveCount(4);
+  await page.waitForTimeout(1000);
+  const sidebar = page.frames().find((frame) => frame !== page.mainFrame())!;
+  await sidebar.evaluate(() => document.getElementById('closed-panel')?.remove());
+  await expect.poll(() => backdrop(page)).toBe(themed);
+});

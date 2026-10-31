@@ -9,7 +9,7 @@ import type { ThemeLook } from '@/app/theme/engine';
 import { Today } from '@/app/today/Today';
 import type { Space } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
-import { pagerSize, pagerX } from './pager';
+import { pagerWidth, pagerX } from './pager';
 import { SpaceHeader } from './SpaceHeader';
 import { constrainTrack, releaseTarget, SWIPE_SCALE } from './swipe';
 import styles from './spaces.module.css';
@@ -45,7 +45,8 @@ export function SpacePager({ looks }: { looks: Record<string, ThemeLook> }) {
   useLayoutEffect(() => {
     const element = viewport.current!;
     const measure = () => {
-      live.current.width = pagerSize.width = element.clientWidth;
+      live.current.width = element.clientWidth;
+      pagerWidth.set(element.clientWidth);
       if (!x.isAnimating()) x.set(-live.current.index * live.current.width);
     };
     measure();

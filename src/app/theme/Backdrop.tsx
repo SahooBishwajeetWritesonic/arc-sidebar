@@ -1,6 +1,6 @@
 import { motion, useTransform } from 'motion/react';
 import { useMemo } from 'react';
-import { pagerX, pageVisibility } from '@/app/spaces/pager';
+import { pagerWidth, pagerX, pageVisibility } from '@/app/spaces/pager';
 import { useSidebar } from '@/state/sidebar';
 import type { ThemeLook } from './engine';
 import { grainTile } from './grain';
@@ -24,7 +24,9 @@ export function Backdrop({ looks }: { looks: Record<string, ThemeLook> }) {
 }
 
 function Layer({ index, look, grain }: { index: number; look: ThemeLook; grain: string }) {
-  const opacity = useTransform(pagerX, (x) => pageVisibility(x, index));
+  const opacity = useTransform([pagerX, pagerWidth], ([x, width]: number[]) =>
+    pageVisibility(x!, width!, index),
+  );
   return (
     <motion.div className={styles.layer} style={{ opacity, background: look.background }}>
       {look.grain > 0 && (
