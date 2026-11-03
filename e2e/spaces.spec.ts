@@ -347,3 +347,31 @@ test('dropping a Today tab on another space’s icon moves it there', async ({ p
   await showSpace(page, 'Work');
   await expect.poll(() => titles(page, 'tab')).toContain('Engineering Wiki');
 });
+
+test('a dragged tab held at the sidebar’s side switches spaces, one after another', async ({
+  page,
+}) => {
+  await ready(page);
+  await newSpace(page, 'Work');
+  await newSpace(page, 'Play');
+  await showSpace(page, 'Space');
+
+  await pickUp(page, 'Engineering Wiki');
+  const frame = (await page.locator('iframe[title="Sidebar"]').boundingBox())!;
+  await page.mouse.move(frame.x + frame.width - 6, frame.y + 300, { steps: 12 });
+  await expect(shownPage(page)).toHaveAttribute('aria-label', 'Work');
+  await expect(shownPage(page)).toHaveAttribute('aria-label', 'Play');
+  await expect.poll(() => shownPage(page).evaluate((el) => el.getBoundingClientRect().x)).toBe(0);
+
+  // Into Play's Today, below its last row.
+  const last = (await panel(page)
+    .locator('[data-active-page] [data-nav-row]')
+    .last()
+    .boundingBox())!;
+  await page.mouse.move(last.x + 60, last.y + last.height + 20, { steps: 12 });
+  await expect(panel(page).locator('[data-drop-line]')).toBeVisible();
+  await page.mouse.up();
+  await expect.poll(() => titles(page, 'tab')).toContain('Engineering Wiki');
+  await showSpace(page, 'Space');
+  await expect.poll(() => titles(page, 'tab')).not.toContain('Engineering Wiki');
+});

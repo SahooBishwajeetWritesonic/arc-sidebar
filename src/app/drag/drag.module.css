@@ -109,3 +109,29 @@
   padding: 0;
   border-radius: 8px;
 }
+
+/* A drag held at a side, about to switch spaces. */
+.edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 32px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms var(--ease-out);
+}
+
+.edge[data-side='left'] {
+  left: 0;
+  background: linear-gradient(to right, var(--drag-edge), transparent);
+}
+
+.edge[data-side='right'] {
+  right: 0;
+  background: linear-gradient(to left, var(--drag-edge), transparent);
+}
+
+.edge[data-on] {
+  opacity: 1;
+}

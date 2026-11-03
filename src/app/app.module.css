@@ -17,7 +17,7 @@
 }
 
 .sidebar {
-  position: relative;
+  position: relative; /* for the drag's edge cues */
   z-index: 1;
   flex: 1;
   display: flex;

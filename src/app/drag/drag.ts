@@ -1,5 +1,7 @@
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { create } from 'zustand';
+import { switchSpaceBy } from '@/app/actions';
+import { pagerX } from '@/app/spaces/pager';
 import { isWithin } from '@/model/tree';
 import { FAVORITES_LIMIT, type SpaceIcon } from '@/model/types';
 import { useSidebar } from '@/state/sidebar';
@@ -30,9 +32,11 @@ export const useDrag = create<{
   ghost: Ghost | null;
   /** Option is held: the drop leaves a copy (Arc's Option-drag). */
   copying: boolean;
+  /** The side a drag is held at, about to switch spaces. */
+  edge: -1 | 0 | 1;
   /** The space icon last dropped on. */
   landed: { spaceId: string; at: number } | null;
-}>()(() => ({ source: null, target: null, ghost: null, copying: false, landed: null }));
+}>()(() => ({ source: null, target: null, ghost: null, copying: false, edge: 0, landed: null }));
 
 /** How a drop ends: `copy` when Option was held as it was let go. */
 export interface DropHow {
@@ -45,6 +49,11 @@ const THRESHOLD = 4;
 const SCROLL_EDGE = 40;
 /** Rows changed mid-drag have finished sliding by then (spring.row: ~105 ms). */
 const SETTLE_MS = 150;
+/** Held this close to a side, a drag switches spaces, as in Arc. */
+const SIDE_EDGE = 24;
+/** Wait before the first switch, then between switches. */
+const SIDE_WAIT_MS = 400;
+const SIDE_REPEAT_MS = 700;
 
 type GhostContent = Omit<Ghost, 'width'>;
 
@@ -69,11 +78,15 @@ interface Tracking {
   grabX: number;
   grabY: number;
   started: boolean;
+  /** Null while the pager slides. */
   page: HTMLElement | null;
   slots: Slot[];
   favorites?: FavoritesLayout;
   spaces: { id: string; rect: DOMRect }[];
   scrollFrame: number;
+  settleFrame: number;
+  side: -1 | 0 | 1;
+  sideTimer?: ReturnType<typeof setTimeout>;
   /** Stops watching for rows changing under the drag. */
   unwatch?: () => void;
   remeasure?: ReturnType<typeof setTimeout>;
@@ -120,6 +133,8 @@ export function beginPress(
     slots: [],
     spaces: [],
     scrollFrame: 0,
+    settleFrame: 0,
+    side: 0,
   };
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
@@ -140,6 +155,7 @@ function onMove(event: PointerEvent) {
   updateTarget();
   placeGhost();
   autoScroll();
+  watchSide(tracking);
   copyWhile(event.altKey);
 }
 
@@ -172,11 +188,7 @@ function onRowsChanged() {
   if (!t?.started) return;
   if (!exists(t.source)) return cancel();
   clearTimeout(t.remeasure);
-  t.remeasure = setTimeout(() => {
-    if (tracking !== t) return;
-    measureAll(t, activePage(t.sidebar));
-    updateTarget();
-  }, SETTLE_MS);
+  t.remeasure = setTimeout(() => remeasure(t), SETTLE_MS);
 }
 
 function exists(source: DragSource): boolean {
@@ -208,6 +220,26 @@ function measureAll(t: Tracking, page: HTMLElement | null) {
     id: icon.dataset.spaceDrop!,
     rect: icon.getBoundingClientRect(),
   }));
+}
+
+/** Measures once the shown space has slid into place. */
+function remeasure(t: Tracking) {
+  cancelAnimationFrame(t.settleFrame);
+  const check = () => {
+    if (tracking !== t) return;
+    const page = activePage(t.sidebar);
+    const settled =
+      page?.dataset.spaceId === useSidebar.getState().spaceId &&
+      !pagerX.isAnimating() &&
+      Math.abs(page.getBoundingClientRect().left - t.sidebar.getBoundingClientRect().left) < 1;
+    if (!settled) {
+      t.settleFrame = requestAnimationFrame(check);
+      return;
+    }
+    measureAll(t, page);
+    updateTarget();
+  };
+  check();
 }
 
 /** Rows in display order, relative to the top of the page's content. */
@@ -320,6 +352,37 @@ function targetOf(t: Tracking): DropTarget | null {
   );
 }
 
+function watchSide(t: Tracking) {
+  const { left, right } = t.sidebar.getBoundingClientRect();
+  const toward = t.x < left + SIDE_EDGE ? -1 : t.x > right - SIDE_EDGE ? 1 : 0;
+  const side = toward && spaceBeside(toward) ? toward : 0;
+  if (side === t.side) return;
+  t.side = side;
+  clearTimeout(t.sideTimer);
+  useDrag.setState({ edge: side });
+  if (side) t.sideTimer = setTimeout(() => switchSide(t), SIDE_WAIT_MS);
+}
+
+function switchSide(t: Tracking) {
+  if (tracking !== t || !t.side) return;
+  switchSpaceBy(t.side);
+  measureAll(t, null);
+  updateTarget();
+  remeasure(t);
+  if (spaceBeside(t.side)) {
+    t.sideTimer = setTimeout(() => switchSide(t), SIDE_REPEAT_MS);
+  } else {
+    t.side = 0;
+    useDrag.setState({ edge: 0 });
+  }
+}
+
+function spaceBeside(side: -1 | 1): boolean {
+  const { model, spaceId } = useSidebar.getState();
+  const index = model.spaces.findIndex((space) => space.id === spaceId);
+  return model.spaces[index + side] !== undefined;
+}
+
 /** Over Favorites the ghost becomes a tile centred on the pointer, as in Arc. */
 export const GHOST_TILE = { width: 72, height: 47 };
 /** Over a space's icon it shrinks to its favicon, above the pointer. */
@@ -393,7 +456,9 @@ function cancel() {
 function finish() {
   if (!tracking) return;
   cancelAnimationFrame(tracking.scrollFrame);
+  cancelAnimationFrame(tracking.settleFrame);
   clearTimeout(tracking.remeasure);
+  clearTimeout(tracking.sideTimer);
   tracking.unwatch?.();
   delete tracking.sidebar.dataset.dragging;
   tracking = null;
@@ -402,5 +467,5 @@ function finish() {
   window.removeEventListener('pointercancel', cancel);
   window.removeEventListener('keydown', onKey, true);
   window.removeEventListener('keyup', onKey, true);
-  useDrag.setState({ source: null, target: null, ghost: null, copying: false });
+  useDrag.setState({ source: null, target: null, ghost: null, copying: false, edge: 0 });
 }

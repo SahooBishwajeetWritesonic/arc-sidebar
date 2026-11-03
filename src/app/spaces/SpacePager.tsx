@@ -159,6 +159,7 @@ function SpacePage({
       layoutScroll
       className={styles.page}
       data-active-page={active || undefined}
+      data-space-id={space.id}
       inert={!active}
       // Each page in its space's scheme, so a neighbour sliding in is drawn right.
       style={{ colorScheme: scheme }}

@@ -9,6 +9,7 @@ export function DragLayer() {
   const ghost = useDrag((state) => state.ghost);
   const copying = useDrag((state) => state.copying);
   const target = useDrag((state) => state.target);
+  const edge = useDrag((state) => state.edge);
   const line = target && 'lineY' in target && target.lineY !== null ? target : null;
   // In the page, so it scrolls with the rows.
   const page = line && document.querySelector<HTMLElement>('[data-sidebar] [data-active-page]');
@@ -29,6 +30,16 @@ export function DragLayer() {
           />,
           page,
         )}
+      {ghost &&
+        ([-1, 1] as const).map((side) => (
+          <div
+            key={side}
+            className={styles.edge}
+            data-side={side < 0 ? 'left' : 'right'}
+            data-on={edge === side || undefined}
+            aria-hidden
+          />
+        ))}
       {ghost &&
         createPortal(
           <div

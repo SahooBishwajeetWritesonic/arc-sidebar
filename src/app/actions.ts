@@ -213,7 +213,7 @@ function dropPair(pair: readonly [string, string], target: DropTarget, windowId:
         type: 'unpin',
         itemId,
         windowId,
-        spaceId: homeSpaceOf(itemId),
+        spaceId,
         todayBeforeTabId: target.beforeTabId,
       });
     }
@@ -538,6 +538,16 @@ function whenPlaced(url: string, then: (tabId: number) => void) {
   const timer = setTimeout(stop, 5000);
 }
 
+/** Tabs dragged here from another space join the shown one. */
+function bringOver(tabIds: readonly number[]) {
+  const { session, spaceId } = useSidebar.getState();
+  for (const tabId of tabIds) {
+    const home = session.tabSpaces[tabId];
+    if (home !== undefined && home !== spaceId)
+      dispatch({ type: 'moveTabToSpace', tabId, spaceId });
+  }
+}
+
 /** Tabs go to the top of the space's Today; pins and folders to the end of its Pinned. */
 function dropOnSpace(source: DragSource, spaceId: string) {
   const { model } = useSidebar.getState();
@@ -572,7 +582,9 @@ function drop(source: DragSource, target: DropTarget) {
   if (pair) return dropPair(pair, target, windowId);
 
   if (target.section === 'split') {
-    if (source.kind === 'tab') splitTodayTabs(source.tabId, target.withTabId, target.side);
+    if (source.kind !== 'tab') return;
+    bringOver([source.tabId]);
+    splitTodayTabs(source.tabId, target.withTabId, target.side);
     return;
   }
   if (source.kind === 'split') {
@@ -582,6 +594,7 @@ function drop(source: DragSource, target: DropTarget) {
       return pinSplit(source.tabIds, { parentId, orders });
     }
     if (target.section !== 'today') return;
+    bringOver(source.tabIds);
     for (const tabId of source.tabIds) {
       dispatch({ type: 'reorderToday', windowId, tabId, beforeTabId: target.beforeTabId });
     }
@@ -612,6 +625,7 @@ function drop(source: DragSource, target: DropTarget) {
 
   if (target.section === 'today') {
     if (source.kind === 'tab') {
+      bringOver([source.tabId]);
       dispatch({
         type: 'reorderToday',
         windowId,
@@ -623,7 +637,7 @@ function drop(source: DragSource, target: DropTarget) {
         type: 'unpin',
         itemId: source.itemId,
         windowId,
-        spaceId: homeSpaceOf(source.itemId),
+        spaceId,
         todayBeforeTabId: target.beforeTabId,
       });
     }
@@ -672,12 +686,13 @@ function dropMany(
     const ids = selectTodayIds(tabsState);
     const from = target.beforeTabId === null ? ids.length : ids.indexOf(target.beforeTabId);
     const beforeTabId = ids.slice(Math.max(from, 0)).find((id) => !source.tabIds.includes(id));
+    bringOver(source.tabIds);
     for (const itemId of source.itemIds) {
       dispatch({
         type: 'unpin',
         itemId,
         windowId,
-        spaceId: homeSpaceOf(itemId),
+        spaceId,
         todayBeforeTabId: beforeTabId ?? null,
       });
     }
