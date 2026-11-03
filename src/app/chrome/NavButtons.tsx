@@ -1,11 +1,14 @@
 import { ArrowLeft, ArrowRight, RotateCw, X } from 'lucide-react';
-import type { MouseEvent } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import { IconSwap } from '@/app/rows/IconSwap';
 import { duplicateTab, historyStep, reloadTab, stopLoading, useTabs } from '@/state/tabs';
 import styles from './nav-buttons.module.css';
 
 /** A middle-press would start the page's autoscroll. */
 const noAutoscroll = (event: MouseEvent) => event.button === 1 && event.preventDefault();
+
+/** Stop shows from the press at least this long, so a quick reload still reads. */
+const STOP_HOLD_MS = 500;
 
 /**
  * Arc's Back, Forward and Reload. Chrome doesn't say whether a tab has history,
@@ -15,6 +18,12 @@ export function NavButtons() {
   const tab = useTabs((state) =>
     state.activeId === null ? undefined : state.tabs.get(state.activeId),
   );
+  const [pressed, setPressed] = useState<number | null>(null);
+  useEffect(() => {
+    if (pressed === null) return;
+    const timer = setTimeout(() => setPressed(null), STOP_HOLD_MS);
+    return () => clearTimeout(timer);
+  }, [pressed]);
   if (!tab) return <nav className={styles.nav} aria-label="Page navigation" />;
 
   const step = (by: -1 | 1) => ({
@@ -22,10 +31,16 @@ export function NavButtons() {
     onAuxClick: (event: MouseEvent) => event.button === 1 && historyStep(tab.id, by, true),
     onMouseDown: noAutoscroll,
   });
-  const reload = (event: MouseEvent) => {
-    if (tab.loading) stopLoading(tab.id);
-    else if (event.metaKey || event.ctrlKey) duplicateTab(tab.id);
-    else reloadTab(tab.id);
+  const stopping = tab.loading || pressed === tab.id;
+  const onReload = (event: MouseEvent) => {
+    if (stopping) {
+      setPressed(null);
+      stopLoading(tab.id);
+    } else if (event.metaKey || event.ctrlKey) duplicateTab(tab.id);
+    else {
+      setPressed(tab.id);
+      reloadTab(tab.id);
+    }
   };
 
   return (
@@ -51,11 +66,12 @@ export function NavButtons() {
       <button
         type="button"
         className={styles.button}
-        aria-label={tab.loading ? 'Stop' : 'Reload'}
-        onClick={reload}
+        data-nudge={stopping ? undefined : 'reload'}
+        aria-label={stopping ? 'Stop' : 'Reload'}
+        onClick={onReload}
       >
         <IconSwap
-          on={tab.loading}
+          on={stopping}
           off={<RotateCw size={15} strokeWidth={1.75} />}
           to={<X size={16} strokeWidth={1.75} />}
         />

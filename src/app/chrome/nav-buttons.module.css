@@ -1,6 +1,6 @@
 /*
  * Arc's top-row navigation (research/07): 32 pt buttons 2 pt apart, Reload's centre 22 pt
- * in from the edge. The arrows nudge the way they go as they're pressed.
+ * in from the edge. The arrows nudge the way they go as they're pressed, and Reload turns.
  */
 .nav {
   display: flex;
@@ -29,7 +29,13 @@
 }
 
 .button svg {
-  transition: translate var(--press-time) linear;
+  transition:
+    translate var(--press-time) linear,
+    rotate var(--press-time) linear;
+}
+
+.button[data-nudge='reload']:active svg {
+  rotate: 30deg;
 }
 
 .button[data-nudge='back']:active svg {
