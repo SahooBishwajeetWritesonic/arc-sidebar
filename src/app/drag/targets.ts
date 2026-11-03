@@ -56,7 +56,8 @@ export type DropTarget =
   /** Onto the middle of a Today tab: the two go side by side, the dragged one on `side`. */
   | { section: 'split'; withTabId: number; side: 'left' | 'right' }
   /** Arc makes room in the grid instead of drawing a line. */
-  | { section: 'favorites'; index: number; beforeId: string | null };
+  | { section: 'favorites'; index: number; beforeId: string | null }
+  | { section: 'space'; spaceId: string };
 
 const HALF_GAP = 0.5;
 
@@ -74,7 +75,7 @@ export function findTarget(
   if (favorites && point.y < favorites.bottom) return favoritesTarget(favorites, point, source);
 
   const target = locate(slots, point, source);
-  if (!target || target.section === 'favorites' || target.section === 'split') return target;
+  if (!target || (target.section !== 'pinned' && target.section !== 'today')) return target;
 
   if (source.kind === 'many') {
     if (target.section === 'today') return source.bound ? target : null;

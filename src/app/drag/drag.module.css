@@ -101,3 +101,11 @@
   padding: 0;
   border-radius: 12px;
 }
+
+/* Over a space's icon: just the favicon, so the icon shows. */
+.ghost[data-chip] {
+  justify-content: center;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+}

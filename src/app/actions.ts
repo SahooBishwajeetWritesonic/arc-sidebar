@@ -490,7 +490,8 @@ function copyOn(source: DragSource, target: DropTarget) {
   // A favorited split is one tile: it moves as one, as a pinned split does.
   const paired = source.kind === 'favorite' && pairOf(source.itemId);
   const page = paired ? undefined : copiedPage(source);
-  if (!page || target.section === 'split') return drop(source, target);
+  if (!page || target.section === 'split' || target.section === 'space')
+    return drop(source, target);
   if (target.section === 'today') {
     const { beforeTabId } = target;
     whenPlaced(page.url, (tabId) =>
@@ -537,9 +538,35 @@ function whenPlaced(url: string, then: (tabId: number) => void) {
   const timer = setTimeout(stop, 5000);
 }
 
+/** Tabs go to the top of the space's Today; pins and folders to the end of its Pinned. */
+function dropOnSpace(source: DragSource, spaceId: string) {
+  const { model } = useSidebar.getState();
+  const toPinned = (itemIds: readonly string[]) => {
+    const orders = ordersForDrop(model, spaceId, null, null, null, itemIds, itemIds.length);
+    itemIds.forEach((itemId, i) =>
+      dispatch({ type: 'moveToSpace', itemId, spaceId, order: orders[i]! }),
+    );
+  };
+  switch (source.kind) {
+    case 'tab':
+      return moveTabToSpace(source.tabId, spaceId);
+    case 'split':
+      return moveTabsToSpace(source.tabIds, spaceId);
+    case 'many':
+      clearSelection();
+      toPinned(source.itemIds);
+      return moveTabsToSpace(source.tabIds, spaceId);
+    case 'folder':
+      return toPinned([source.itemId]);
+    default:
+      return toPinned(pairOf(source.itemId) ?? [source.itemId]);
+  }
+}
+
 function drop(source: DragSource, target: DropTarget) {
   const { model, spaceId, windowId } = useSidebar.getState();
   if (windowId === null) return;
+  if (target.section === 'space') return dropOnSpace(source, target.spaceId);
   if (source.kind === 'many') return dropMany(source, target, windowId);
   const pair = source.kind === 'favorite' ? pairOf(source.itemId) : undefined;
   if (pair) return dropPair(pair, target, windowId);

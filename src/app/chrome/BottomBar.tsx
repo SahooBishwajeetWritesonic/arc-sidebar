@@ -14,6 +14,7 @@ import {
   setSync,
   switchSpace,
 } from '@/app/actions';
+import { useDrag } from '@/app/drag/drag';
 import { spring } from '@/app/motion';
 import { useBesideMenu } from '@/app/rows/beside';
 import menu from '@/app/rows/menu.module.css';
@@ -72,6 +73,10 @@ function SpaceSwitcher() {
   // A drag ends with a click on the icon dragged, which mustn't switch to it.
   const justDragged = useRef(false);
   const nav = useRef<HTMLElement>(null);
+  const dropTarget = useDrag((state) =>
+    state.target?.section === 'space' ? state.target.spaceId : null,
+  );
+  const landed = useDrag((state) => state.landed);
   if (all.length < 2) return <div className={spaces.switcher} />;
 
   const order = dragged ?? all.map((space) => space.id);
@@ -112,6 +117,8 @@ function SpaceSwitcher() {
             value={space.id}
             type="button"
             className={spaces.space}
+            data-space-drop={space.id}
+            data-drop-target={dropTarget === space.id || undefined}
             aria-label={space.name}
             aria-current={space.id === current}
             title={i < 9 ? `${space.name} (⌃${i + 1})` : space.name}
@@ -134,7 +141,13 @@ function SpaceSwitcher() {
               switchSpace(space.id);
             }}
           >
-            <SpaceGlyph icon={space.icon} />
+            <span
+              key={landed?.spaceId === space.id ? landed.at : undefined}
+              className={spaces.glyphBox}
+              data-landed={landed?.spaceId === space.id || undefined}
+            >
+              <SpaceGlyph icon={space.icon} />
+            </span>
           </Reorder.Item>
         );
       })}

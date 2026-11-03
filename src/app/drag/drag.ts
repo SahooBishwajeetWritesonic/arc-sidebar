@@ -30,7 +30,9 @@ export const useDrag = create<{
   ghost: Ghost | null;
   /** Option is held: the drop leaves a copy (Arc's Option-drag). */
   copying: boolean;
-}>()(() => ({ source: null, target: null, ghost: null, copying: false }));
+  /** The space icon last dropped on. */
+  landed: { spaceId: string; at: number } | null;
+}>()(() => ({ source: null, target: null, ghost: null, copying: false, landed: null }));
 
 /** How a drop ends: `copy` when Option was held as it was let go. */
 export interface DropHow {
@@ -70,6 +72,7 @@ interface Tracking {
   page: HTMLElement | null;
   slots: Slot[];
   favorites?: FavoritesLayout;
+  spaces: { id: string; rect: DOMRect }[];
   scrollFrame: number;
   /** Stops watching for rows changing under the drag. */
   unwatch?: () => void;
@@ -115,6 +118,7 @@ export function beginPress(
     started: false,
     page: null,
     slots: [],
+    spaces: [],
     scrollFrame: 0,
   };
   window.addEventListener('pointermove', onMove);
@@ -200,6 +204,10 @@ function measureAll(t: Tracking, page: HTMLElement | null) {
   t.page = page;
   t.slots = page ? measure(t.sidebar, page) : [];
   t.favorites = page ? measureFavorites(t.sidebar, page) : undefined;
+  t.spaces = [...document.querySelectorAll<HTMLElement>('[data-space-drop]')].map((icon) => ({
+    id: icon.dataset.spaceDrop!,
+    rect: icon.getBoundingClientRect(),
+  }));
 }
 
 /** Rows in display order, relative to the top of the page's content. */
@@ -259,6 +267,24 @@ function favoritesZone(layout: FavoritesLayout, scroll: number): FavoritesZone {
   };
 }
 
+/** Everything dragged is in that space already. */
+function alreadyIn(source: DragSource, spaceId: string): boolean {
+  const { model, session, spaceId: shown } = useSidebar.getState();
+  const { items } = model;
+  const tabIn = (tabId: number) => (session.tabSpaces[tabId] ?? shown) === spaceId;
+  const itemIn = (itemId: string) => items[itemId]?.spaceId === spaceId;
+  switch (source.kind) {
+    case 'tab':
+      return tabIn(source.tabId);
+    case 'split':
+      return source.tabIds.every(tabIn);
+    case 'many':
+      return source.tabIds.every(tabIn) && source.itemIds.every(itemIn);
+    default:
+      return itemIn(source.itemId);
+  }
+}
+
 function updateTarget() {
   if (!tracking?.started) return;
   const target = targetOf(tracking);
@@ -269,6 +295,10 @@ function updateTarget() {
 
 function targetOf(t: Tracking): DropTarget | null {
   const { x, y, source, page } = t;
+  const icon = t.spaces.find(
+    ({ rect }) => x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom,
+  );
+  if (icon) return alreadyIn(source, icon.id) ? null : { section: 'space', spaceId: icon.id };
   if (!page) return null;
 
   const scroll = page.scrollTop;
@@ -292,12 +322,18 @@ function targetOf(t: Tracking): DropTarget | null {
 
 /** Over Favorites the ghost becomes a tile centred on the pointer, as in Arc. */
 export const GHOST_TILE = { width: 72, height: 47 };
+/** Over a space's icon it shrinks to its favicon, above the pointer. */
+export const GHOST_CHIP = 28;
 
 function placeGhost() {
   if (!tracking || !ghostElement) return;
-  const asTile = useDrag.getState().target?.section === 'favorites';
-  const x = tracking.x - (asTile ? GHOST_TILE.width / 2 : tracking.grabX);
-  const y = tracking.y - (asTile ? GHOST_TILE.height / 2 : tracking.grabY);
+  const section = useDrag.getState().target?.section;
+  const [x, y] =
+    section === 'favorites'
+      ? [tracking.x - GHOST_TILE.width / 2, tracking.y - GHOST_TILE.height / 2]
+      : section === 'space'
+        ? [tracking.x - GHOST_CHIP / 2, tracking.y - GHOST_CHIP - 10]
+        : [tracking.x - tracking.grabX, tracking.y - tracking.grabY];
   ghostElement.style.transform = `translate3d(${x}px, ${y}px, 0)`;
   // A selection's count sits by the pointer, as in Finder, where the panel's edge can't cut it off.
   ghostElement.style.setProperty('--grab-x', `${tracking.grabX}px`);
@@ -308,7 +344,8 @@ function autoScroll() {
   const step = () => {
     if (!tracking) return;
     const { y, page } = tracking;
-    const speed = page ? scrollSpeed(y, page.getBoundingClientRect()) : 0;
+    const overIcon = useDrag.getState().target?.section === 'space';
+    const speed = page && !overIcon ? scrollSpeed(y, page.getBoundingClientRect()) : 0;
     if (speed === 0) {
       tracking.scrollFrame = 0;
       return;
@@ -333,7 +370,12 @@ function onUp(event: PointerEvent) {
   const { target } = useDrag.getState();
   finish();
   if (!t.started) t.onTap?.();
-  else if (target) t.onDrop(t.source, target, { copy: event.altKey });
+  else if (target) {
+    t.onDrop(t.source, target, { copy: event.altKey });
+    if (target.section === 'space') {
+      useDrag.setState({ landed: { spaceId: target.spaceId, at: Date.now() } });
+    }
+  }
 }
 
 function onKey(event: KeyboardEvent) {

@@ -1,7 +1,7 @@
 import { Folder, Globe, Plus } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { SpaceGlyph } from '@/app/spaces/icons';
-import { GHOST_TILE, setGhostElement, useDrag } from './drag';
+import { GHOST_CHIP, GHOST_TILE, setGhostElement, useDrag } from './drag';
 import styles from './drag.module.css';
 
 /** As in Arc, the list itself doesn't move during a drag: only the drop line and the ghost. */
@@ -13,6 +13,7 @@ export function DragLayer() {
   // In the page, so it scrolls with the rows.
   const page = line && document.querySelector<HTMLElement>('[data-sidebar] [data-active-page]');
   const asTile = target?.section === 'favorites';
+  const asChip = target?.section === 'space';
   const depth = line?.section === 'pinned' ? line.depth : 0;
 
   return (
@@ -34,9 +35,10 @@ export function DragLayer() {
             ref={setGhostElement}
             className={styles.ghost}
             data-tile={asTile || undefined}
+            data-chip={asChip || undefined}
             data-count={ghost.count}
             data-copy={copying || undefined}
-            style={{ width: asTile ? GHOST_TILE.width : ghost.width }}
+            style={{ width: asTile ? GHOST_TILE.width : asChip ? GHOST_CHIP : ghost.width }}
             aria-hidden
           >
             {ghost.icon ? (
@@ -50,7 +52,7 @@ export function DragLayer() {
             ) : (
               <Globe className={styles.icon} size={16} strokeWidth={1.75} />
             )}
-            {!asTile && (
+            {!asTile && !asChip && (
               <span className={styles.title} dir="auto">
                 {ghost.title}
               </span>

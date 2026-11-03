@@ -319,3 +319,31 @@ test('each space keeps its own scroll depth, and one not seen yet starts at the 
   await showSpace(page, 'Space');
   await expect.poll(() => depth(page)).toBe(left);
 });
+
+/** Presses a row and moves it a little, so it's dragging. */
+async function pickUp(page: Page, title: string) {
+  const box = (await panel(page)
+    .locator('[data-active-page] [data-nav-row]', { hasText: title })
+    .first()
+    .boundingBox())!;
+  await page.mouse.move(box.x + 60, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 60, box.y + box.height / 2 + 10, { steps: 4 });
+}
+
+test('dropping a Today tab on another space’s icon moves it there', async ({ page }) => {
+  await ready(page);
+  await newSpace(page, 'Work');
+  await showSpace(page, 'Space');
+
+  await pickUp(page, 'Engineering Wiki');
+  const icon = (await spaceIcon(page, 'Work').boundingBox())!;
+  await page.mouse.move(icon.x + icon.width / 2, icon.y + icon.height / 2, { steps: 12 });
+  await expect(spaceIcon(page, 'Work')).toHaveAttribute('data-drop-target');
+  await page.mouse.up();
+  await expect.poll(() => titles(page, 'tab')).not.toContain('Engineering Wiki');
+  await expect(shownPage(page)).toHaveAttribute('aria-label', 'Space');
+
+  await showSpace(page, 'Work');
+  await expect.poll(() => titles(page, 'tab')).toContain('Engineering Wiki');
+});

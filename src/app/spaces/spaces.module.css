@@ -114,6 +114,39 @@
   opacity: 1;
 }
 
+.glyphBox {
+  display: grid;
+  place-items: center;
+  transition: scale 150ms var(--ease-out);
+}
+
+.space[data-drop-target] {
+  background: var(--drag-hint);
+  opacity: 1;
+}
+
+.space[data-drop-target] .glyphBox {
+  scale: 1.15;
+}
+
+.glyphBox[data-landed] {
+  animation: landed 320ms var(--ease-out);
+}
+
+@keyframes landed {
+  40% {
+    scale: 1.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space[data-drop-target] .glyphBox,
+  .glyphBox[data-landed] {
+    scale: 1;
+    animation: none;
+  }
+}
+
 .space:focus-visible {
   outline: 2px dashed var(--focus-ring);
   outline-offset: -2px;
