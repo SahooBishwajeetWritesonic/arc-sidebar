@@ -10,19 +10,24 @@ export function DragLayer() {
   const copying = useDrag((state) => state.copying);
   const target = useDrag((state) => state.target);
   const line = target && 'lineY' in target && target.lineY !== null ? target : null;
+  // In the page, so it scrolls with the rows.
+  const page = line && document.querySelector<HTMLElement>('[data-sidebar] [data-active-page]');
   const asTile = target?.section === 'favorites';
   const depth = line?.section === 'pinned' ? line.depth : 0;
 
   return (
     <>
-      {line && (
-        <div
-          className={styles.line}
-          data-drop-line
-          style={{ top: line.lineY!, '--depth': depth } as React.CSSProperties}
-          aria-hidden
-        />
-      )}
+      {line &&
+        page &&
+        createPortal(
+          <div
+            className={styles.line}
+            data-drop-line
+            style={{ top: line.lineY!, '--depth': depth } as React.CSSProperties}
+            aria-hidden
+          />,
+          page,
+        )}
       {ghost &&
         createPortal(
           <div

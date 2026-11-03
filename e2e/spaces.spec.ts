@@ -282,3 +282,40 @@ test('the mouse’s back and forward buttons step through the spaces', async ({ 
   await sidebar.dispatchEvent('mouseup', { button: 4, bubbles: true });
   await expect(shown).toHaveAttribute('aria-label', 'Work');
 });
+
+const shownPage = (page: Page) => panel(page).locator('[data-active-page]');
+const depth = (page: Page) => shownPage(page).evaluate((element) => element.scrollTop);
+const spaceIcon = (page: Page, name: string) =>
+  panel(page).getByRole('navigation', { name: 'Spaces' }).getByRole('button', { name });
+
+/** Switches with the space's icon and waits for its page to slide into place. */
+async function showSpace(page: Page, name: string) {
+  await spaceIcon(page, name).click();
+  await expect(shownPage(page)).toHaveAttribute('aria-label', name);
+  await expect.poll(() => shownPage(page).evaluate((el) => el.getBoundingClientRect().x)).toBe(0);
+}
+
+test('each space keeps its own scroll depth, and one not seen yet starts at the top', async ({
+  page,
+}) => {
+  await ready(page);
+  await page.getByRole('button', { name: 'Open 10 tabs' }).click();
+  await page.getByRole('button', { name: 'Open 10 tabs' }).click();
+  await expect.poll(() => titles(page, 'tab')).toHaveLength(24);
+  await newSpace(page, 'Work');
+  await newSpace(page, 'Play');
+  await showSpace(page, 'Space');
+
+  const box = (await shownPage(page).boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel(0, 300);
+  await expect.poll(() => depth(page)).toBeGreaterThan(200);
+  const left = await depth(page);
+
+  await showSpace(page, 'Work');
+  expect(await depth(page)).toBe(0);
+  // Two spaces away, so the first's rows are let go, and come back where they were.
+  await showSpace(page, 'Play');
+  await showSpace(page, 'Space');
+  await expect.poll(() => depth(page)).toBe(left);
+});

@@ -37,6 +37,8 @@
   --accessory-hover: light-dark(rgb(0 0 0 / 0.07), rgb(255 255 255 / 0.1));
   --bar-hover: light-dark(rgb(0 0 0 / 0.05), rgb(255 255 255 / 0.078));
   --separator: light-dark(rgb(0 0 0 / 0.12), rgb(255 255 255 / 0.14));
+  /* Arc's TabListOverlapBorder. */
+  --overlap-border: light-dark(rgb(0 0 0 / 0.05), rgb(255 255 255 / 0.05));
   /* Split rows: each tab a small pill inside the row's pill. */
   --split-pane-radius: 8px;
   --split-pane: light-dark(rgb(255 255 255 / 0.4), rgb(250 251 255 / 0.07));

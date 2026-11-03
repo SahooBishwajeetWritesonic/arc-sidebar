@@ -39,12 +39,19 @@ export interface DropHow {
 
 /** Movement before a press becomes a drag (Arc: about 3–4 pt). */
 const THRESHOLD = 4;
-/** Distance from the sidebar's top or bottom edge where it starts scrolling. */
+/** Distance from the shown space's top or bottom edge where it starts scrolling. */
 const SCROLL_EDGE = 40;
 /** Rows changed mid-drag have finished sliding by then (spring.row: ~105 ms). */
 const SETTLE_MS = 150;
 
 type GhostContent = Omit<Ghost, 'width'>;
+
+/** Tiles from the page's top, as Favorites don't scroll with it. */
+interface FavoritesLayout {
+  cells: FavoritesZone['cells'];
+  titleMiddle: number;
+  full: boolean;
+}
 
 interface Tracking {
   source: DragSource;
@@ -60,8 +67,9 @@ interface Tracking {
   grabX: number;
   grabY: number;
   started: boolean;
+  page: HTMLElement | null;
   slots: Slot[];
-  favorites?: FavoritesZone;
+  favorites?: FavoritesLayout;
   scrollFrame: number;
   /** Stops watching for rows changing under the drag. */
   unwatch?: () => void;
@@ -105,6 +113,7 @@ export function beginPress(
     grabX: event.clientX - rect.left,
     grabY: event.clientY - rect.top,
     started: false,
+    page: null,
     slots: [],
     scrollFrame: 0,
   };
@@ -138,8 +147,7 @@ function copyWhile(altKey: boolean) {
 
 function start(t: Tracking) {
   t.started = true;
-  t.slots = measure(t.sidebar);
-  t.favorites = measureFavorites(t.sidebar);
+  measureAll(t, activePage(t.sidebar));
   t.sidebar.dataset.dragging = '';
   const width = t.row.getBoundingClientRect().width;
   useDrag.setState({ source: t.source, ghost: { ...t.ghost(), width }, target: null });
@@ -162,8 +170,7 @@ function onRowsChanged() {
   clearTimeout(t.remeasure);
   t.remeasure = setTimeout(() => {
     if (tracking !== t) return;
-    t.slots = measure(t.sidebar);
-    t.favorites = measureFavorites(t.sidebar);
+    measureAll(t, activePage(t.sidebar));
     updateTarget();
   }, SETTLE_MS);
 }
@@ -183,15 +190,22 @@ function exists(source: DragSource): boolean {
   }
 }
 
-/** The top of the sidebar's content in viewport coordinates (it scrolls). */
-const contentTop = (sidebar: HTMLElement) =>
-  sidebar.getBoundingClientRect().top - sidebar.scrollTop;
+const activePage = (sidebar: HTMLElement) =>
+  sidebar.querySelector<HTMLElement>('[data-active-page]');
 
-/** Rows in display order, relative to the top of the sidebar's content. */
-function measure(sidebar: HTMLElement): Slot[] {
-  const top = contentTop(sidebar);
+/** The top of the page's content in viewport coordinates (it scrolls). */
+const contentTop = (page: HTMLElement) => page.getBoundingClientRect().top - page.scrollTop;
+
+function measureAll(t: Tracking, page: HTMLElement | null) {
+  t.page = page;
+  t.slots = page ? measure(t.sidebar, page) : [];
+  t.favorites = page ? measureFavorites(t.sidebar, page) : undefined;
+}
+
+/** Rows in display order, relative to the top of the page's content. */
+function measure(sidebar: HTMLElement, page: HTMLElement): Slot[] {
+  const top = contentTop(page);
   const left = sidebar.getBoundingClientRect().left;
-  const page = sidebar.querySelector('[data-active-page]') ?? sidebar;
   return [...page.querySelectorAll<HTMLElement>('[data-nav-row]')].map((element) => {
     const rect = element.getBoundingClientRect();
     return {
@@ -209,10 +223,10 @@ function measure(sidebar: HTMLElement): Slot[] {
 }
 
 /** The Favorites grid and the strip above the shown space's title, where a drop favorites. */
-function measureFavorites(sidebar: HTMLElement): FavoritesZone | undefined {
-  const header = sidebar.querySelector('[data-active-page] [data-space-header]');
+function measureFavorites(sidebar: HTMLElement, page: HTMLElement): FavoritesLayout | undefined {
+  const header = page.querySelector('[data-space-header]');
   if (!header) return undefined;
-  const top = contentTop(sidebar);
+  const top = page.getBoundingClientRect().top;
   const left = sidebar.getBoundingClientRect().left;
   const cells = [...sidebar.querySelectorAll<HTMLElement>('[data-favorite-id]')].map((tile) => {
     const rect = tile.getBoundingClientRect();
@@ -226,23 +240,45 @@ function measureFavorites(sidebar: HTMLElement): FavoritesZone | undefined {
   });
   const title = header.getBoundingClientRect();
   return {
-    // Down to the middle of the space's title, so an empty grid is easy to hit.
-    bottom: title.top + title.height / 2 - top,
     cells,
+    titleMiddle: title.top + title.height / 2 - contentTop(page),
     full: cells.length >= FAVORITES_LIMIT,
+  };
+}
+
+function favoritesZone(layout: FavoritesLayout, scroll: number): FavoritesZone {
+  return {
+    // To the title's middle, so an empty grid is easy to hit.
+    bottom: Math.max(scroll, layout.titleMiddle),
+    cells: layout.cells.map((cell) => ({
+      ...cell,
+      top: cell.top + scroll,
+      bottom: cell.bottom + scroll,
+    })),
+    full: layout.full,
   };
 }
 
 function updateTarget() {
   if (!tracking?.started) return;
+  const target = targetOf(tracking);
+  if (JSON.stringify(target) !== JSON.stringify(useDrag.getState().target)) {
+    useDrag.setState({ target });
+  }
+}
+
+function targetOf(t: Tracking): DropTarget | null {
+  const { x, y, source, page } = t;
+  if (!page) return null;
+
+  const scroll = page.scrollTop;
   const point = {
-    x: tracking.x - tracking.sidebar.getBoundingClientRect().left,
-    y: tracking.y - contentTop(tracking.sidebar),
+    x: x - t.sidebar.getBoundingClientRect().left,
+    y: y - page.getBoundingClientRect().top + scroll,
   };
   const { model } = useSidebar.getState();
-  const { source } = tracking;
-  const target = findTarget(
-    tracking.slots,
+  return findTarget(
+    t.slots,
     point,
     source,
     (folderId) => {
@@ -250,11 +286,8 @@ function updateTarget() {
       if (folder?.kind === 'folder' && folder.live) return true;
       return source.kind === 'folder' && isWithin(model, folderId, source.itemId);
     },
-    tracking.favorites,
+    t.favorites && favoritesZone(t.favorites, scroll),
   );
-  if (JSON.stringify(target) !== JSON.stringify(useDrag.getState().target)) {
-    useDrag.setState({ target });
-  }
 }
 
 /** Over Favorites the ghost becomes a tile centred on the pointer, as in Arc. */
@@ -274,23 +307,24 @@ function autoScroll() {
   if (!tracking || tracking.scrollFrame) return;
   const step = () => {
     if (!tracking) return;
-    const { y, sidebar } = tracking;
-    const { top, bottom } = sidebar.getBoundingClientRect();
-    const speed =
-      y < top + SCROLL_EDGE
-        ? -(top + SCROLL_EDGE - y) / 3
-        : y > bottom - SCROLL_EDGE
-          ? (y - (bottom - SCROLL_EDGE)) / 3
-          : 0;
+    const { y, page } = tracking;
+    const speed = page ? scrollSpeed(y, page.getBoundingClientRect()) : 0;
     if (speed === 0) {
       tracking.scrollFrame = 0;
       return;
     }
-    sidebar.scrollBy(0, speed);
+    page!.scrollBy(0, speed);
     updateTarget();
     tracking.scrollFrame = requestAnimationFrame(step);
   };
   tracking.scrollFrame = requestAnimationFrame(step);
+}
+
+/** Not above the page, where a drop goes to Favorites. */
+function scrollSpeed(y: number, { top, bottom }: DOMRect): number {
+  if (y >= top && y < top + SCROLL_EDGE) return -(top + SCROLL_EDGE - y) / 3;
+  if (y > bottom - SCROLL_EDGE) return Math.min(y - (bottom - SCROLL_EDGE), SCROLL_EDGE) / 3;
+  return 0;
 }
 
 function onUp(event: PointerEvent) {

@@ -1,4 +1,4 @@
-/* The panel: theme backdrop behind, sidebar scrolling above the bottom bar. */
+/* The panel: theme backdrop behind, the shown space scrolling above the bottom bar. */
 .shell {
   position: relative;
   isolation: isolate;
@@ -17,12 +17,12 @@
 }
 
 .sidebar {
-  position: relative; /* the drop line is placed against this */
+  position: relative;
   z-index: 1;
   flex: 1;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
-  overflow-y: auto;
-  padding: 8px var(--pad-side);
+  padding: 8px var(--pad-side) 0;
   color: var(--ink);
-  scrollbar-width: none;
 }

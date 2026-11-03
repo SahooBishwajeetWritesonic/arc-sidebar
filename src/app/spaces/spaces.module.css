@@ -122,21 +122,45 @@
 /* The pager spans the panel's full width (outside the side padding), so a
    sliding page is clipped at the panel's edge, not 8 pt inside it. */
 .viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
   margin: 0 calc(-1 * var(--pad-side));
   overflow-x: clip;
   overscroll-behavior-x: none;
 }
 
+/* Arc's hairline where the list scrolls under Favorites. */
+.viewport::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  height: 1px;
+  background: var(--overlap-border);
+  opacity: 0;
+  transition: opacity 100ms ease-out;
+  pointer-events: none;
+}
+
+.viewport[data-scrolled]::before {
+  opacity: 1;
+}
+
 .track {
   display: flex;
-  align-items: flex-start;
+  height: 100%;
 }
 
 .page {
+  position: relative; /* for the drop line */
   flex: 0 0 100%;
   box-sizing: border-box;
   min-width: 0;
-  padding: 0 var(--pad-side);
+  padding: 0 var(--pad-side) 8px;
+  overflow: hidden auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
   /* Resolved here, in the page's own scheme, then inherited by its rows. */
   color: var(--ink);
 }

@@ -1,5 +1,5 @@
 import { animate, LayoutGroup, motion, useReducedMotion, type MotionValue } from 'motion/react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type UIEvent } from 'react';
 import { WheelGestures } from 'wheel-gestures';
 import { switchSpace } from '@/app/actions';
 import { Boundary } from '@/app/chrome/Boundary';
@@ -24,6 +24,9 @@ import styles from './spaces.module.css';
 
 /** A wheel notch from a mouse (Shift+scroll) rather than a trackpad's stream. */
 const MOUSE_NOTCH = 50;
+
+/** Each space's scroll depth while the panel is open. */
+const depths = new Map<string, number>();
 
 /**
  * Spaces side by side on a track, sliding on Arc's critically damped spring. Only the shown
@@ -94,34 +97,84 @@ export function SpacePager({ looks }: { looks: Record<string, ThemeLook> }) {
 
   const rendered = (i: number) =>
     Math.abs(i - index) <= 1 || (crossing !== null && i >= crossing[0] && i <= crossing[1]);
+  const showScrolled = useCallback(
+    (top: number) => viewport.current?.toggleAttribute('data-scrolled', top > 0),
+    [],
+  );
 
   return (
     <div ref={viewport} className={styles.viewport}>
       <motion.div className={styles.track} style={{ x }}>
         {spaces.map((space, i) => (
-          <motion.section
+          <SpacePage
             key={space.id}
-            layoutRoot
-            className={styles.page}
-            data-active-page={i === index || undefined}
-            inert={i !== index}
-            // Each page in its space's scheme, so a neighbour sliding in is drawn right.
-            style={{ colorScheme: looks[space.id]?.scheme }}
-            aria-label={space.name}
-          >
-            {rendered(i) && (
-              <Boundary region="space" what="This space">
-                <LayoutGroup id={space.id}>
-                  <SpaceHeader spaceId={space.id} />
-                  <Pinned spaceId={space.id} />
-                  <Today spaceId={space.id} />
-                </LayoutGroup>
-              </Boundary>
-            )}
-          </motion.section>
+            space={space}
+            active={i === index}
+            rendered={rendered(i)}
+            scheme={looks[space.id]?.scheme}
+            onScrolled={showScrolled}
+          />
         ))}
       </motion.div>
     </div>
+  );
+}
+
+/** Its own scroller, so each space keeps its depth. */
+function SpacePage({
+  space,
+  active,
+  rendered,
+  scheme,
+  onScrolled,
+}: {
+  space: Space;
+  active: boolean;
+  rendered: boolean;
+  scheme: ThemeLook['scheme'] | undefined;
+  onScrolled: (top: number) => void;
+}) {
+  const page = useRef<HTMLElement>(null);
+  // Scroll events arrive after the content has gone (and scrolled to 0).
+  const shown = useRef(rendered);
+  shown.current = rendered;
+
+  useLayoutEffect(() => {
+    if (rendered) page.current!.scrollTop = depths.get(space.id) ?? 0;
+  }, [rendered, space.id]);
+  useLayoutEffect(() => {
+    if (active) onScrolled(page.current!.scrollTop);
+  }, [active, onScrolled]);
+
+  const onScroll = (event: UIEvent<HTMLElement>) => {
+    const top = event.currentTarget.scrollTop;
+    if (shown.current) depths.set(space.id, top);
+    if (active) onScrolled(top);
+  };
+
+  return (
+    <motion.section
+      ref={page}
+      layoutRoot
+      layoutScroll
+      className={styles.page}
+      data-active-page={active || undefined}
+      inert={!active}
+      // Each page in its space's scheme, so a neighbour sliding in is drawn right.
+      style={{ colorScheme: scheme }}
+      aria-label={space.name}
+      onScroll={onScroll}
+    >
+      {rendered && (
+        <Boundary region="space" what="This space">
+          <LayoutGroup id={space.id}>
+            <SpaceHeader spaceId={space.id} />
+            <Pinned spaceId={space.id} />
+            <Today spaceId={space.id} />
+          </LayoutGroup>
+        </Boundary>
+      )}
+    </motion.section>
   );
 }
 
