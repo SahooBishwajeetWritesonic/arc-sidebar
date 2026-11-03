@@ -1,6 +1,6 @@
 /*
- * Arc's top-row navigation (research/07): 32 pt buttons 2 pt apart, Reload's centre 22 pt
- * in from the edge. The arrows nudge the way they go as they're pressed, and Reload turns.
+ * Arc's top-row navigation (research/07): 32 pt buttons 2 pt apart. The arrows nudge the
+ * way they go as they're pressed, and Reload turns.
  */
 .nav {
   display: flex;
@@ -46,14 +46,46 @@
   translate: 2px 0;
 }
 
+.reload {
+  display: flex;
+}
+
+.more {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  background: none;
+  color: var(--ink-secondary);
+  opacity: 0.6;
+  transition: scale var(--press-time) linear;
+}
+
+.more:active {
+  scale: var(--press-scale-icon);
+}
+
+.more[data-popup-open] {
+  background: var(--bar-hover);
+  color: var(--ink);
+  opacity: 1;
+}
+
 @media (hover: hover) and (pointer: fine) {
-  .button:hover {
+  .button:hover,
+  .more:hover {
     background: var(--bar-hover);
     color: var(--ink);
+    opacity: 1;
   }
 }
 
-.button:focus-visible {
+.button:focus-visible,
+.more:focus-visible {
   outline: 2px dashed var(--focus-ring);
   outline-offset: -2px;
 }

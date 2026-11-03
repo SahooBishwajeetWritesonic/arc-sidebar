@@ -29,6 +29,7 @@ import type {
   MediaState,
   Platform,
   Recording,
+  ReloadKind,
   SitePermission,
   SitePermissionKind,
   TabEvent,
@@ -790,7 +791,10 @@ export class FakePlatform implements Platform {
     this.simulateLoad(tabId);
   }
 
-  reloadTab(tabId: number) {
+  readonly reloads: { tabId: number; how: ReloadKind }[] = [];
+
+  reloadTab(tabId: number, how: ReloadKind = 'normal') {
+    this.reloads.push({ tabId, how });
     this.simulateLoad(tabId);
   }
 

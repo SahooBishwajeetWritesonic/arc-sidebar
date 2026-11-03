@@ -218,8 +218,16 @@ export const chromePlatform: Platform = {
       .catch(() => {});
   },
 
-  reloadTab(tabId) {
-    void browser.tabs.reload(tabId).catch(() => {});
+  reloadTab(tabId, how = 'normal') {
+    const reload = () => browser.tabs.reload(tabId, { bypassCache: how !== 'normal' });
+    if (how !== 'clear') return void reload().catch(() => {});
+    void (async () => {
+      const { url = '' } = await browser.tabs.get(tabId);
+      if (/^https?:/.test(url)) {
+        await browser.browsingData.removeCache({ origins: [new URL(url).origin] });
+      }
+      await reload();
+    })().catch(() => {});
   },
 
   stopLoading(tabId) {

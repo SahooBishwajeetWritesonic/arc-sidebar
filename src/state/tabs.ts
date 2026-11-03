@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { hostname, isSamePage } from '@/model/urls';
-import type { Platform, SitePermissionKind, TabEvent, TabInfo } from '@/platform/types';
+import type { Platform, ReloadKind, SitePermissionKind, TabEvent, TabInfo } from '@/platform/types';
 import { nextAfterClose, withNewTab } from '@/platform/today-order';
 
 /** The window's live Chrome tabs, plus what the sidebar store tells us about them. */
@@ -272,8 +272,8 @@ export function historyStep(id: number, by: -1 | 1, inNewTab = false) {
   platform?.historyStep(id, by, inNewTab);
 }
 
-export function reloadTab(id: number) {
-  platform?.reloadTab(id);
+export function reloadTab(id: number, how?: ReloadKind) {
+  platform?.reloadTab(id, how);
 }
 
 export function stopLoading(id: number) {

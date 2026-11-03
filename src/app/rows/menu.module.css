@@ -103,3 +103,9 @@
   width: 16px;
   margin-right: 8px;
 }
+
+.keys {
+  margin-left: auto;
+  padding-left: 20px;
+  opacity: 0.55;
+}

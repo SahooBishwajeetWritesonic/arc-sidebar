@@ -27,6 +27,8 @@ export default defineConfig({
       // The URL bar's site menu: full-page capture and site permissions.
       'debugger',
       'contentSettings',
+      // Reload's Clear Site Cache and Reload.
+      'browsingData',
     ],
     // The command bar covers any page, as Arc's does.
     host_permissions: ['<all_urls>'],

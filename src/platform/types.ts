@@ -82,6 +82,9 @@ export type TabEvent =
   | { type: 'activate'; tabId: number; windowId: number }
   | { type: 'replace'; addedTabId: number; removedTabId: number };
 
+/** `hard` skips the cache; `clear` empties the site's cache first. */
+export type ReloadKind = 'normal' | 'hard' | 'clear';
+
 /**
  * Everything the panel needs from the browser. The extension implements it
  * over chrome.* (platform/chrome.ts); the dev harness implements it in memory.
@@ -145,7 +148,7 @@ export interface Platform {
    * in a copy of the tab instead, history and all (Arc's ⌘-click).
    */
   historyStep(tabId: number, by: -1 | 1, inNewTab?: boolean): void;
-  reloadTab(tabId: number): void;
+  reloadTab(tabId: number, how?: ReloadKind): void;
   stopLoading(tabId: number): void;
   /** Arc's Move to New Window: the tab, as it is, in a new window. */
   moveToNewWindow(tabId: number): void;

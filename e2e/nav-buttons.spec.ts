@@ -42,3 +42,31 @@ test('⌘-click on Back opens the page before in a new tab', async ({ page }) =>
   const pinned = panel(page).locator('[data-active-page] [data-nav-row="pin"]');
   await expect(pinned.filter({ hasText: 'Another page on' })).toBeVisible();
 });
+
+const reloads = (page: Page) =>
+  page.evaluate(() => window.harnessPlatform.reloads.map((r) => r.how));
+
+test('the reload menu reloads, hard reloads, or clears the site’s cache first', async ({
+  page,
+}) => {
+  await withButtons(page);
+  await button(page, 'Reload Options').click();
+  await panel(page)
+    .getByRole('menuitem', { name: /^Hard Reload/ })
+    .click();
+  await expect.poll(() => reloads(page)).toEqual(['hard']);
+  await expect(button(page, 'Reload')).toBeVisible();
+
+  // Right-click on Reload opens it too.
+  await button(page, 'Reload').click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Clear Site Cache and Reload' }).click();
+  await expect.poll(() => reloads(page)).toEqual(['hard', 'clear']);
+});
+
+test('Reload shows Stop at once, and Shift-click hard reloads', async ({ page }) => {
+  await withButtons(page);
+  await button(page, 'Reload').click({ modifiers: ['Shift'] });
+  await expect(button(page, 'Stop')).toBeVisible();
+  await expect.poll(() => reloads(page)).toEqual(['hard']);
+  await expect(button(page, 'Reload')).toBeVisible();
+});
