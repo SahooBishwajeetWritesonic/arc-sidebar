@@ -555,7 +555,7 @@ function useCommandContext(sidebarOpen: boolean): CommandContext {
   const activeId = useTabs((state) => state.activeId);
   const previousId = useTabs((state) => state.previousId);
   const todayIds = useTabs(useShallow((state) => selectTodayIds(state, spaceId)));
-  const archiveCount = useSidebar((state) => state.archive.entries.length);
+  const archive = useSidebar((state) => state.archive.entries);
   return useMemo(
     () => ({
       model,
@@ -566,9 +566,9 @@ function useCommandContext(sidebarOpen: boolean): CommandContext {
       previousId,
       todayIds,
       sidebarOpen,
-      archiveCount,
+      archive,
     }),
-    [model, session, spaceId, tabs, activeId, previousId, todayIds, sidebarOpen, archiveCount],
+    [model, session, spaceId, tabs, activeId, previousId, todayIds, sidebarOpen, archive],
   );
 }
 

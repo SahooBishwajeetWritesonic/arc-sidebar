@@ -47,6 +47,7 @@ export type Command =
   | { type: 'switchToTab'; tabId: number }
   | { type: 'openPin'; itemId: string }
   | { type: 'switchSpace'; spaceId: string }
+  | { type: 'restoreArchived'; entryId: string }
   | {
       type: 'action';
       action: ActionId;

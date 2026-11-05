@@ -1,4 +1,4 @@
-import { FAVORITES_ID, type Shortcut } from '@/model/types';
+import { FAVORITES_ID, type ArchiveEntry, type Shortcut } from '@/model/types';
 import { hostname, isSamePage } from '@/model/urls';
 import { availableActions, type CommandContext } from './actions';
 import type { HistoryEntry } from '@/platform/types';
@@ -8,7 +8,7 @@ import { linkFor, linkPages, siteSearchUrl } from './sites';
 import type { Result } from './types';
 import { displayUrl, typedUrl } from './url';
 
-const LIMIT = { pages: 6, actions: 5, history: 5, suggestions: 5, linkPages: 5 };
+const LIMIT = { pages: 6, actions: 5, history: 5, suggestions: 5, linkPages: 5, archive: 3 };
 
 interface Page extends Result {
   text: string;
@@ -258,26 +258,61 @@ export function searchCommands(
 
   matches.slice(0, LIMIT.pages).forEach(({ item }) => add(strip(item)));
 
-  const shown = results.map((result) => result.url).filter((u): u is string => !!u);
-  ranked(
+  const shown = () => results.flatMap((result) => (result.url ? [result.url] : []));
+  archiveRows(ctx.archive, text, shown()).slice(0, LIMIT.archive).forEach(add);
+  historyRows(history, text, now, shown()).slice(0, LIMIT.history).forEach(add);
+  return results;
+}
+
+/** One row per address; newest first among equal matches. */
+function archiveRows(
+  entries: readonly ArchiveEntry[],
+  text: string,
+  shown: readonly string[] = [],
+): Result[] {
+  const seen = new Set<string>();
+  const rows = entries
+    .filter((entry) => {
+      if (seen.has(entry.url) || shown.some((url) => isSamePage(url, entry.url))) return false;
+      seen.add(entry.url);
+      return true;
+    })
+    .map((entry) => ({ entry, text: `${entry.title} ${displayUrl(entry.url)}` }));
+  const found = text
+    ? ranked(rows, text, { tieBreak: (a, b) => b.entry.archivedAt - a.entry.archivedAt }).map(
+        ({ item }) => item,
+      )
+    : rows;
+  return found.map(({ entry }) => ({
+    key: `archive:${entry.id}`,
+    command: { type: 'restoreArchived', entryId: entry.id },
+    title: entry.title || displayUrl(entry.url),
+    detail: displayUrl(entry.url),
+    url: entry.url,
+    hint: 'Restore',
+  }));
+}
+
+function historyRows(
+  history: readonly HistoryEntry[],
+  text: string,
+  now: number,
+  shown: readonly string[] = [],
+): Result[] {
+  return ranked(
     history
       .filter((entry) => !shown.some((other) => isSamePage(other, entry.url)))
       .map((entry) => ({ ...entry, text: pageText(entry) })),
     text,
     { bonus: (entry) => historyBonus(entry, now) },
-  )
-    .slice(0, LIMIT.history)
-    .forEach(({ item }) =>
-      add({
-        key: `history:${item.url}`,
-        command: { type: 'openUrl', url: item.url },
-        title: item.title || displayUrl(item.url),
-        detail: item.title ? displayUrl(item.url) : undefined,
-        url: item.url,
-        hint: 'Open',
-      }),
-    );
-  return results;
+  ).map(({ item }) => ({
+    key: `history:${item.url}`,
+    command: { type: 'openUrl', url: item.url },
+    title: item.title || displayUrl(item.url),
+    detail: item.title ? displayUrl(item.url) : undefined,
+    url: item.url,
+    hint: 'Open',
+  }));
 }
 
 /**

@@ -3,6 +3,7 @@ import {
   FAVORITES_ID,
   FAVORITES_LIMIT,
   type Appearance,
+  type ArchiveEntry,
   type PinItem,
   type SessionState,
   type SidebarModel,
@@ -24,7 +25,8 @@ export interface CommandContext {
   todayIds: readonly number[];
   /** Whether this window's sidebar is open; some actions only work there. */
   sidebarOpen: boolean;
-  archiveCount: number;
+  /** Newest first. */
+  archive: readonly ArchiveEntry[];
 }
 
 /** The pinned item (or favorite) the tab belongs to, if any. */
@@ -186,7 +188,7 @@ export function availableActions(ctx: CommandContext): (Result & { words: string
     }
     add({ action: 'viewArchive', title: 'View Archive', words: 'library archived closed' });
     add({ action: 'viewDownloads', title: 'View Downloads', words: 'library files saved' });
-    if (ctx.archiveCount) {
+    if (ctx.archive.length) {
       add({ action: 'clearArchive', title: 'Clear Archive…', words: 'library archived empty' });
     }
     add({ action: 'editTheme', title: 'Edit Theme…', words: 'colour color gradient' });

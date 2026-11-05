@@ -254,6 +254,26 @@ test('a port alone opens that local server', async ({ page }) => {
   await expect.poll(async () => (await todayTitles(page))[0]).toContain('localhost');
 });
 
+test('an archived tab is found and restored from the bar', async ({ page }) => {
+  await ready(page);
+  await openBar(page);
+  await field(page).pressSequentially('figma');
+  await field(page).press('Enter');
+  await expect(selectedRow(page)).toContainText('Figma');
+  await openBar(page);
+  await field(page).pressSequentially('/archive tab');
+  await field(page).press('Enter');
+  await expect(panel(page).locator('[data-active-page] [data-nav-row="tab"]')).toHaveCount(3);
+
+  await openBar(page);
+  await field(page).pressSequentially('explorations');
+  const row = bar(page).getByRole('option').filter({ hasText: 'Restore' });
+  await expect(row).toContainText('Sidebar explorations – Figma');
+  await row.click();
+  await expect(panel(page).locator('[data-active-page] [data-nav-row="tab"]')).toHaveCount(4);
+  await expect.poll(() => todayTitles(page)).toContain('Sidebar explorations – Figma');
+});
+
 test('Backspace in an empty site search goes back to searching everything', async ({ page }) => {
   await ready(page);
   await openBar(page);

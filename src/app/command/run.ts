@@ -15,6 +15,7 @@ import {
   replacePinUrl,
   resetPin,
   resetSpace,
+  restoreArchived,
   separateSplit,
   setAppearance,
   setPinnedCollapsed,
@@ -47,6 +48,8 @@ export function runCommand(command: Command) {
       return pressPin(command.itemId);
     case 'switchSpace':
       return switchSpace(command.spaceId);
+    case 'restoreArchived':
+      return restoreArchived([command.entryId]);
     case 'action':
       return runAction(command);
   }

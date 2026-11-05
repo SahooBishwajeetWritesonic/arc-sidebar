@@ -4,6 +4,7 @@ import {
   FAVORITES_ID,
   defaultSettings,
   emptySession,
+  type ArchiveEntry,
   type PinItem,
 } from '@/model/types';
 import type { HistoryEntry, TabInfo } from '@/platform/types';
@@ -30,6 +31,16 @@ const pin = (id: string, spaceId: string, title: string, url: string): PinItem =
   order: 'a0',
   title,
   url,
+});
+
+const archived = (id: string, title: string, url: string, daysAgo: number): ArchiveEntry => ({
+  id,
+  title,
+  url,
+  spaceId: DEFAULT_SPACE_ID,
+  archivedAt: Date.UTC(2026, 10, 6) - daysAgo * 86_400_000,
+  reason: 'closed',
+  batchId: id,
 });
 
 /** Two spaces; tab 1 is current; Linear is pinned, Gmail a favorite, GitHub pinned in Work. */
@@ -67,7 +78,10 @@ function context(overrides: Partial<CommandContext> = {}): CommandContext {
     previousId: 4,
     todayIds: [4, 1],
     sidebarOpen: true,
-    archiveCount: 2,
+    archive: [
+      archived('a1', 'Quarterly planning doc', 'https://docs.example.com/plan', 1),
+      archived('a2', 'Old Figma file', 'https://www.figma.com/file/old', 2),
+    ],
     ...overrides,
   };
 }
@@ -187,6 +201,26 @@ describe('searchCommands', () => {
       type: 'openUrl',
       url: 'https://www.youtube.com/results?search_query=lofi%20beats',
     });
+  });
+
+  it('lists archived tabs to restore, after open tabs and before history', () => {
+    const history = [
+      {
+        url: 'https://docs.example.com/plan',
+        title: 'Quarterly planning doc',
+        visitCount: 3,
+        typedCount: 0,
+        lastVisitTime: 0,
+      },
+    ];
+    const results = searchCommands('planning', context(), history);
+    const row = results.find((result) => result.key === 'archive:a1')!;
+    expect(row).toMatchObject({
+      command: { type: 'restoreArchived', entryId: 'a1' },
+      hint: 'Restore',
+    });
+    // Its page isn't listed again from history.
+    expect(keys(results)).not.toContain('history:https://docs.example.com/plan');
   });
 
   it('puts strong tab matches before the search and weak ones after', () => {
