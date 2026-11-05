@@ -35,6 +35,8 @@ export default defineConfig({
     action: { default_title: 'Toggle Arc Sidebar' },
     // Arc's shortcuts. Chrome suggests at most four keys and none it uses itself (Arc's ⌘S, ⌘T,
     // ⌘L, ⌘D, ⌘⇧C), so the top four get ⌥ keys; set the rest at chrome://extensions/shortcuts.
+    // The command bar's shortcuts and searches in Chrome's address bar.
+    omnibox: { keyword: 'arc' },
     commands: {
       _execute_action: {
         suggested_key: { default: 'Alt+S' },

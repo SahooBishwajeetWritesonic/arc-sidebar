@@ -4,6 +4,7 @@ import { onCommandBarHello } from '@/background/command-bar';
 import { cropVisibleTab } from '@/background/crop';
 import { chromeHistory, toHistoryEntry } from '@/background/chrome-history';
 import { HistoryIndex } from '@/background/history';
+import { watchOmnibox } from '@/background/omnibox';
 import { fetchGitHubJson, fetchPullRequests } from '@/background/github';
 import { SidebarService, type LiveTab } from '@/background/service';
 import {
@@ -172,6 +173,11 @@ export default defineBackground(() => {
   });
 
   browser.commands.onCommand.addListener((command, tab) => onShortcut(command, tab, service));
+
+  watchOmnibox(async () => {
+    await service.ready;
+    return service.snapshot().model.settings.shortcuts;
+  }, history);
 
   void service.ready.then(() => buildTabMenu(service.snapshot().model.spaces));
   browser.contextMenus.onClicked.addListener((info, tab) => {
