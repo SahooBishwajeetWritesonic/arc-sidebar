@@ -4,11 +4,20 @@ import { availableActions, type CommandContext } from './actions';
 import type { HistoryEntry } from '@/platform/types';
 import { historyBonus, pageText } from './history';
 import { isStrong, ranked } from './match';
+import type { Scope } from './scopes';
 import { linkFor, linkPages, siteSearchUrl } from './sites';
 import type { Result } from './types';
 import { displayUrl, typedUrl } from './url';
 
-const LIMIT = { pages: 6, actions: 5, history: 5, suggestions: 5, linkPages: 5, archive: 3 };
+const LIMIT = {
+  pages: 6,
+  actions: 5,
+  history: 5,
+  suggestions: 5,
+  linkPages: 5,
+  archive: 3,
+  scoped: 12,
+};
 
 interface Page extends Result {
   text: string;
@@ -129,6 +138,7 @@ export interface SearchOptions {
   /** History for the link being typed, to list its pages. */
   linkHistory?: readonly HistoryEntry[];
   siteSuggestions?: readonly string[];
+  scope?: Scope | null;
   /** For history's frecency. */
   now?: number;
 }
@@ -148,6 +158,7 @@ export function searchCommands(
     site = null,
     linkHistory = [],
     siteSuggestions = [],
+    scope = null,
     now = Date.now(),
   }: SearchOptions = {},
 ): Result[] {
@@ -175,6 +186,7 @@ export function searchCommands(
     }
     return rows;
   }
+  if (scope) return scoped(scope, text, ctx, history, now);
   const actions = availableActions(ctx);
   const plain = ({ words: _words, ...result }: Result & { words: string }): Result => result;
 
@@ -262,6 +274,21 @@ export function searchCommands(
   archiveRows(ctx.archive, text, shown()).slice(0, LIMIT.archive).forEach(add);
   historyRows(history, text, now, shown()).slice(0, LIMIT.history).forEach(add);
   return results;
+}
+
+function scoped(
+  scope: Scope,
+  text: string,
+  ctx: CommandContext,
+  history: readonly HistoryEntry[],
+  now: number,
+): Result[] {
+  if (scope === 'archive') return archiveRows(ctx.archive, text).slice(0, LIMIT.scoped);
+  if (scope === 'history')
+    return text ? historyRows(history, text, now).slice(0, LIMIT.scoped) : [];
+  const open = pages(ctx);
+  const found = text ? ranked(open, text).map(({ item }) => item) : open;
+  return found.slice(0, LIMIT.scoped).map(strip);
 }
 
 /** One row per address; newest first among equal matches. */

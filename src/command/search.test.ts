@@ -223,6 +223,19 @@ describe('searchCommands', () => {
     expect(keys(results)).not.toContain('history:https://docs.example.com/plan');
   });
 
+  it('searches only tabs, history or the archive in a scope', () => {
+    expect(keys(searchCommands('', context(), [], { scope: 'archive' }))).toEqual([
+      'archive:a1',
+      'archive:a2',
+    ]);
+    expect(keys(searchCommands('figma', context(), [], { scope: 'archive' }))).toEqual([
+      'archive:a2',
+    ]);
+    const tabs = keys(searchCommands('figma', context(), [], { scope: 'tabs' }));
+    expect(tabs).toEqual(['tab:4']);
+    expect(searchCommands('', context(), [], { scope: 'history' })).toEqual([]);
+  });
+
   it('puts strong tab matches before the search and weak ones after', () => {
     const results = searchCommands('figma', context(), []);
     expect(keys(results).slice(0, 2)).toEqual(['tab:4', 'search']);

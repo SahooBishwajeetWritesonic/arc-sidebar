@@ -254,6 +254,21 @@ test('a port alone opens that local server', async ({ page }) => {
   await expect.poll(async () => (await todayTitles(page))[0]).toContain('localhost');
 });
 
+test('@ and a scope’s name, then Tab, search only that', async ({ page }) => {
+  await ready(page);
+  await openBar(page);
+  await field(page).pressSequentially('@t');
+  await expect(bar(page).locator('[class*="keyHint"]')).toHaveText(/^Search\s*Tabs\s*Tab$/);
+  await field(page).press('Tab');
+  await expect(bar(page).getByText('Tabs', { exact: true })).toBeVisible();
+  await expect(field(page)).toHaveAttribute('placeholder', 'Search tabs…');
+  await field(page).pressSequentially('figma');
+  await expect(bar(page).getByRole('option')).toHaveCount(1);
+  await expect(selected(page)).toContainText('Sidebar explorations – Figma');
+  await field(page).press('Escape');
+  await expect(field(page)).toHaveAttribute('placeholder', 'Search or Enter URL…');
+});
+
 test('an archived tab is found and restored from the bar', async ({ page }) => {
   await ready(page);
   await openBar(page);

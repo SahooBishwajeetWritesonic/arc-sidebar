@@ -58,6 +58,7 @@ import { themeAccent, themeLook } from '@/app/theme/engine';
 import { usePreferredScheme } from '@/app/theme/looks';
 import type { CommandContext } from '@/command/actions';
 import { parseSuggestions } from '@/command/opensearch';
+import { SCOPE_NAMES, scopeFor, type Scope } from '@/command/scopes';
 import { completeAddress, searchCommands } from '@/command/search';
 import { completeLink, linkFor, linkHistoryText, linkPages, siteFor } from '@/command/sites';
 import type { ActionId, Command, Result } from '@/command/types';
@@ -157,19 +158,23 @@ export function CommandBar({
   const [picking, setPicking] = useState<Result | null>(null);
   // Arc's Site Search: the site being searched, after its keyword and Tab.
   const [site, setSite] = useState<Shortcut | null>(null);
+  const [scope, setScope] = useState<Scope | null>(null);
   const shortcuts = ctx.model.settings.shortcuts;
   const accent = themeAccent(theme);
   const colorOf = (shortcut: Shortcut) => shortcut.color ?? accent;
 
-  const slash = typed.startsWith('/') && !picking && !pagesOnly && !site;
-  const actionsMode = (actionsOnly || slash) && !picking && !pagesOnly && !site;
+  const slash = typed.startsWith('/') && !picking && !pagesOnly && !site && !scope;
+  const actionsMode = (actionsOnly || slash) && !picking && !pagesOnly && !site && !scope;
   const query = slash ? typed.slice(1) : typed;
-  const plainTyping = !site && !actionsMode && !prompt && !picking;
-  // What's typed is a site's keyword: Tab searches that site.
+  const plainTyping = !site && !scope && !actionsMode && !prompt && !picking;
+  // A site's keyword, or a scope's: Tab searches that.
   const keyword = plainTyping ? siteFor(query, shortcuts) : undefined;
+  const scopeTyped = plainTyping ? scopeFor(query) : undefined;
   // No inline completion over a link ("lh 3300").
   const linked = plainTyping && linkFor(query, shortcuts) !== undefined;
-  const history = useHistory(actionsMode || site ? '' : query);
+  const history = useHistory(
+    actionsMode || site || scope === 'tabs' || scope === 'archive' ? '' : query,
+  );
   // For "lh 51" to complete to "lh 5173".
   // Plenty, so one busy port doesn't crowd out the others.
   const linkHistory = useHistory(plainTyping ? linkHistoryText(query, shortcuts) : '', 500);
@@ -189,6 +194,7 @@ export function CommandBar({
       site,
       linkHistory,
       siteSuggestions,
+      scope,
     });
     return pagesOnly
       ? found.filter(({ command }) => command.type === 'openUrl' || command.type === 'search')
@@ -205,6 +211,7 @@ export function CommandBar({
     pagesOnly,
     linkHistory,
     siteSuggestions,
+    scope,
   ]);
 
   // For the stand-in's Return, which picks the top result once its text is in.
@@ -212,7 +219,7 @@ export function CommandBar({
   latestResults.current = results;
 
   // The selection goes back to the top whenever what's typed changes.
-  const listKey = `${actionsMode}:${picking?.key}:${site?.id}:${query}`;
+  const listKey = `${actionsMode}:${picking?.key}:${site?.id}:${scope}:${query}`;
   const [selection, setSelection] = useState({ listKey, index: 0 });
   const index = Math.min(selection.listKey === listKey ? selection.index : 0, results.length - 1);
   const select = (next: number) =>
@@ -333,9 +340,10 @@ export function CommandBar({
       }
     } else if (event.key === 'Escape') {
       if (prompt) setPrompt(null);
-      else if (picking || site) {
+      else if (picking || site || scope) {
         setPicking(null);
         setSite(null);
+        setScope(null);
         setTyped('');
       } else host.close();
     } else if (event.key === 'Tab') {
@@ -345,10 +353,15 @@ export function CommandBar({
         setTyped('');
         setCompleting(false);
         press();
-      } else if (!prompt && !picking && !site) setActionsOnly(!actionsOnly);
-    } else if (event.key === 'Backspace' && (actionsOnly || site) && !value) {
+      } else if (scopeTyped) {
+        setScope(scopeTyped);
+        setTyped('');
+        setCompleting(false);
+      } else if (!prompt && !picking && !site && !scope) setActionsOnly(!actionsOnly);
+    } else if (event.key === 'Backspace' && (actionsOnly || site || scope) && !value) {
       setActionsOnly(false);
       setSite(null);
+      setScope(null);
     } else {
       if ((event.key === 'ArrowRight' || event.key === 'End') && completion) {
         // Accept the completion; the caret moves to its end by itself.
@@ -366,16 +379,20 @@ export function CommandBar({
       ? picking.pick!.label
       : site
         ? site.name
-        : actionsMode
-          ? 'Actions'
-          : null;
+        : scope
+          ? SCOPE_NAMES[scope]
+          : actionsMode
+            ? 'Actions'
+            : null;
   const placeholder = picking
     ? 'Search tabs or enter URL…'
     : site
       ? `Search ${site.name}…`
-      : actionsMode
-        ? 'Search actions…'
-        : 'Search or Enter URL…';
+      : scope
+        ? `Search ${SCOPE_NAMES[scope].toLowerCase()}…`
+        : actionsMode
+          ? 'Search actions…'
+          : 'Search or Enter URL…';
   const layerStyle = {
     colorScheme: look.scheme,
     '--command-card': look.background,
@@ -428,13 +445,13 @@ export function CommandBar({
             onChange={onChange}
             onKeyDown={onKeyDown}
           />
-          {keyword && (
+          {(keyword || scopeTyped) && (
             <span
-              key={keyword.id}
+              key={keyword?.id ?? `@${scopeTyped}`}
               className={styles.keyHint}
-              style={{ '--site': colorOf(keyword) } as CSSProperties}
+              style={{ '--site': keyword ? colorOf(keyword) : accent } as CSSProperties}
             >
-              Search <b className={styles.keySite}>{keyword.name}</b>
+              Search <b className={styles.keySite}>{keyword?.name ?? SCOPE_NAMES[scopeTyped!]}</b>
               <kbd className={styles.key}>Tab</kbd>
             </span>
           )}
