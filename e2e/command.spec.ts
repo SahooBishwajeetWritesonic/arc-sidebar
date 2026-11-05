@@ -233,6 +233,15 @@ test('a link’s keyword lists the pages it opened before, and completes to them
   await expect.poll(async () => (await todayTitles(page))[0]).toContain('localhost');
 });
 
+test('a port alone opens that local server', async ({ page }) => {
+  await ready(page);
+  await openBar(page);
+  await field(page).pressSequentially(':6006');
+  await expect(selected(page)).toContainText('localhost:6006');
+  await field(page).press('Enter');
+  await expect.poll(async () => (await todayTitles(page))[0]).toContain('localhost');
+});
+
 test('Backspace in an empty site search goes back to searching everything', async ({ page }) => {
   await ready(page);
   await openBar(page);

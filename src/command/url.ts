@@ -45,6 +45,11 @@ export function typedUrl(input: string): string | null {
     return parses(text) ? text : null;
   }
 
+  // ":5173" is localhost.
+  if (/^:\d{1,5}([/?#].*)?$/.test(text)) {
+    return parses(`http://localhost${text}`) ? `http://localhost${text}` : null;
+  }
+
   // host[:port][/path][?query][#hash]
   const match = /^([^/?#:]+)(:\d{1,5})?([/?#].*)?$/.exec(text);
   if (!match) return null;

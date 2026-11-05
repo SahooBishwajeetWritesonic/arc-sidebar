@@ -17,6 +17,8 @@ describe('typedUrl', () => {
     ['my.internal:8080', 'https://my.internal:8080'],
     ['docs.internal/wiki', 'https://docs.internal/wiki'],
     ['  arc.net  ', 'https://arc.net'],
+    [':5173', 'http://localhost:5173'],
+    [':3300/api?x=1', 'http://localhost:3300/api?x=1'],
   ])('opens %s as %s', (input, url) => {
     expect(typedUrl(input)).toBe(url);
   });
@@ -31,6 +33,8 @@ describe('typedUrl', () => {
     'e.g',
     '',
     '   ',
+    ':99999',
+    ':dev',
   ])('searches for %j', (input) => {
     expect(typedUrl(input)).toBeNull();
   });
