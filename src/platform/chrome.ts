@@ -249,6 +249,15 @@ export const chromePlatform: Platform = {
     );
   },
 
+  async fetchText(url, signal) {
+    try {
+      const response = await fetch(url, { credentials: 'omit', signal });
+      return response.ok ? await response.text() : null;
+    } catch {
+      return null;
+    }
+  },
+
   async startCapture(tabId) {
     try {
       await browser.scripting.executeScript({ target: { tabId }, files: ['/capture-tool.js'] });

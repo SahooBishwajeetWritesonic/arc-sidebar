@@ -128,6 +128,7 @@ export interface SearchOptions {
   site?: Shortcut | null;
   /** History for the link being typed, to list its pages. */
   linkHistory?: readonly HistoryEntry[];
+  siteSuggestions?: readonly string[];
   /** For history's frecency. */
   now?: number;
 }
@@ -146,6 +147,7 @@ export function searchCommands(
     completion = null,
     site = null,
     linkHistory = [],
+    siteSuggestions = [],
     now = Date.now(),
   }: SearchOptions = {},
 ): Result[] {
@@ -154,9 +156,24 @@ export function searchCommands(
   if (site) {
     if (!text) return [];
     const url = siteSearchUrl(site, text);
-    return [
+    const rows: Result[] = [
       { key: 'site-search', command: { type: 'openUrl', url }, title: text, url, hint: 'Search' },
     ];
+    const seen = new Set([text.toLowerCase()]);
+    for (const suggestion of siteSuggestions) {
+      const words = suggestion.trim();
+      if (seen.has(words.toLowerCase()) || rows.length > LIMIT.suggestions) continue;
+      seen.add(words.toLowerCase());
+      const page = siteSearchUrl(site, words);
+      rows.push({
+        key: `site-suggestion:${words}`,
+        command: { type: 'openUrl', url: page },
+        title: words,
+        url: page,
+        hint: 'Search',
+      });
+    }
+    return rows;
   }
   const actions = availableActions(ctx);
   const plain = ({ words: _words, ...result }: Result & { words: string }): Result => result;

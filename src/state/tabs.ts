@@ -306,6 +306,10 @@ export function searchHistory(text: string, limit?: number) {
   return platform?.searchHistory(text, limit) ?? Promise.resolve([]);
 }
 
+export function fetchText(url: string, signal?: AbortSignal) {
+  return platform?.fetchText(url, signal) ?? Promise.resolve(null);
+}
+
 export function toggleMuted(id: number) {
   const tab = useTabs.getState().tabs.get(id);
   if (tab) platform?.setMuted(id, !tab.muted);

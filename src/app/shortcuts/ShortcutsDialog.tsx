@@ -15,6 +15,7 @@ import {
   keywordProblem,
   parseKeywords,
   requiredBlanks,
+  suggestUrl,
   withScheme,
 } from '@/model/shortcuts';
 import type { Shortcut } from '@/model/types';
@@ -41,6 +42,7 @@ interface Draft {
   keywords: string;
   url: string;
   color?: string;
+  suggest?: string;
 }
 
 const toDraft = ({ keywords, ...shortcut }: Shortcut): Draft => ({
@@ -131,7 +133,9 @@ function exampleOf(draft: Draft): string | null {
   if (isSiteSearch({ url })) {
     const name = draft.name.trim() || 'the site';
     const typed = keyword ?? draft.name.trim().toLowerCase();
-    return typed ? `Type ${typed}, then Tab, to search ${name}.` : null;
+    if (!typed) return null;
+    const suggests = suggestUrl({ id: draft.id, url, suggest: draft.suggest });
+    return `Type ${typed}, then Tab, to search ${name}.${suggests ? ' Suggests as you type.' : ''}`;
   }
   if (!keyword) return null;
   const words = Array.from({ length: requiredBlanks(url) }, (_, i) => String(i + 1));

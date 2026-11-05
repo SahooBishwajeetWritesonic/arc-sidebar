@@ -176,6 +176,19 @@ describe('searchCommands', () => {
     expect(keys(results).indexOf('search')).toBeLessThan(keys(results).indexOf(found[0]!));
   });
 
+  it('lists a site’s suggestions under the search, while searching that site', () => {
+    const youtube = context().model.settings.shortcuts.find((s) => s.id === 'youtube')!;
+    const results = searchCommands('lofi', context(), [], {
+      site: youtube,
+      siteSuggestions: ['lofi', 'lofi beats', 'Lofi Beats', 'lofi girl'],
+    });
+    expect(results.map((result) => result.title)).toEqual(['lofi', 'lofi beats', 'lofi girl']);
+    expect(results[1]!.command).toEqual({
+      type: 'openUrl',
+      url: 'https://www.youtube.com/results?search_query=lofi%20beats',
+    });
+  });
+
   it('puts strong tab matches before the search and weak ones after', () => {
     const results = searchCommands('figma', context(), []);
     expect(keys(results).slice(0, 2)).toEqual(['tab:4', 'search']);

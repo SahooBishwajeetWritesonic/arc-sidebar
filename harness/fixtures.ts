@@ -2,7 +2,7 @@ import type { PullRequest } from '@/model/live';
 import type { DownloadEntry } from '@/platform/downloads';
 import type { GmailInbox } from '@/platform/gmail';
 import type { HistoryEntry } from '@/platform/types';
-import type { Fixture } from './fake-platform';
+import type { Fixture, OpenSearchSite } from './fake-platform';
 
 export const startingTabs: Fixture[] = [
   { title: 'Inbox (3) - Gmail', url: 'https://mail.google.com/mail/u/0/#inbox' },
@@ -296,3 +296,20 @@ export function downloadFixtures(now: number): DownloadEntry[] {
     }),
   ];
 }
+
+/** By origin. */
+export const openSearchSites: Record<string, OpenSearchSite> = {
+  'https://kagi.com': {
+    themeColor: '#FFB319',
+    xml: `<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Kagi</ShortName>
+  <Url type="text/html" method="get" template="https://kagi.com/search?q={searchTerms}"/>
+  <Url type="application/x-suggestions+json" template="https://kagi.com/api/autosuggest?q={searchTerms}"/>
+</OpenSearchDescription>`,
+  },
+};
+
+/** What any suggestions address answers. */
+export const suggestionsFor = (query: string) =>
+  JSON.stringify([query, ['tutorial', 'live', 'music'].map((end) => `${query} ${end}`)]);

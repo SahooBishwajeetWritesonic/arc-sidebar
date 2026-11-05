@@ -8,6 +8,7 @@ import {
   keywordProblem,
   linkMatcher,
   parseKeywords,
+  suggestUrl,
   withScheme,
 } from './shortcuts';
 
@@ -69,6 +70,26 @@ describe('shortcut addresses', () => {
     expect(keywordProblem('y')).not.toBeNull();
     expect(keywordProblem('/x')).not.toBeNull();
     expect(keywordProblem('yt')).toBeNull();
+  });
+});
+
+describe('suggestions', () => {
+  it('keeps a site search’s suggestions address, and drops one that can’t work', () => {
+    const kagi = { id: 'k', name: 'Kagi', keywords: ['kg'], url: 'https://kagi.com/search?q=%s' };
+    expect(
+      cleanShortcuts([
+        { ...kagi, suggest: 'https://kagi.com/api/autosuggest?q=%s' },
+        { ...kagi, id: 'k2', suggest: 'javascript:alert(%s)' },
+        { ...kagi, id: 'k3', suggest: 'https://kagi.com/api/autosuggest' },
+      ]).map((shortcut) => shortcut.suggest),
+    ).toEqual(['https://kagi.com/api/autosuggest?q=%s', undefined, undefined]);
+  });
+
+  it('gives built-in sites saved before suggestions theirs while the address is the same', () => {
+    const youtube = DEFAULT_SHORTCUTS.find((shortcut) => shortcut.id === 'youtube')!;
+    const { suggest: _suggest, ...saved } = youtube;
+    expect(suggestUrl(saved)).toBe(youtube.suggest);
+    expect(suggestUrl({ ...saved, url: 'https://www.youtube.com/feed?q=%s' })).toBeUndefined();
   });
 });
 

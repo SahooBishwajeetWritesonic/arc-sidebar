@@ -37,6 +37,12 @@ import type {
   TabInfo,
 } from '@/platform/types';
 
+/** A site's OpenSearch file, and its page's theme-color. */
+export interface OpenSearchSite {
+  xml: string;
+  themeColor?: string;
+}
+
 export interface Fixture {
   title: string;
   url: string;
@@ -131,6 +137,10 @@ export class FakePlatform implements Platform {
     /** Any Live Calendar address's feed at a time; an address with "missing" gives a 404. */
     private calendarFeed: (now: number) => string = () => 'BEGIN:VCALENDAR\r\nEND:VCALENDAR',
     downloads: (now: number) => DownloadEntry[] = () => [],
+    private web: {
+      openSearch: Record<string, OpenSearchSite>;
+      suggestions: (query: string) => string;
+    } = { openSearch: {}, suggestions: () => '[]' },
   ) {
     this.history = [...history];
     this.downloadList = downloads(Date.now());
@@ -411,6 +421,16 @@ export class FakePlatform implements Platform {
         .slice(0, max);
     },
   });
+
+  async fetchText(url: string) {
+    await new Promise((resolve) => setTimeout(resolve, 4));
+    const parsed = new URL(url);
+    if (parsed.pathname === '/opensearch.xml') {
+      return this.web.openSearch[parsed.origin]?.xml ?? null;
+    }
+    const query = parsed.searchParams.get('q') ?? parsed.searchParams.get('search');
+    return query ? this.web.suggestions(query) : null;
+  }
 
   async searchHistory(text: string, limit = 30) {
     await new Promise((resolve) => setTimeout(resolve, 4)); // like a message to the background

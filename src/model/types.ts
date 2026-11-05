@@ -65,6 +65,8 @@ export interface Shortcut {
   url: string;
   /** Site searches only; the space's accent when unset. */
   color?: string;
+  /** Site searches only: suggestions in OpenSearch's JSON, %s for the search. */
+  suggest?: string;
 }
 
 /** Arc's Live Calendar, read from the calendar's private iCal address. */

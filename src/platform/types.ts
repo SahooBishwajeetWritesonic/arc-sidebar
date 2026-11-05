@@ -136,6 +136,8 @@ export interface Platform {
   recentTabs(windowId: number): Promise<number[]>;
   /** Best first. With no text: addresses typed before. */
   searchHistory(text: string, limit?: number): Promise<HistoryEntry[]>;
+  /** Without cookies; null if it fails. */
+  fetchText(url: string, signal?: AbortSignal): Promise<string | null>;
   /** Opens `url` in a new tab, which lands at the top of Today. */
   openUrl(windowId: number, url: string): void;
   /** Loads `url` in the tab, in place (the URL bar's ⌘L). */

@@ -8,8 +8,10 @@ import {
   gmailInbox,
   historyPages,
   manyTabs,
+  openSearchSites,
   pullRequests,
   startingTabs,
+  suggestionsFor,
 } from './fixtures';
 import { Harness } from './Harness';
 import '@/app/global.css';
@@ -26,6 +28,7 @@ const platform = new FakePlatform(
   gmailInbox,
   calendarFeed,
   downloadFixtures,
+  { openSearch: openSearchSites, suggestions: suggestionsFor },
 );
 window.harnessPlatform = platform;
 

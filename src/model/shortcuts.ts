@@ -12,6 +12,7 @@ export const DEFAULT_SHORTCUTS: readonly Shortcut[] = [
     keywords: [],
     url: 'https://www.google.com/search?q=%s',
     color: '#4285F4',
+    suggest: 'https://suggestqueries.google.com/complete/search?client=firefox&q=%s',
   },
   {
     id: 'youtube',
@@ -19,6 +20,7 @@ export const DEFAULT_SHORTCUTS: readonly Shortcut[] = [
     keywords: ['yt'],
     url: 'https://www.youtube.com/results?search_query=%s',
     color: '#FF0033',
+    suggest: 'https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=%s',
   },
   {
     id: 'google-maps',
@@ -40,6 +42,7 @@ export const DEFAULT_SHORTCUTS: readonly Shortcut[] = [
     keywords: ['wiki'],
     url: 'https://en.wikipedia.org/wiki/Special:Search?search=%s',
     color: '#3366CC',
+    suggest: 'https://en.wikipedia.org/w/api.php?action=opensearch&format=json&search=%s',
   },
   {
     id: 'github',
@@ -83,10 +86,18 @@ export const DEFAULT_SHORTCUTS: readonly Shortcut[] = [
     keywords: [],
     url: 'https://www.amazon.com/s?k=%s',
     color: '#FF9900',
+    suggest: 'https://completion.amazon.com/search/complete?search-alias=aps&mkt=1&q=%s',
   },
 ];
 
 export const isSiteSearch = (shortcut: Pick<Shortcut, 'url'>) => shortcut.url.includes('%s');
+
+/** Built-in sites saved before suggestions existed get them while their address is unchanged. */
+export function suggestUrl(shortcut: Pick<Shortcut, 'id' | 'url' | 'suggest'>): string | undefined {
+  if (shortcut.suggest) return shortcut.suggest;
+  const builtIn = DEFAULT_SHORTCUTS.find((each) => each.id === shortcut.id);
+  return builtIn?.url === shortcut.url ? builtIn.suggest : undefined;
+}
 
 /** {1}, {2}…, optionally with a default: {1|3000}. */
 const BLANK = /\{([1-9])(?:\|([^}]*))?\}/g;
@@ -175,6 +186,15 @@ export function historyText(url: string): string {
   return host.replace(/^www\./i, '').replace(/^\.+|\.+$/g, '');
 }
 
+function isWebSearch(url: string): boolean {
+  if (!isSiteSearch({ url })) return false;
+  try {
+    return /^https?:$/.test(new URL(fillSearch(url, 'test')).protocol);
+  } catch {
+    return false;
+  }
+}
+
 export function isValidShortcutUrl(url: string): boolean {
   if (isSiteSearch({ url })) return openable(fillSearch(url, 'test')) !== null;
   const words = Array.from({ length: blankCount(url) }, (_, i) => String(i + 1));
@@ -232,12 +252,17 @@ export function cleanShortcuts(raw: readonly unknown[]): Shortcut[] {
       typeof entry.color === 'string' && /^#[0-9a-f]{6}$/i.test(entry.color)
         ? entry.color
         : undefined;
+    const suggest =
+      typeof entry.suggest === 'string' && isSiteSearch({ url }) && isWebSearch(entry.suggest)
+        ? entry.suggest
+        : undefined;
     shortcuts.push({
       id: entry.id,
       name: typedName || siteName(url),
       keywords,
       url,
       ...(color && { color }),
+      ...(suggest && { suggest }),
     });
   }
   return shortcuts;

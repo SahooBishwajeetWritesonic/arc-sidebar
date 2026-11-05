@@ -56,14 +56,17 @@ import { readableOn } from '@/app/theme/color';
 import { themeAccent, themeLook } from '@/app/theme/engine';
 import { usePreferredScheme } from '@/app/theme/looks';
 import type { CommandContext } from '@/command/actions';
+import { parseSuggestions } from '@/command/opensearch';
 import { completeAddress, searchCommands } from '@/command/search';
 import { completeLink, linkFor, linkHistoryText, linkPages, siteFor } from '@/command/sites';
 import type { ActionId, Command, Result } from '@/command/types';
+import { fillSearch, suggestUrl } from '@/model/shortcuts';
 import type { Shortcut } from '@/model/types';
 import type { Typed } from '@/platform/command-bar';
 import type { HistoryEntry } from '@/platform/types';
 import { useSidebar } from '@/state/sidebar';
 import {
+  fetchText,
   navigateActive,
   searchHistory,
   searchInActive,
@@ -170,6 +173,7 @@ export function CommandBar({
   // Plenty, so one busy port doesn't crowd out the others.
   const linkHistory = useHistory(plainTyping ? linkHistoryText(query, shortcuts) : '', 500);
   const typedAddresses = useTypedAddresses();
+  const siteSuggestions = useSiteSuggestions(site, query);
   const completion = useMemo(() => {
     if (!completing || !plainTyping) return null;
     if (linked) return completeLink(query, linkPages(query, shortcuts, linkHistory));
@@ -183,11 +187,24 @@ export function CommandBar({
       completion,
       site,
       linkHistory,
+      siteSuggestions,
     });
     return pagesOnly
       ? found.filter(({ command }) => command.type === 'openUrl' || command.type === 'search')
       : found;
-  }, [prompt, picking, query, ctx, history, actionsMode, completion, site, pagesOnly, linkHistory]);
+  }, [
+    prompt,
+    picking,
+    query,
+    ctx,
+    history,
+    actionsMode,
+    completion,
+    site,
+    pagesOnly,
+    linkHistory,
+    siteSuggestions,
+  ]);
 
   // For the stand-in's Return, which picks the top result once its text is in.
   const latestResults = useRef(results);
@@ -566,6 +583,31 @@ function useHistory(text: string, limit?: number): HistoryEntry[] {
     };
   }, [query, limit]);
   return query ? found : EMPTY;
+}
+
+const NO_SUGGESTIONS: string[] = [];
+
+/** A moment after typing stops. The last ones stay until the next arrive, so rows don't flicker. */
+function useSiteSuggestions(site: Shortcut | null, text: string): string[] {
+  const [found, setFound] = useState({ from: '', list: NO_SUGGESTIONS });
+  const template = site ? suggestUrl(site) : undefined;
+  const query = text.trim();
+  useEffect(() => {
+    if (!template || !query) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      void fetchText(fillSearch(template, query), controller.signal).then((json) => {
+        if (!controller.signal.aborted) {
+          setFound({ from: template, list: json ? parseSuggestions(json) : NO_SUGGESTIONS });
+        }
+      });
+    }, 120);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [template, query]);
+  return template && query && found.from === template ? found.list : NO_SUGGESTIONS;
 }
 
 /** Addresses typed before, loaded once, for inline completion. */
