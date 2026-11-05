@@ -2,51 +2,12 @@ import { FAVORITES_ID, type Shortcut } from '@/model/types';
 import { hostname, isSamePage } from '@/model/urls';
 import { availableActions, type CommandContext } from './actions';
 import type { HistoryEntry } from '@/platform/types';
+import { isStrong, ranked } from './match';
 import { linkFor, linkPages, siteSearchUrl } from './sites';
 import type { Result } from './types';
 import { displayUrl, typedUrl } from './url';
 
 const LIMIT = { pages: 6, actions: 5, history: 5, suggestions: 5, linkPages: 5 };
-
-/**
- * How well `query` matches `text`: 0 when some word of the query is missing,
- * otherwise more for words found at the start of the text or of a word.
- */
-export function score(text: string, query: string): number {
-  const haystack = text.toLowerCase();
-  let total = 0;
-  for (const word of query.toLowerCase().split(/\s+/)) {
-    if (!word) continue;
-    const at = haystack.indexOf(word);
-    if (at === -1) return 0;
-    if (at === 0) total += 4;
-    else if (!/[\p{L}\p{N}]/u.test(haystack[at - 1]!)) total += 3;
-    else {
-      // A later match at a word start beats this one inside a word.
-      const start = new RegExp(`(^|[^\\p{L}\\p{N}])${escape(word)}`, 'u').test(haystack);
-      total += start ? 3 : 1;
-    }
-  }
-  return total;
-}
-
-const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-/** Every word found at the start of a word: good enough to come before "Search". */
-const isStrong = (points: number, query: string) =>
-  points >= 3 * query.split(/\s+/).filter(Boolean).length;
-
-/** Matching items, best first; ties go to `tieBreak`, else the shorter text. */
-function ranked<T extends { text: string }>(
-  items: T[],
-  query: string,
-  tieBreak: (a: T, b: T) => number = (a, b) => a.text.length - b.text.length,
-) {
-  return items
-    .map((item) => ({ item, points: score(item.text, query) }))
-    .filter(({ points }) => points > 0)
-    .sort((a, b) => b.points - a.points || tieBreak(a.item, b.item));
-}
 
 interface Page extends Result {
   text: string;
@@ -282,7 +243,7 @@ export function searchCommands(
       .filter((entry) => !shown.some((other) => isSamePage(other, entry.url)))
       .map((entry) => ({ ...entry, text: `${entry.title} ${displayUrl(entry.url)}` })),
     text,
-    (a, b) => b.visitCount - a.visitCount || b.lastVisitTime - a.lastVisitTime,
+    { tieBreak: (a, b) => b.visitCount - a.visitCount || b.lastVisitTime - a.lastVisitTime },
   )
     .slice(0, LIMIT.history)
     .forEach(({ item }) =>
@@ -334,7 +295,7 @@ function splitChoices(text: string, ctx: CommandContext, history: readonly Histo
   ranked(
     history.map((entry) => ({ ...entry, text: `${entry.title} ${displayUrl(entry.url)}` })),
     text,
-    (a, b) => b.visitCount - a.visitCount,
+    { tieBreak: (a, b) => b.visitCount - a.visitCount },
   )
     .slice(0, LIMIT.history)
     .forEach(({ item }) =>

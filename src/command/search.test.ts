@@ -8,7 +8,7 @@ import {
 } from '@/model/types';
 import type { HistoryEntry, TabInfo } from '@/platform/types';
 import type { CommandContext } from './actions';
-import { completeAddress, score, searchCommands } from './search';
+import { completeAddress, searchCommands } from './search';
 
 const tab = (id: number, title: string, url: string): TabInfo => ({
   id,
@@ -73,16 +73,6 @@ function context(overrides: Partial<CommandContext> = {}): CommandContext {
 }
 
 const keys = (results: { key: string }[]) => results.map((result) => result.key);
-
-describe('score', () => {
-  it('needs every word and prefers word starts', () => {
-    expect(score('Sidebar explorations – Figma', 'fig')).toBe(3);
-    expect(score('Sidebar explorations – Figma', 'side')).toBe(4);
-    expect(score('Sidebar explorations – Figma', 'plor')).toBe(1);
-    expect(score('Sidebar explorations – Figma', 'fig side')).toBe(7);
-    expect(score('Sidebar explorations – Figma', 'fig notion')).toBe(0);
-  });
-});
 
 describe('searchCommands', () => {
   it('suggests the previous tab and this space’s tabs when nothing is typed', () => {
