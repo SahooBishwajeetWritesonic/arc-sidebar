@@ -4,6 +4,7 @@ import { availableActions, type CommandContext } from './actions';
 import type { HistoryEntry } from '@/platform/types';
 import { historyBonus, pageText } from './history';
 import { isStrong, ranked } from './match';
+import { pickTarget } from './picks';
 import type { Scope } from './scopes';
 import { linkFor, linkPages, siteSearchUrl } from './sites';
 import type { Result } from './types';
@@ -139,6 +140,8 @@ export interface SearchOptions {
   linkHistory?: readonly HistoryEntry[];
   siteSuggestions?: readonly string[];
   scope?: Scope | null;
+  /** See picks.ts. */
+  learned?: string | null;
   /** For history's frecency. */
   now?: number;
 }
@@ -159,6 +162,7 @@ export function searchCommands(
     linkHistory = [],
     siteSuggestions = [],
     scope = null,
+    learned = null,
     now = Date.now(),
   }: SearchOptions = {},
 ): Result[] {
@@ -192,10 +196,11 @@ export function searchCommands(
 
   if (actionsOnly) {
     if (!text) return actions.map(plain);
-    return ranked(
+    const found = ranked(
       actions.map((a) => ({ ...a, text: `${a.title} ${a.words}` })),
       text,
     ).map(({ item: { text: _text, ...a } }) => plain(a));
+    return promote(found, learned, 0);
   }
   if (!text) return suggestions(ctx);
 
@@ -273,7 +278,16 @@ export function searchCommands(
   const shown = () => results.flatMap((result) => (result.url ? [result.url] : []));
   archiveRows(ctx.archive, text, shown()).slice(0, LIMIT.archive).forEach(add);
   historyRows(history, text, now, shown()).slice(0, LIMIT.history).forEach(add);
-  return results;
+  // A learned pick goes first, but after an address being typed.
+  return promote(results, learned, url ? results.findIndex((r) => r.key === 'open-url') + 1 : 0);
+}
+
+function promote(results: Result[], target: string | null, at: number): Result[] {
+  const from = target ? results.findIndex((result) => pickTarget(result) === target) : -1;
+  if (from <= at) return results;
+  const moved = [...results];
+  moved.splice(at, 0, ...moved.splice(from, 1));
+  return moved;
 }
 
 function scoped(

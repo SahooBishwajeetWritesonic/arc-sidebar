@@ -28,6 +28,13 @@ export interface HistoryMessage {
   limit: number;
 }
 
+/** Command bar → background. */
+export interface PickMessage {
+  kind: 'picks:learn';
+  typed: string;
+  target: string;
+}
+
 /** The capture tool → background: a picture of this part of the page, as it is now. */
 export interface CaptureMessage {
   kind: 'capture:shot';

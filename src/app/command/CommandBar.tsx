@@ -58,6 +58,7 @@ import { themeAccent, themeLook } from '@/app/theme/engine';
 import { usePreferredScheme } from '@/app/theme/looks';
 import type { CommandContext } from '@/command/actions';
 import { parseSuggestions } from '@/command/opensearch';
+import { learnedTarget, pickTarget, type LearnedPick } from '@/command/picks';
 import { SCOPE_NAMES, scopeFor, type Scope } from '@/command/scopes';
 import { completeAddress, searchCommands } from '@/command/search';
 import { completeLink, linkFor, linkHistoryText, linkPages, siteFor } from '@/command/sites';
@@ -69,6 +70,8 @@ import type { HistoryEntry } from '@/platform/types';
 import { useSidebar } from '@/state/sidebar';
 import {
   fetchText,
+  learnPick,
+  loadPicks,
   navigateActive,
   searchHistory,
   searchInActive,
@@ -180,6 +183,12 @@ export function CommandBar({
   const linkHistory = useHistory(plainTyping ? linkHistoryText(query, shortcuts) : '', 500);
   const typedAddresses = useTypedAddresses();
   const siteSuggestions = useSiteSuggestions(site, query);
+  const picks = usePicks();
+  const learning = !site && !scope && !prompt && !picking;
+  const learned = useMemo(
+    () => (learning ? learnedTarget(picks, query, Date.now()) : null),
+    [learning, picks, query],
+  );
   const completion = useMemo(() => {
     if (!completing || !plainTyping) return null;
     if (linked) return completeLink(query, linkPages(query, shortcuts, linkHistory));
@@ -195,6 +204,7 @@ export function CommandBar({
       linkHistory,
       siteSuggestions,
       scope,
+      learned,
     });
     return pagesOnly
       ? found.filter(({ command }) => command.type === 'openUrl' || command.type === 'search')
@@ -212,6 +222,7 @@ export function CommandBar({
     linkHistory,
     siteSuggestions,
     scope,
+    learned,
   ]);
 
   // For the stand-in's Return, which picks the top result once its text is in.
@@ -296,6 +307,8 @@ export function CommandBar({
 
   function choose(result: Result | undefined) {
     if (!result) return;
+    const target = learning && query.trim() ? pickTarget(result) : null;
+    if (target) learnPick(query, target);
     if (picking?.command.type === 'action') {
       const { command } = result;
       if (command.type === 'switchToTab') void run({ ...picking.command, tabId: command.tabId });
@@ -627,6 +640,18 @@ function useSiteSuggestions(site: Shortcut | null, text: string): string[] {
     };
   }, [template, query]);
   return template && query && found.from === template ? found.list : NO_SUGGESTIONS;
+}
+
+function usePicks(): LearnedPick[] {
+  const [picks, setPicks] = useState<LearnedPick[]>([]);
+  useEffect(() => {
+    let current = true;
+    void loadPicks().then((loaded) => current && setPicks(loaded));
+    return () => {
+      current = false;
+    };
+  }, []);
+  return picks;
 }
 
 /** Addresses typed before, loaded once, for inline completion. */

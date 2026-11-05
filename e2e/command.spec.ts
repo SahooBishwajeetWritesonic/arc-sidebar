@@ -289,6 +289,31 @@ test('an archived tab is found and restored from the bar', async ({ page }) => {
   await expect.poll(() => todayTitles(page)).toContain('Sidebar explorations – Figma');
 });
 
+test('what was picked twice for the same text goes first', async ({ page }) => {
+  await ready(page);
+  // The bar never lists the current tab, so another one is selected first each time.
+  const away = async () => {
+    await panel(page)
+      .locator('[data-active-page] [data-nav-row="tab"]')
+      .filter({ hasText: 'Engineering Wiki' })
+      .click();
+    await expect(selectedRow(page)).toContainText('Engineering Wiki');
+  };
+  const pickFigma = async () => {
+    await away();
+    await openBar(page);
+    await field(page).pressSequentially('plor');
+    await bar(page).getByRole('option').filter({ hasText: 'Figma' }).click();
+    await expect(selectedRow(page)).toContainText('Figma');
+  };
+  await pickFigma();
+  await pickFigma();
+  await away();
+  await openBar(page);
+  await field(page).pressSequentially('plor');
+  await expect(selected(page)).toContainText('Sidebar explorations – Figma');
+});
+
 test('Backspace in an empty site search goes back to searching everything', async ({ page }) => {
   await ready(page);
   await openBar(page);

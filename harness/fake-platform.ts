@@ -1,5 +1,6 @@
 import { generateNKeysBetween } from 'fractional-indexing';
 import { HistoryIndex } from '@/background/history';
+import { learnPick, type LearnedPick } from '@/command/picks';
 import { SidebarService, type LiveTab } from '@/background/service';
 import type { PullRequest } from '@/model/live';
 import { feedOwner, meetingsIn, type CalendarState } from '@/platform/calendar';
@@ -421,6 +422,16 @@ export class FakePlatform implements Platform {
         .slice(0, max);
     },
   });
+
+  private picks: LearnedPick[] = [];
+
+  async loadPicks() {
+    return this.picks;
+  }
+
+  learnPick(typed: string, target: string) {
+    this.picks = learnPick(this.picks, typed, target, Date.now());
+  }
 
   async readPageSearch(tabId: number) {
     const tab = this.tabs.find((each) => each.id === tabId);

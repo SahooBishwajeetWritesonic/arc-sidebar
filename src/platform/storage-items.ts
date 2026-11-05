@@ -12,6 +12,7 @@ import {
   type SidebarModel,
   type TabDetails,
 } from '@/model/types';
+import type { LearnedPick } from '@/command/picks';
 import type { SyncState } from '@/model/sync';
 import type { CalendarState } from './calendar';
 import type { CommandBarRequest } from './command-bar';
@@ -39,6 +40,11 @@ export const sessionItem = storage.defineItem<SessionState>('session:sidebar', {
 /** Archived Today tabs, newest first. */
 export const archiveItem = storage.defineItem<ArchiveState>('local:archive', {
   fallback: emptyArchive(),
+});
+
+/** The command bar's learned picks. */
+export const picksItem = storage.defineItem<LearnedPick[]>('local:commandPicks', {
+  fallback: [],
 });
 
 /** Rolling copies of the model, newest first. */

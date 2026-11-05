@@ -21,12 +21,19 @@ import { chromeSyncStore } from '@/background/sync-storage';
 import { buildTabMenu, onTabMenuClick } from '@/background/tab-menu';
 import type { Intent } from '@/model/types';
 import type { CommandBarMessage } from '@/platform/command-bar';
-import type { CaptureMessage, CaptureReply, HistoryMessage } from '@/platform/messages';
+import type {
+  CaptureMessage,
+  CaptureReply,
+  HistoryMessage,
+  PickMessage,
+} from '@/platform/messages';
 import type { RecordingMessage } from '@/platform/recording';
+import { learnPick as learn } from '@/command/picks';
 import {
   archiveItem,
   backupsItem,
   modelItem,
+  picksItem,
   restoreSnapshotItem,
   sessionItem,
   tabDetailsItem,
@@ -62,6 +69,15 @@ export default defineBackground(() => {
   browser.history.onVisitRemoved.addListener(({ allHistory, urls }) =>
     history.removed(allHistory ? 'all' : (urls ?? [])),
   );
+  // One write at a time, so quick picks all count.
+  let picking = Promise.resolve();
+  const learnPick = (typed: string, target: string) => {
+    picking = picking
+      .then(async () =>
+        picksItem.setValue(learn(await picksItem.getValue(), typed, target, Date.now())),
+      )
+      .catch(() => {});
+  };
 
   const service = new SidebarService({
     queryTabs: async () =>
@@ -169,7 +185,8 @@ export default defineBackground(() => {
         | CommandBarMessage
         | CaptureMessage
         | RecordingMessage
-        | HistoryMessage,
+        | HistoryMessage
+        | PickMessage,
       sender,
       sendResponse,
     ) => {
@@ -185,6 +202,10 @@ export default defineBackground(() => {
       if (message?.kind === 'recording' && 'mic' in message) {
         const { mic, camera } = message;
         if (sender.tab?.id !== undefined) noteRecording(sender.tab.id, { mic, camera });
+        return;
+      }
+      if (message?.kind === 'picks:learn' && 'target' in message) {
+        learnPick(message.typed, message.target);
         return;
       }
       if (message?.kind === 'history:search' && 'limit' in message) {

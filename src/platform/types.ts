@@ -1,3 +1,4 @@
+import type { LearnedPick } from '@/command/picks';
 import type {
   ArchiveState,
   Backup,
@@ -144,6 +145,8 @@ export interface Platform {
   recentTabs(windowId: number): Promise<number[]>;
   /** Best first. With no text: addresses typed before. */
   searchHistory(text: string, limit?: number): Promise<HistoryEntry[]>;
+  loadPicks(): Promise<LearnedPick[]>;
+  learnPick(typed: string, target: string): void;
   /** Null when the page can't be read (Chrome's own pages, the Web Store). */
   readPageSearch(tabId: number): Promise<PageSearch | null>;
   /** Without cookies; null if it fails. */

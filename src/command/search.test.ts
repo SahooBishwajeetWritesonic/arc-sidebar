@@ -236,6 +236,31 @@ describe('searchCommands', () => {
     expect(searchCommands('', context(), [], { scope: 'history' })).toEqual([]);
   });
 
+  it('puts what was picked before for this text first, after an address being typed', () => {
+    const figma = 'url:https://www.figma.com/file/abc';
+    expect(keys(searchCommands('plor', context(), []))[0]).toBe('search');
+    expect(keys(searchCommands('plor', context(), [], { learned: figma }))[0]).toBe('tab:4');
+    // An address being typed stays first; the pick comes next.
+    const max = {
+      url: 'https://arc.net/max',
+      title: 'Arc Max',
+      visitCount: 1,
+      typedCount: 0,
+      lastVisitTime: 0,
+    };
+    const address = keys(
+      searchCommands('arc.net', context(), [max], { learned: 'url:https://arc.net/max' }),
+    );
+    expect(address.slice(0, 2)).toEqual(['open-url', 'history:https://arc.net/max']);
+
+    const actions = keys(searchCommands('space', context(), [], { actionsOnly: true }));
+    const last = actions.at(-1)!;
+    expect(actions[0]).not.toBe(last);
+    expect(
+      keys(searchCommands('space', context(), [], { actionsOnly: true, learned: last }))[0],
+    ).toBe(last);
+  });
+
   it('puts strong tab matches before the search and weak ones after', () => {
     const results = searchCommands('figma', context(), []);
     expect(keys(results).slice(0, 2)).toEqual(['tab:4', 'search']);

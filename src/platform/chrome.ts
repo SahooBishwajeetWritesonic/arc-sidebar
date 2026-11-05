@@ -6,6 +6,7 @@ import {
   backupsItem,
   calendarItem,
   modelItem,
+  picksItem,
   recordingItem,
   sessionItem,
   syncStateItem,
@@ -13,7 +14,7 @@ import {
 import { fullPage, SITE_PERMISSION_DEFAULTS } from './capture';
 import { fileName, type DownloadEntry } from './downloads';
 import { gmailFeedUrl, parseGmailFeed } from './gmail';
-import type { HistoryMessage } from './messages';
+import type { HistoryMessage, PickMessage } from './messages';
 import type { PeekMessage } from './peek';
 import type {
   HistoryEntry,
@@ -97,6 +98,11 @@ export const chromePlatform: Platform = {
   loadArchive: () => archiveItem.getValue(),
   onArchiveChange: (listener) => archiveItem.watch((archive) => listener(archive)),
   loadBackups: () => backupsItem.getValue(),
+  loadPicks: () => picksItem.getValue(),
+  learnPick(typed, target) {
+    const message: PickMessage = { kind: 'picks:learn', typed, target };
+    void browser.runtime.sendMessage(message).catch(() => {});
+  },
   loadSyncProblem: async () => (await syncStateItem.getValue()).problem,
 
   // With the browser's own Gmail sign-in: the panel may read mail.google.com.

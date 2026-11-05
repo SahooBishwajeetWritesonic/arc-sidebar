@@ -306,6 +306,14 @@ export function searchHistory(text: string, limit?: number) {
   return platform?.searchHistory(text, limit) ?? Promise.resolve([]);
 }
 
+export function loadPicks() {
+  return platform?.loadPicks() ?? Promise.resolve([]);
+}
+
+export function learnPick(typed: string, target: string) {
+  platform?.learnPick(typed, target);
+}
+
 export function readPageSearch(tabId: number) {
   return platform?.readPageSearch(tabId) ?? Promise.resolve(null);
 }
