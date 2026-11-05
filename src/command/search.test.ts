@@ -114,11 +114,24 @@ describe('searchCommands', () => {
     expect(completed[0]!.command).toEqual({ type: 'openUrl', url: 'http://localhost:3000' });
   });
 
-  it('switches to a tab already showing a link’s address', () => {
+  it('switches to a tab already showing a link’s address, whatever its title', () => {
     const tabs = new Map(context().tabs);
-    tabs.set(6, tab(6, 'Vite App', 'http://localhost:5173/'));
-    const results = searchCommands('lh 5173', context({ tabs }), []);
-    expect(keys(results).slice(0, 2)).toEqual(['tab:6', 'open-url']);
+    tabs.set(7, tab(7, 'Untitled', 'https://acme.atlassian.net/browse/ARC-42'));
+    const jira = {
+      id: 'jira',
+      name: 'Jira',
+      keywords: ['jira'],
+      url: 'https://acme.atlassian.net/browse/ARC-{1}',
+    };
+    const base = context({ tabs });
+    const ctx = {
+      ...base,
+      model: {
+        ...base.model,
+        settings: { ...base.model.settings, shortcuts: [...base.model.settings.shortcuts, jira] },
+      },
+    };
+    expect(keys(searchCommands('jira 42', ctx, [])).slice(0, 2)).toEqual(['tab:7', 'open-url']);
   });
 
   it('puts strong tab matches before the search and weak ones after', () => {

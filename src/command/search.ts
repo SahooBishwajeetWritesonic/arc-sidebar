@@ -205,10 +205,11 @@ export function searchCommands(
   // A link ("lh 3300") wins over reading the text as an address.
   const link = linkFor(text, ctx.model.settings.shortcuts);
   const url = link?.url ?? completion?.url ?? typedUrl(text);
-  const matches = ranked(pages(ctx), text);
-  // A tab already showing the typed address: switch to it rather than open it twice.
-  const already = url ? matches.find(({ item }) => item.url && isSamePage(item.url, url)) : null;
-  if (already) add(strip(already.item));
+  const open = pages(ctx);
+  const matches = ranked(open, text);
+  // A tab already showing the address: switch to it rather than open it twice.
+  const already = url ? open.find((page) => page.url && isSamePage(page.url, url)) : null;
+  if (already) add(strip(already));
   if (url) {
     add({
       key: 'open-url',
