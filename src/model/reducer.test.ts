@@ -289,6 +289,19 @@ describe('applySessionIntent', () => {
 });
 
 describe('settings, undo and archive', () => {
+  it('saves the command bar’s shortcuts, dropping ones that can’t work', () => {
+    const model = build({
+      type: 'setShortcuts',
+      shortcuts: [
+        { id: 'a', name: 'Jira', keywords: ['JIRA'], url: 'acme.atlassian.net/browse/{1}' },
+        { id: 'b', name: 'Empty', keywords: ['em'], url: '' },
+      ],
+    });
+    expect(model.settings.shortcuts).toEqual([
+      { id: 'a', name: 'Jira', keywords: ['jira'], url: 'https://acme.atlassian.net/browse/{1}' },
+    ]);
+  });
+
   it('turns Developer Mode on and off per site, once', () => {
     const on = build({ type: 'setDeveloperMode', host: 'App.Example.com', on: true });
     expect(on.settings.developerSites).toEqual(['localhost', '127.0.0.1', 'app.example.com']);

@@ -68,6 +68,16 @@ describe('repairModel', () => {
         numberFavorites: false,
         nineIsLast: false,
         calendar: { feed: 'https://example.com/cal.ics', itemId: 'p', before: 10 },
+        shortcuts: [
+          { id: 's1', name: 'Jira', keywords: ['jira'], url: 'https://jira.example.com/ARC-{1}' },
+          {
+            id: 's2',
+            name: 'Kagi',
+            keywords: ['kg'],
+            url: 'https://kagi.com/search?q=%s',
+            color: '#FFB319',
+          },
+        ],
       },
     };
     expect(repairModel(structuredClone(model))).toEqual(model);

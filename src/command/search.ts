@@ -1,8 +1,8 @@
-import { FAVORITES_ID } from '@/model/types';
+import { FAVORITES_ID, type Shortcut } from '@/model/types';
 import { hostname, isSamePage } from '@/model/urls';
 import { availableActions, type CommandContext } from './actions';
 import type { HistoryEntry } from '@/platform/types';
-import { siteSearchUrl, type Site } from './sites';
+import { linkFor, siteSearchUrl } from './sites';
 import type { Result } from './types';
 import { displayUrl, typedUrl } from './url';
 
@@ -163,7 +163,7 @@ export interface SearchOptions {
   /** The address the input is completing to, which becomes the first row. */
   completion?: { text: string; url: string } | null;
   /** The site being searched (after its keyword and Tab). */
-  site?: Site | null;
+  site?: Shortcut | null;
 }
 
 /**
@@ -202,7 +202,9 @@ export function searchCommands(
     if (!results.some((other) => other.key === result.key)) results.push(result);
   };
 
-  const url = completion?.url ?? typedUrl(text);
+  // A link ("lh 3300") wins over reading the text as an address.
+  const link = linkFor(text, ctx.model.settings.shortcuts);
+  const url = link?.url ?? completion?.url ?? typedUrl(text);
   const matches = ranked(pages(ctx), text);
   // A tab already showing the typed address: switch to it rather than open it twice.
   const already = url ? matches.find(({ item }) => item.url && isSamePage(item.url, url)) : null;
@@ -211,7 +213,8 @@ export function searchCommands(
     add({
       key: 'open-url',
       command: { type: 'openUrl', url },
-      title: completion ? completion.text : displayUrl(url),
+      title: !link && completion ? completion.text : displayUrl(url),
+      ...(link && { detail: link.shortcut.name }),
       url,
       hint: 'Open',
     });
@@ -292,7 +295,7 @@ function splitChoices(text: string, ctx: CommandContext, history: readonly Histo
   if (!text) return tabs.slice(0, LIMIT.pages).map(strip);
 
   const results: Result[] = [];
-  const url = typedUrl(text);
+  const url = linkFor(text, ctx.model.settings.shortcuts)?.url ?? typedUrl(text);
   if (url) {
     results.push({
       key: 'open-url',

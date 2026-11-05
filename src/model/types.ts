@@ -1,3 +1,5 @@
+import { DEFAULT_SHORTCUTS } from './shortcuts';
+
 /**
  * The saved sidebar: what survives restarts. Identity is our own ids, never
  * Chrome's tab ids (those change on every restart).
@@ -47,6 +49,22 @@ export interface Settings {
   /** ⌘9 goes to the last tab, as in Chrome; off, to the ninth. */
   nineIsLast: boolean;
   calendar: LiveCalendar | null;
+  shortcuts: Shortcut[];
+}
+
+/**
+ * A command bar keyword. With %s in its address it's Arc's Site Search (keyword, Tab, query);
+ * otherwise a link that opens as typed: "lh 3300".
+ */
+export interface Shortcut {
+  id: string;
+  name: string;
+  /** Lowercase, two letters or more. A site search also answers to its name. */
+  keywords: string[];
+  /** %s: the search, encoded. {1}, {2}…: words after the keyword; {1|3000} has a default. */
+  url: string;
+  /** Site searches only; the space's accent when unset. */
+  color?: string;
 }
 
 /** Arc's Live Calendar, read from the calendar's private iCal address. */
@@ -79,6 +97,10 @@ export const defaultSettings = (): Settings => ({
   numberFavorites: true,
   nineIsLast: true,
   calendar: null,
+  shortcuts: DEFAULT_SHORTCUTS.map((shortcut) => ({
+    ...shortcut,
+    keywords: [...shortcut.keywords],
+  })),
 });
 
 export interface Space {
@@ -366,6 +388,8 @@ export type Intent =
   | { type: 'setNavButtons'; on: boolean }
   /** Air Traffic Control's rules, as edited; ones with no text are dropped. */
   | { type: 'setRoutes'; routes: Route[] }
+  /** As edited; ones that can't work are dropped. */
+  | { type: 'setShortcuts'; shortcuts: Shortcut[] }
   | { type: 'setSync'; on: boolean }
   /** How ⌘1–9 count; what's left out stays as it is. */
   | { type: 'setNumbering'; favorites?: boolean; nineIsLast?: boolean }

@@ -56,8 +56,9 @@ import { themeAccent, themeLook } from '@/app/theme/engine';
 import { usePreferredScheme } from '@/app/theme/looks';
 import type { CommandContext } from '@/command/actions';
 import { completeAddress, searchCommands } from '@/command/search';
-import { siteFor, type Site } from '@/command/sites';
+import { linkFor, siteFor } from '@/command/sites';
 import type { ActionId, Command, Result } from '@/command/types';
+import type { Shortcut } from '@/model/types';
 import type { Typed } from '@/platform/command-bar';
 import type { HistoryEntry } from '@/platform/types';
 import { useSidebar } from '@/state/sidebar';
@@ -150,21 +151,27 @@ export function CommandBar({
   // An action waiting for a tab or address ("Add Split View…").
   const [picking, setPicking] = useState<Result | null>(null);
   // Arc's Site Search: the site being searched, after its keyword and Tab.
-  const [site, setSite] = useState<Site | null>(null);
+  const [site, setSite] = useState<Shortcut | null>(null);
+  const shortcuts = ctx.model.settings.shortcuts;
+  const accent = themeAccent(theme);
+  const colorOf = (shortcut: Shortcut) => shortcut.color ?? accent;
 
   const slash = typed.startsWith('/') && !picking && !pagesOnly && !site;
   const actionsMode = (actionsOnly || slash) && !picking && !pagesOnly && !site;
   const query = slash ? typed.slice(1) : typed;
+  const plainTyping = !site && !actionsMode && !prompt && !picking;
   // What's typed is a site's keyword: Tab searches that site.
-  const keyword = !site && !actionsMode && !prompt && !picking ? siteFor(query) : undefined;
+  const keyword = plainTyping ? siteFor(query, shortcuts) : undefined;
+  // No inline completion over a link ("lh 3300").
+  const linked = plainTyping && linkFor(query, shortcuts) !== undefined;
   const history = useHistory(actionsMode || site ? '' : query);
   const typedAddresses = useTypedAddresses();
   const completion = useMemo(
     () =>
-      completing && !actionsMode && !prompt && !picking && !site
+      completing && plainTyping && !linked
         ? completeAddress(query, [...typedAddresses, ...history])
         : null,
-    [completing, actionsMode, prompt, picking, site, query, typedAddresses, history],
+    [completing, plainTyping, linked, query, typedAddresses, history],
   );
   const results = useMemo(() => {
     if (prompt) return [];
@@ -184,7 +191,7 @@ export function CommandBar({
   latestResults.current = results;
 
   // The selection goes back to the top whenever what's typed changes.
-  const listKey = `${actionsMode}:${picking?.key}:${site?.name}:${query}`;
+  const listKey = `${actionsMode}:${picking?.key}:${site?.id}:${query}`;
   const [selection, setSelection] = useState({ listKey, index: 0 });
   const index = Math.min(selection.listKey === listKey ? selection.index : 0, results.length - 1);
   const select = (next: number) =>
@@ -351,7 +358,7 @@ export function CommandBar({
   const layerStyle = {
     colorScheme: look.scheme,
     '--command-card': look.background,
-    '--command-accent': themeAccent(theme),
+    '--command-accent': accent,
   } as CSSProperties;
 
   return (
@@ -364,18 +371,21 @@ export function CommandBar({
         if (event.target === event.currentTarget) host.close();
       }}
     >
-      <SiteDust burst={burst} color={site?.color} card={card} />
+      <SiteDust burst={burst} color={site ? colorOf(site) : undefined} card={card} />
       <div ref={card} className={styles.card} role="dialog" aria-label="Command bar">
         <div className={styles.field}>
           <Search className={styles.fieldIcon} size={16} strokeWidth={2} aria-hidden />
           {chip && (
             <span
-              key={site?.name ?? 'chip'}
+              key={site?.id ?? 'chip'}
               className={styles.chip}
               data-site={site ? '' : undefined}
               style={
                 site
-                  ? ({ '--site': site.color, '--on-site': readableOn(site.color) } as CSSProperties)
+                  ? ({
+                      '--site': colorOf(site),
+                      '--on-site': readableOn(colorOf(site)),
+                    } as CSSProperties)
                   : undefined
               }
             >
@@ -399,9 +409,9 @@ export function CommandBar({
           />
           {keyword && (
             <span
-              key={keyword.name}
+              key={keyword.id}
               className={styles.keyHint}
-              style={{ '--site': keyword.color } as CSSProperties}
+              style={{ '--site': colorOf(keyword) } as CSSProperties}
             >
               Search <b className={styles.keySite}>{keyword.name}</b>
               <kbd className={styles.key}>Tab</kbd>

@@ -99,6 +99,28 @@ describe('searchCommands', () => {
     expect(results[0]!.hint).toBe('Switch to Tab');
   });
 
+  it('opens a link’s address first, from its keyword and words', () => {
+    const results = searchCommands('lh 3300', context(), []);
+    expect(keys(results).slice(0, 2)).toEqual(['open-url', 'search']);
+    expect(results[0]).toMatchObject({
+      command: { type: 'openUrl', url: 'http://localhost:3300' },
+      title: 'localhost:3300',
+      detail: 'Localhost',
+    });
+    // Over an inline completion, too.
+    const completed = searchCommands('lh', context(), [], {
+      completion: { text: 'lhr.example.com', url: 'https://lhr.example.com/' },
+    });
+    expect(completed[0]!.command).toEqual({ type: 'openUrl', url: 'http://localhost:3000' });
+  });
+
+  it('switches to a tab already showing a link’s address', () => {
+    const tabs = new Map(context().tabs);
+    tabs.set(6, tab(6, 'Vite App', 'http://localhost:5173/'));
+    const results = searchCommands('lh 5173', context({ tabs }), []);
+    expect(keys(results).slice(0, 2)).toEqual(['tab:6', 'open-url']);
+  });
+
   it('puts strong tab matches before the search and weak ones after', () => {
     const results = searchCommands('figma', context(), []);
     expect(keys(results).slice(0, 2)).toEqual(['tab:4', 'search']);

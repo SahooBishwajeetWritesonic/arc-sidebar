@@ -205,6 +205,16 @@ test('a site’s keyword and Tab search that site', async ({ page }) => {
   await expect.poll(async () => (await todayTitles(page))[0]).toContain('youtube.com');
 });
 
+test('a link’s keyword and a port open that local server', async ({ page }) => {
+  await ready(page);
+  await openBar(page);
+  await field(page).pressSequentially('lh 3300');
+  await expect(selected(page)).toContainText('localhost:3300');
+  await expect(selected(page)).toContainText('Localhost');
+  await field(page).press('Enter');
+  await expect.poll(async () => (await todayTitles(page))[0]).toContain('localhost');
+});
+
 test('Backspace in an empty site search goes back to searching everything', async ({ page }) => {
   await ready(page);
   await openBar(page);

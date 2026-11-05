@@ -1,4 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
+import { cleanShortcuts } from './shortcuts';
 import {
   ARCHIVE_AFTER_MS,
   defaultSettings,
@@ -268,6 +269,7 @@ function repairSettings(raw: unknown): Settings {
         isString(route.spaceId),
     );
   }
+  if (Array.isArray(raw.shortcuts)) settings.shortcuts = cleanShortcuts(raw.shortcuts);
   return settings;
 }
 

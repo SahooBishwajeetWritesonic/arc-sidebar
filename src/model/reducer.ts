@@ -1,6 +1,7 @@
 import { generateKeyBetween, generateNKeysBetween } from 'fractional-indexing';
 import { withTabBefore, withTabOnTop, withoutTab } from '@/platform/today-order';
 import { filtersKey, githubFolderOf } from './live';
+import { cleanShortcuts } from './shortcuts';
 import { canPlace, childrenOf, descendants } from './tree';
 import {
   ARCHIVE_LIMIT,
@@ -398,6 +399,12 @@ export function applyIntent(
         .filter((route) => route.text);
       return { ...model, settings: { ...model.settings, routes } };
     }
+
+    case 'setShortcuts':
+      return {
+        ...model,
+        settings: { ...model.settings, shortcuts: cleanShortcuts(intent.shortcuts) },
+      };
 
     case 'setSync':
       if (model.settings.sync === intent.on) return model;

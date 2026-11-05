@@ -1,71 +1,33 @@
-/**
- * Arc's Site Search: a site's keyword ("yt"), then Tab, searches that site.
- * Chrome doesn't let extensions list its search engines, so these are the common ones.
- */
-export interface Site {
-  name: string;
-  /** What to type before Tab; the name works too. */
-  keywords: string[];
-  /** The search page, with %s for what's searched. */
-  search: string;
-  /** Brand colour that reads in light and dark. */
-  color: string;
-}
-
-// No one-letter keywords: Tab after a letter searches actions instead.
-export const SITES: Site[] = [
-  { name: 'Google', keywords: [], search: 'https://www.google.com/search?q=%s', color: '#4285F4' },
-  {
-    name: 'YouTube',
-    keywords: ['yt'],
-    search: 'https://www.youtube.com/results?search_query=%s',
-    color: '#FF0033',
-  },
-  {
-    name: 'Google Maps',
-    keywords: ['maps'],
-    search: 'https://www.google.com/maps/search/%s',
-    color: '#34A853',
-  },
-  {
-    name: 'Google Drive',
-    keywords: ['drive'],
-    search: 'https://drive.google.com/drive/search?q=%s',
-    color: '#1FA463',
-  },
-  {
-    name: 'Wikipedia',
-    keywords: ['wiki'],
-    search: 'https://en.wikipedia.org/wiki/Special:Search?search=%s',
-    color: '#3366CC',
-  },
-  { name: 'GitHub', keywords: ['gh'], search: 'https://github.com/search?q=%s', color: '#8250DF' },
-  {
-    name: 'Stack Overflow',
-    keywords: ['so'],
-    search: 'https://stackoverflow.com/search?q=%s',
-    color: '#F48024',
-  },
-  {
-    name: 'MDN',
-    keywords: ['mdn'],
-    search: 'https://developer.mozilla.org/en-US/search?q=%s',
-    color: '#0069C2',
-  },
-  { name: 'npm', keywords: ['npm'], search: 'https://www.npmjs.com/search?q=%s', color: '#CB3837' },
-  { name: 'Reddit', keywords: [], search: 'https://www.reddit.com/search/?q=%s', color: '#FF4500' },
-  { name: 'X', keywords: ['twitter'], search: 'https://x.com/search?q=%s', color: '#1D9BF0' },
-  { name: 'Amazon', keywords: [], search: 'https://www.amazon.com/s?k=%s', color: '#FF9900' },
-];
+import { fillLink, fillSearch, isSiteSearch } from '@/model/shortcuts';
+import type { Shortcut } from '@/model/types';
 
 const squash = (text: string) => text.toLowerCase().replace(/\s+/g, '');
 
-/** The site whose keyword or name is exactly what's typed (two letters or more). */
-export function siteFor(typed: string): Site | undefined {
+/** Arc's Site Search: the site whose keyword or name is what's typed, for Tab to search. */
+export function siteFor(typed: string, shortcuts: readonly Shortcut[]): Shortcut | undefined {
   const text = squash(typed);
   if (text.length < 2) return undefined;
-  return SITES.find((site) => site.keywords.includes(text) || squash(site.name) === text);
+  return shortcuts.find(
+    (shortcut) =>
+      isSiteSearch(shortcut) &&
+      (shortcut.keywords.includes(text) || squash(shortcut.name) === text),
+  );
 }
 
-export const siteSearchUrl = (site: Site, query: string) =>
-  site.search.replace('%s', encodeURIComponent(query.trim()));
+/** A link typed with its words ("lh 3300"). Keywords only, so "localhost" stays an address. */
+export function linkFor(
+  typed: string,
+  shortcuts: readonly Shortcut[],
+): { shortcut: Shortcut; url: string } | undefined {
+  const [first = '', ...words] = typed.trim().split(/\s+/);
+  const keyword = first.toLowerCase();
+  if (keyword.length < 2) return undefined;
+  for (const shortcut of shortcuts) {
+    if (isSiteSearch(shortcut) || !shortcut.keywords.includes(keyword)) continue;
+    const url = fillLink(shortcut.url, words);
+    if (url) return { shortcut, url };
+  }
+  return undefined;
+}
+
+export const siteSearchUrl = (site: Shortcut, query: string) => fillSearch(site.url, query);
