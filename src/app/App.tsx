@@ -37,6 +37,7 @@ import { ImportDialog } from './import/ImportDialog';
 import { MediaTray } from './media/MediaTray';
 import { RestoreDialog } from './restore/RestoreDialog';
 import { RoutesDialog } from './routes/RoutesDialog';
+import { ShortcutsDialog } from './shortcuts/ShortcutsDialog';
 import styles from './app.module.css';
 import { SpacePager } from './spaces/SpacePager';
 import { Backdrop } from './theme/Backdrop';
@@ -289,6 +290,7 @@ export function App() {
         <RestoreDialog />
         <ClearArchiveDialog />
         <RoutesDialog />
+        <ShortcutsDialog />
         <LiveCalendarDialog />
       </Boundary>
       <Boundary region="command bar">

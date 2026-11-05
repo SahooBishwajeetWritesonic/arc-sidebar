@@ -22,6 +22,7 @@ import {
   type LiveCalendar,
   type PinItem,
   type Route,
+  type Shortcut,
   type SidebarModel,
   type SpaceIcon,
   type SpaceTheme,
@@ -1103,6 +1104,17 @@ export function applyThemeToAllSpaces(spaceId: string) {
 
 export function setRoutes(routes: Route[]) {
   dispatch({ type: 'setRoutes', routes });
+}
+
+export function setShortcuts(shortcuts: Shortcut[]) {
+  const before = useSidebar.getState().model.settings.shortcuts;
+  dispatch({ type: 'setShortcuts', shortcuts });
+  const removed = before.filter((old) => !shortcuts.some((shortcut) => shortcut.id === old.id));
+  if (!removed.length) return;
+  showUndoToast(
+    removed.length === 1 ? `Deleted “${removed[0]!.name}”` : `Deleted ${removed.length} shortcuts`,
+    () => dispatch({ type: 'setShortcuts', shortcuts: before }),
+  );
 }
 
 export function setNavButtons(on: boolean) {

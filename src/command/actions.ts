@@ -190,6 +190,11 @@ export function availableActions(ctx: CommandContext): (Result & { words: string
       add({ action: 'clearArchive', title: 'Clear Archive…', words: 'library archived empty' });
     }
     add({ action: 'editTheme', title: 'Edit Theme…', words: 'colour color gradient' });
+    add({
+      action: 'editShortcuts',
+      title: 'Site Search & Shortcuts…',
+      words: 'keywords aliases links edit',
+    });
     add({ action: 'restoreSidebar', title: 'Restore Sidebar…', words: 'backup data' });
     add({ action: 'exportSidebar', title: 'Export Sidebar…', words: 'backup save download' });
     add({ action: 'importArc', title: 'Import from Arc…', words: 'arc' });

@@ -20,6 +20,8 @@ interface UiState {
   clearingArchive: boolean;
   /** Air Traffic Control's rules are being edited. */
   editingRoutes: boolean;
+  /** The Site Search & Shortcuts sheet is open. */
+  editingShortcuts: boolean;
   /** The pin Live Calendar is being set up for. */
   liveCalendarFor: string | null;
   /** The command bar is open inside the sidebar. */
@@ -39,6 +41,7 @@ export const useUi = create<UiState>()(() => ({
   restoring: null,
   clearingArchive: false,
   editingRoutes: false,
+  editingShortcuts: false,
   liveCalendarFor: null,
   commandBar: false,
   commandBarAddress: null,
@@ -55,6 +58,8 @@ export const setImporting = (importing: boolean) => useUi.setState({ importing }
 export const setRestoring = (restoring: Backup[] | null) => useUi.setState({ restoring });
 export const setClearingArchive = (clearingArchive: boolean) => useUi.setState({ clearingArchive });
 export const setEditingRoutes = (editingRoutes: boolean) => useUi.setState({ editingRoutes });
+export const setEditingShortcuts = (editingShortcuts: boolean) =>
+  useUi.setState({ editingShortcuts });
 export const setLiveCalendarFor = (liveCalendarFor: string | null) =>
   useUi.setState({ liveCalendarFor });
 export const setCommandBar = (commandBar: boolean) =>

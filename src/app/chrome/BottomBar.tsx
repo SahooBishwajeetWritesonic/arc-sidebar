@@ -26,6 +26,7 @@ import { loadBackups, loadSyncProblem, useSidebar } from '@/state/sidebar';
 import {
   openLibrary,
   setEditingRoutes,
+  setEditingShortcuts,
   setImporting,
   setRestoring,
   showView,
@@ -221,6 +222,9 @@ function AddMenu() {
             </Menu.SubmenuRoot>
             <Menu.Item className={menu.item} onClick={() => setEditingRoutes(true)}>
               Air Traffic Control…
+            </Menu.Item>
+            <Menu.Item className={menu.item} onClick={() => setEditingShortcuts(true)}>
+              Site Search & Shortcuts…
             </Menu.Item>
             <Menu.Item className={menu.item} onClick={() => setNavButtons(!navButtons)}>
               {navButtons ? 'Hide' : 'Show'} Back, Forward and Reload

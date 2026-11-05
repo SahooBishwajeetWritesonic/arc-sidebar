@@ -30,6 +30,7 @@ export type ActionId =
   | 'viewDownloads'
   | 'clearArchive'
   | 'editTheme'
+  | 'editShortcuts'
   | 'appearance'
   | 'restoreSidebar'
   | 'exportSidebar'
