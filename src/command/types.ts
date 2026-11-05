@@ -31,6 +31,7 @@ export type ActionId =
   | 'clearArchive'
   | 'editTheme'
   | 'editShortcuts'
+  | 'addSiteSearch'
   | 'appearance'
   | 'restoreSidebar'
   | 'exportSidebar'

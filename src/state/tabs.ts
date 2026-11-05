@@ -306,6 +306,10 @@ export function searchHistory(text: string, limit?: number) {
   return platform?.searchHistory(text, limit) ?? Promise.resolve([]);
 }
 
+export function readPageSearch(tabId: number) {
+  return platform?.readPageSearch(tabId) ?? Promise.resolve(null);
+}
+
 export function fetchText(url: string, signal?: AbortSignal) {
   return platform?.fetchText(url, signal) ?? Promise.resolve(null);
 }

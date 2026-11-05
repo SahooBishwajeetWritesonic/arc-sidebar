@@ -33,6 +33,14 @@ export interface Recording {
   camera: boolean;
 }
 
+/** What a page says about its own search. */
+export interface PageSearch {
+  openSearch?: string;
+  themeColor?: string;
+  /** On a results page, what was searched. */
+  searchText?: string;
+}
+
 /** A page from Chrome's history, as the command bar uses it. */
 export interface HistoryEntry {
   url: string;
@@ -136,6 +144,8 @@ export interface Platform {
   recentTabs(windowId: number): Promise<number[]>;
   /** Best first. With no text: addresses typed before. */
   searchHistory(text: string, limit?: number): Promise<HistoryEntry[]>;
+  /** Null when the page can't be read (Chrome's own pages, the Web Store). */
+  readPageSearch(tabId: number): Promise<PageSearch | null>;
   /** Without cookies; null if it fails. */
   fetchText(url: string, signal?: AbortSignal): Promise<string | null>;
   /** Opens `url` in a new tab, which lands at the top of Today. */

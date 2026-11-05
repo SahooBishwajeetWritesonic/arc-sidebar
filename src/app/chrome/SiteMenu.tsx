@@ -13,6 +13,7 @@ import {
   ScrollText,
   SlidersHorizontal,
   SquareArrowOutUpRight,
+  TextSearch,
   TriangleAlert,
   Video,
   type LucideIcon,
@@ -33,6 +34,7 @@ import {
   setDeveloperMode,
   setPermission,
 } from './page-actions';
+import { addSiteSearch } from '@/app/shortcuts/add';
 import styles from './url-bar.module.css';
 
 const PERMISSIONS: Record<SitePermissionKind, { title: string; icon: LucideIcon }> = {
@@ -121,6 +123,17 @@ export function SiteMenu({
               >
                 <ScrollText size={18} strokeWidth={1.75} />
               </button>
+              {web && (
+                <button
+                  type="button"
+                  className={styles.tile}
+                  aria-label="Add Site Search"
+                  title="Search this site from the command bar"
+                  onClick={thenClose(() => void addSiteSearch(tab))}
+                >
+                  <TextSearch size={18} strokeWidth={1.75} />
+                </button>
+              )}
             </div>
             {web && (
               <>

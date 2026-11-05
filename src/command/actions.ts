@@ -1,4 +1,4 @@
-import { isSamePage } from '@/model/urls';
+import { hostname, isSamePage } from '@/model/urls';
 import {
   FAVORITES_ID,
   FAVORITES_LIMIT,
@@ -190,6 +190,13 @@ export function availableActions(ctx: CommandContext): (Result & { words: string
       add({ action: 'clearArchive', title: 'Clear Archive…', words: 'library archived empty' });
     }
     add({ action: 'editTheme', title: 'Edit Theme…', words: 'colour color gradient' });
+    if (tab && /^https?:/.test(tab.url)) {
+      add({
+        action: 'addSiteSearch',
+        title: `Add Site Search for ${hostname(tab.url)}…`,
+        words: 'opensearch keyword shortcut',
+      });
+    }
     add({
       action: 'editShortcuts',
       title: 'Site Search & Shortcuts…',

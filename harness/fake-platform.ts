@@ -422,6 +422,14 @@ export class FakePlatform implements Platform {
     },
   });
 
+  async readPageSearch(tabId: number) {
+    const tab = this.tabs.find((each) => each.id === tabId);
+    if (!tab || !/^https?:/.test(tab.url)) return null;
+    const origin = new URL(tab.url).origin;
+    const site = this.web.openSearch[origin];
+    return site ? { openSearch: `${origin}/opensearch.xml`, themeColor: site.themeColor } : {};
+  }
+
   async fetchText(url: string) {
     await new Promise((resolve) => setTimeout(resolve, 4));
     const parsed = new URL(url);

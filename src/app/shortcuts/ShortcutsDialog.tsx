@@ -155,11 +155,20 @@ function ShortcutsPopup() {
   const accent = useSidebar((state) =>
     themeAccent(state.model.spaces.find((space) => space.id === state.spaceId)?.theme),
   );
+  // A site search found on a page goes first, unsaved.
+  const [start] = useState(() => {
+    const found = useUi.getState().shortcutToAdd;
+    return {
+      saved: useSidebar.getState().model.settings.shortcuts.map(toDraft),
+      found: found && toDraft({ ...found, id: newId() }),
+    };
+  });
   const [drafts, setDrafts] = useState(() =>
-    useSidebar.getState().model.settings.shortcuts.map(toDraft),
+    start.found ? [start.found, ...start.saved] : start.saved,
   );
-  const [saved] = useState(() => new Set(drafts.map((draft) => draft.id)));
-  const [added, setAdded] = useState<string | null>(null);
+  const [saved] = useState(() => new Set(start.saved.map((draft) => draft.id)));
+  // Its keyword starts selected, to type over.
+  const [added, setAdded] = useState<string | null>(start.found?.id ?? null);
   const problems = useMemo(() => problemsOf(drafts, saved), [drafts, saved]);
   const blocked = [...problems.values()].some(Boolean);
 
@@ -206,6 +215,11 @@ function ShortcutsPopup() {
                     autoCapitalize="off"
                     autoComplete="off"
                     autoFocus={draft.id === added}
+                    onFocus={(event) => {
+                      if (draft.id !== added) return;
+                      event.currentTarget.select();
+                      setAdded(null);
+                    }}
                     value={draft.keywords}
                     onChange={(event) => change(draft.id, { keywords: event.target.value })}
                   />

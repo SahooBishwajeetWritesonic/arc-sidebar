@@ -33,6 +33,7 @@ import {
   StarOff,
   Sun,
   SunMoon,
+  TextSearch,
   type LucideIcon,
   X,
 } from 'lucide-react';
@@ -503,6 +504,7 @@ const ACTION_ICONS: Record<ActionId, LucideIcon> = {
   clearArchive: ArchiveX,
   editTheme: Palette,
   editShortcuts: Keyboard,
+  addSiteSearch: TextSearch,
   appearance: SunMoon,
   restoreSidebar: History,
   exportSidebar: Download,

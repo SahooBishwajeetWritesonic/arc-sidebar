@@ -19,6 +19,7 @@ import type {
   HistoryEntry,
   MediaState,
   Platform,
+  PageSearch,
   SitePermission,
   SitePermissionKind,
   SitePermissionSetting,
@@ -247,6 +248,28 @@ export const chromePlatform: Platform = {
     void browser.search.query(
       tabId === undefined ? { text, disposition: 'NEW_TAB' } : { text, tabId },
     );
+  },
+
+  async readPageSearch(tabId) {
+    try {
+      const [frame] = await browser.scripting.executeScript({
+        target: { tabId },
+        func: () => ({
+          openSearch: document.querySelector<HTMLLinkElement>(
+            'link[rel~="search"][type="application/opensearchdescription+xml"]',
+          )?.href,
+          themeColor: document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content,
+          searchText: [
+            ...document.querySelectorAll<HTMLInputElement>(
+              'input[type="search"], input[name="q"], input[name="query"], input[name="search"]',
+            ),
+          ].find((box) => box.value.trim())?.value,
+        }),
+      });
+      return (frame?.result as PageSearch | undefined) ?? null;
+    } catch {
+      return null;
+    }
   },
 
   async fetchText(url, signal) {

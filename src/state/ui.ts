@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Backup, SpaceTheme } from '@/model/types';
+import type { Backup, Shortcut, SpaceTheme } from '@/model/types';
 
 export type LibrarySection = 'downloads' | 'archive';
 
@@ -22,6 +22,8 @@ interface UiState {
   editingRoutes: boolean;
   /** The Site Search & Shortcuts sheet is open. */
   editingShortcuts: boolean;
+  /** Found on a page, for the sheet to start with. */
+  shortcutToAdd: Omit<Shortcut, 'id'> | null;
   /** The pin Live Calendar is being set up for. */
   liveCalendarFor: string | null;
   /** The command bar is open inside the sidebar. */
@@ -42,6 +44,7 @@ export const useUi = create<UiState>()(() => ({
   clearingArchive: false,
   editingRoutes: false,
   editingShortcuts: false,
+  shortcutToAdd: null,
   liveCalendarFor: null,
   commandBar: false,
   commandBarAddress: null,
@@ -59,7 +62,9 @@ export const setRestoring = (restoring: Backup[] | null) => useUi.setState({ res
 export const setClearingArchive = (clearingArchive: boolean) => useUi.setState({ clearingArchive });
 export const setEditingRoutes = (editingRoutes: boolean) => useUi.setState({ editingRoutes });
 export const setEditingShortcuts = (editingShortcuts: boolean) =>
-  useUi.setState({ editingShortcuts });
+  useUi.setState({ editingShortcuts, shortcutToAdd: null });
+export const addShortcut = (shortcutToAdd: Omit<Shortcut, 'id'>) =>
+  useUi.setState({ editingShortcuts: true, shortcutToAdd });
 export const setLiveCalendarFor = (liveCalendarFor: string | null) =>
   useUi.setState({ liveCalendarFor });
 export const setCommandBar = (commandBar: boolean) =>

@@ -84,3 +84,90 @@ test('deleting shortcuts can be undone', async ({ page }) => {
   await field(page).pressSequentially('yt');
   await expect(bar(page).locator('[class*="keyHint"]')).toHaveText(/^Search\s*YouTube\s*Tab$/);
 });
+
+test('a site’s own search is added from its page, and suggests as you type', async ({ page }) => {
+  await page.goto('/');
+  await expect(panel(page).locator('[data-active-page] [data-nav-row="tab"]')).toHaveCount(4);
+  await openBar(page);
+  await field(page).pressSequentially('kagi.com');
+  await field(page).press('Enter');
+  await expect.poll(async () => (await todayTitles(page))[0]).toContain('kagi.com');
+
+  await panel(page).getByRole('button', { name: 'Site controls' }).click();
+  await panel(page).getByRole('button', { name: 'Add Site Search' }).click();
+  const dialog = panel(page).getByRole('dialog', { name: 'Site Search & Shortcuts' });
+  const first = (part: string) => dialog.getByRole('textbox', { name: `Shortcut 1: ${part}` });
+  await expect(first('keywords')).toHaveValue('kagi');
+  await expect(first('keywords')).toBeFocused();
+  await expect(first('name')).toHaveValue('Kagi');
+  await expect(first('address')).toHaveValue('https://kagi.com/search?q=%s');
+  await expect(
+    dialog.getByText('Type kagi, then Tab, to search Kagi. Suggests as you type.'),
+  ).toBeVisible();
+  // The keyword starts selected, to type over.
+  await page.keyboard.type('kg');
+  await expect(first('keywords')).toHaveValue('kg');
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(dialog).toHaveCount(0);
+
+  await openBar(page);
+  await field(page).pressSequentially('kg');
+  await field(page).press('Tab');
+  // The page's theme-color.
+  await expect(bar(page).getByText('Kagi', { exact: true })).toHaveCSS(
+    'background-color',
+    'rgb(255, 179, 25)',
+  );
+  await field(page).pressSequentially('arc');
+  const suggestion = bar(page).getByRole('option').filter({ hasText: 'arc tutorial' });
+  await expect(suggestion).toBeVisible();
+  await field(page).press('ArrowDown');
+  await expect(selected(page)).toContainText('arc tutorial');
+  await field(page).press('Enter');
+  await expect.poll(async () => (await todayTitles(page))[0]).toContain('kagi.com');
+});
+
+test('a results page with the search in its path is added as a site search', async ({ page }) => {
+  await page.goto('/');
+  await expect(panel(page).locator('[data-active-page] [data-nav-row="tab"]')).toHaveCount(4);
+  await openBar(page);
+  await field(page).pressSequentially('hackertube.org/search/test');
+  await field(page).press('Enter');
+  await expect.poll(async () => (await todayTitles(page))[0]).toContain('hackertube.org');
+  await panel(page).getByRole('button', { name: 'Site controls' }).click();
+  await panel(page).getByRole('button', { name: 'Add Site Search' }).click();
+  const dialog = panel(page).getByRole('dialog', { name: 'Site Search & Shortcuts' });
+  await expect(dialog.getByRole('textbox', { name: 'Shortcut 1: address' })).toHaveValue(
+    'https://hackertube.org/search/%s',
+  );
+  await expect(dialog.getByRole('textbox', { name: 'Shortcut 1: keywords' })).toHaveValue(
+    'hackertube',
+  );
+});
+
+test('a site already in Site Search, or one with no search, says so', async ({ page }) => {
+  await page.goto('/');
+  await expect(panel(page).locator('[data-active-page] [data-nav-row="tab"]')).toHaveCount(4);
+  await openBar(page);
+  await field(page).pressSequentially('youtube.com/results?search_query=lofi');
+  await field(page).press('Enter');
+  await expect.poll(async () => (await todayTitles(page))[0]).toContain('youtube.com');
+
+  await openBar(page);
+  await field(page).pressSequentially('/add site search');
+  await expect(selected(page)).toContainText('Add Site Search for youtube.com…');
+  await field(page).press('Enter');
+  await expect(panel(page).getByRole('status')).toContainText(
+    'YouTube is in Site Search already, as “yt”.',
+  );
+
+  await openBar(page);
+  await field(page).pressSequentially('example.org/about');
+  await field(page).press('Enter');
+  await expect.poll(async () => (await todayTitles(page))[0]).toContain('example.org');
+  await panel(page).getByRole('button', { name: 'Site controls' }).click();
+  await panel(page).getByRole('button', { name: 'Add Site Search' }).click();
+  await expect(
+    panel(page).getByRole('status').filter({ hasText: 'No site search on this page.' }),
+  ).toBeVisible();
+});

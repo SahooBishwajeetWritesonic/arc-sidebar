@@ -12,6 +12,8 @@ import {
   setRestoring,
   showView,
 } from '@/state/ui';
+import { addSiteSearch } from '@/app/shortcuts/add';
+import { useTabs } from '@/state/tabs';
 import { runCommand } from './run';
 
 /** Arc's Reveal Tab in Sidebar: scrolls the selected row into view and gives it focus. */
@@ -51,6 +53,11 @@ export function runInSidebar(command: Command) {
     case 'editTheme':
       showView('sidebar');
       return openThemePicker(useSidebar.getState().spaceId);
+    case 'addSiteSearch': {
+      const { activeId, tabs } = useTabs.getState();
+      const tab = activeId === null ? undefined : tabs.get(activeId);
+      return tab ? void addSiteSearch(tab) : undefined;
+    }
     case 'editShortcuts':
       showView('sidebar');
       return setEditingShortcuts(true);
