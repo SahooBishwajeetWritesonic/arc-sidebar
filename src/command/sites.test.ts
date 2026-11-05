@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SHORTCUTS } from '@/model/shortcuts';
 import type { Shortcut } from '@/model/types';
-import { linkFor, siteFor, siteSearchUrl } from './sites';
+import type { HistoryEntry } from '@/platform/types';
+import { completeLink, linkFor, linkHistoryText, linkPages, siteFor, siteSearchUrl } from './sites';
 
 const jira: Shortcut = {
   id: 'jira',
@@ -77,5 +78,59 @@ describe('links', () => {
   it('never makes an address the bar shouldn’t open', () => {
     const sneaky: Shortcut = { id: 's', name: 'S', keywords: ['js'], url: '{1}' };
     expect(linkFor('js javascript:alert(1)', [sneaky])).toBeUndefined();
+  });
+});
+
+describe('a link’s pages from history', () => {
+  const visit = (url: string, title: string, daysAgo: number): HistoryEntry => ({
+    url,
+    title,
+    visitCount: 1,
+    typedCount: 0,
+    lastVisitTime: Date.UTC(2026, 10, 5) - daysAgo * 86_400_000,
+  });
+  const history = [
+    visit('http://localhost:3300/settings', 'Settings · Acme', 0),
+    visit('http://localhost:3300/', 'Acme dashboard', 2),
+    visit('http://localhost:5173/', 'Vite + React', 1),
+    visit('http://localhost:33001/', 'Another one', 5),
+    visit('https://localhostess.com/', 'Not local', 0),
+    visit('https://acme.atlassian.net/browse/ARC-42', 'ARC-42 Fix sign-in', 3),
+  ];
+  const urls = (typed: string) => linkPages(typed, shortcuts, history).map((page) => page.url);
+
+  it('looks up the link’s host', () => {
+    expect(linkHistoryText('lh 33', shortcuts)).toBe('localhost');
+    expect(linkHistoryText('jira', shortcuts)).toBe('acme.atlassian.net');
+    expect(linkHistoryText('yt cats', shortcuts)).toBe('');
+    expect(linkHistoryText('local', shortcuts)).toBe('');
+  });
+
+  it('lists each page the link opened, most recent first, named by its own page', () => {
+    expect(linkPages('lh', shortcuts, history)).toEqual([
+      { url: 'http://localhost:3300', title: 'Acme dashboard', words: ['3300'] },
+      { url: 'http://localhost:5173', title: 'Vite + React', words: ['5173'] },
+      { url: 'http://localhost:33001', title: 'Another one', words: ['33001'] },
+    ]);
+    expect(urls('jira')).toEqual(['https://acme.atlassian.net/browse/ARC-42']);
+  });
+
+  it('keeps the ones that start with the word typed', () => {
+    expect(urls('lh 33')).toEqual(['http://localhost:3300', 'http://localhost:33001']);
+    expect(urls('lh 9')).toEqual([]);
+    expect(urls('lh 3300 more')).toEqual([]);
+    expect(urls('localhost')).toEqual([]);
+  });
+
+  it('completes the word typed from the most recent page, unless one has it as typed', () => {
+    const pages = (typed: string) => linkPages(typed, shortcuts, history);
+    expect(completeLink('lh 5', pages('lh 5'))).toEqual({
+      text: 'lh 5173',
+      url: 'http://localhost:5173',
+    });
+    expect(completeLink('LH 33', pages('LH 33'))?.text).toBe('LH 3300');
+    expect(completeLink('lh 3300', pages('lh 3300'))).toBeNull();
+    expect(completeLink('lh', pages('lh'))).toBeNull();
+    expect(completeLink('lh 5 ', pages('lh 5 '))).toBeNull();
   });
 });

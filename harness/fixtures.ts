@@ -119,6 +119,15 @@ export const historyPages: HistoryEntry[] = [
     visitCount: 2,
     typedCount: 0,
   },
+  // For "lh" to list.
+  { url: 'http://localhost:3300/', title: 'Acme dashboard', visitCount: 30, typedCount: 0 },
+  { url: 'http://localhost:5173/', title: 'Vite + React', visitCount: 12, typedCount: 0 },
+  {
+    url: 'http://localhost:6006/?path=/docs/button',
+    title: 'Button · Storybook',
+    visitCount: 5,
+    typedCount: 0,
+  },
 ].map((entry, i) => ({ ...entry, lastVisitTime: Date.UTC(2026, 9, 28) - i * day }));
 
 /** Open pull requests on the fake github.com: yours, and ones waiting for your review. */

@@ -2,11 +2,11 @@ import { FAVORITES_ID, type Shortcut } from '@/model/types';
 import { hostname, isSamePage } from '@/model/urls';
 import { availableActions, type CommandContext } from './actions';
 import type { HistoryEntry } from '@/platform/types';
-import { linkFor, siteSearchUrl } from './sites';
+import { linkFor, linkPages, siteSearchUrl } from './sites';
 import type { Result } from './types';
 import { displayUrl, typedUrl } from './url';
 
-const LIMIT = { pages: 6, actions: 5, history: 5, suggestions: 5 };
+const LIMIT = { pages: 6, actions: 5, history: 5, suggestions: 5, linkPages: 5 };
 
 /**
  * How well `query` matches `text`: 0 when some word of the query is missing,
@@ -164,6 +164,8 @@ export interface SearchOptions {
   completion?: { text: string; url: string } | null;
   /** The site being searched (after its keyword and Tab). */
   site?: Shortcut | null;
+  /** History for the link being typed, to list its pages. */
+  linkHistory?: readonly HistoryEntry[];
 }
 
 /**
@@ -174,7 +176,13 @@ export function searchCommands(
   query: string,
   ctx: CommandContext,
   history: readonly HistoryEntry[],
-  { actionsOnly = false, pickSplit = false, completion = null, site = null }: SearchOptions = {},
+  {
+    actionsOnly = false,
+    pickSplit = false,
+    completion = null,
+    site = null,
+    linkHistory = [],
+  }: SearchOptions = {},
 ): Result[] {
   const text = query.trim();
   if (pickSplit) return splitChoices(text, ctx, history);
@@ -202,8 +210,9 @@ export function searchCommands(
     if (!results.some((other) => other.key === result.key)) results.push(result);
   };
 
-  // A link ("lh 3300") wins over reading the text as an address.
-  const link = linkFor(text, ctx.model.settings.shortcuts);
+  const shortcuts = ctx.model.settings.shortcuts;
+  // A link (typed, or completed to) wins over reading the text as an address.
+  const link = (completion && linkFor(completion.text, shortcuts)) || linkFor(text, shortcuts);
   const url = link?.url ?? completion?.url ?? typedUrl(text);
   const open = pages(ctx);
   const matches = ranked(open, text);
@@ -220,6 +229,19 @@ export function searchCommands(
       hint: 'Open',
     });
   }
+  linkPages(text, shortcuts, linkHistory)
+    .filter((page) => !url || !isSamePage(page.url, url))
+    .slice(0, LIMIT.linkPages)
+    .forEach((page) =>
+      add({
+        key: `link:${page.url}`,
+        command: { type: 'openUrl', url: page.url },
+        title: displayUrl(page.url),
+        ...(page.title && { detail: page.title }),
+        url: page.url,
+        hint: 'Open',
+      }),
+    );
   const spaces = ranked(
     ctx.model.spaces
       .filter((space) => space.id !== ctx.spaceId)

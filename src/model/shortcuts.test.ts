@@ -3,8 +3,10 @@ import {
   cleanShortcuts,
   DEFAULT_SHORTCUTS,
   fillLink,
+  historyText,
   isValidShortcutUrl,
   keywordProblem,
+  linkMatcher,
   parseKeywords,
   withScheme,
 } from './shortcuts';
@@ -17,6 +19,34 @@ describe('shortcut addresses', () => {
     );
     expect(fillLink('https://github.com/{1}', [])).toBeNull();
     expect(fillLink('https://example.com/', ['extra'])).toBeNull();
+  });
+
+  it('reads a page back into the words that open it', () => {
+    const local = linkMatcher('http://localhost:{1|3000}');
+    expect(local('http://localhost:3300/')).toEqual(['3300']);
+    expect(local('http://localhost:5173/settings?tab=2')).toEqual(['5173']);
+    expect(local('https://localhost:8443')).toEqual(['8443']);
+    expect(local('https://localhostess.com/')).toBeNull();
+    expect(local('http://example.com:3300/')).toBeNull();
+
+    const pr = linkMatcher('https://github.com/{2|acme/app}/pull/{1}');
+    expect(pr('https://www.github.com/vercel/next.js/pull/7/files')).toEqual([
+      '7',
+      'vercel/next.js',
+    ]);
+    expect(pr('https://github.com/vercel/next.js/issues/7')).toBeNull();
+
+    expect(linkMatcher('https://{1}.vercel.app/')('https://my-app.vercel.app/')).toEqual([
+      'my-app',
+    ]);
+    expect(linkMatcher('https://calendar.google.com/')('https://calendar.google.com/')).toBeNull();
+  });
+
+  it('looks a link’s pages up by its host', () => {
+    expect(historyText('http://localhost:{1|3000}')).toBe('localhost');
+    expect(historyText('https://www.github.com/{2|acme/app}/pull/{1}')).toBe('github.com');
+    expect(historyText('https://{1}.vercel.app')).toBe('vercel.app');
+    expect(historyText('{1}')).toBe('');
   });
 
   it('checks a search with a sample and a link with every blank filled', () => {

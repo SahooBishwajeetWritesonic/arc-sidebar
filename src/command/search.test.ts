@@ -134,6 +134,36 @@ describe('searchCommands', () => {
     expect(keys(searchCommands('jira 42', ctx, [])).slice(0, 2)).toEqual(['tab:7', 'open-url']);
   });
 
+  it('lists a link’s pages from history after it, and opens the one it completes to', () => {
+    const visit = (url: string, title: string, lastVisitTime: number): HistoryEntry => ({
+      url,
+      title,
+      visitCount: 1,
+      typedCount: 0,
+      lastVisitTime,
+    });
+    const linkHistory = [
+      visit('http://localhost:5173/', 'Vite + React', 3),
+      visit('http://localhost:3300/', 'Acme dashboard', 2),
+      visit('http://localhost:3000/', 'Default', 1),
+    ];
+    const results = searchCommands('lh', context(), [], { linkHistory });
+    expect(keys(results).slice(0, 4)).toEqual([
+      'open-url',
+      'link:http://localhost:5173',
+      'link:http://localhost:3300',
+      'search',
+    ]);
+    expect(results[1]).toMatchObject({ title: 'localhost:5173', detail: 'Vite + React' });
+
+    const completed = searchCommands('lh 5', context(), [], {
+      linkHistory,
+      completion: { text: 'lh 5173', url: 'http://localhost:5173' },
+    });
+    expect(completed[0]!.command).toEqual({ type: 'openUrl', url: 'http://localhost:5173' });
+    expect(keys(completed)).not.toContain('link:http://localhost:5173');
+  });
+
   it('puts strong tab matches before the search and weak ones after', () => {
     const results = searchCommands('figma', context(), []);
     expect(keys(results).slice(0, 2)).toEqual(['tab:4', 'search']);

@@ -215,6 +215,24 @@ test('a link’s keyword and a port open that local server', async ({ page }) =>
   await expect.poll(async () => (await todayTitles(page))[0]).toContain('localhost');
 });
 
+test('a link’s keyword lists the pages it opened before, and completes to them', async ({
+  page,
+}) => {
+  await ready(page);
+  await openBar(page);
+  await field(page).pressSequentially('lh');
+  const rows = bar(page).getByRole('option');
+  await expect(rows.nth(0)).toContainText('localhost:3000');
+  await expect(rows.nth(1)).toContainText('localhost:3300');
+  await expect(rows.nth(1)).toContainText('Acme dashboard');
+  await expect(rows.nth(2)).toContainText('localhost:5173');
+  await field(page).pressSequentially(' 51');
+  await expect(field(page)).toHaveValue('lh 5173');
+  await expect(selected(page)).toContainText('localhost:5173');
+  await field(page).press('Enter');
+  await expect.poll(async () => (await todayTitles(page))[0]).toContain('localhost');
+});
+
 test('Backspace in an empty site search goes back to searching everything', async ({ page }) => {
   await ready(page);
   await openBar(page);

@@ -57,7 +57,7 @@ import { themeAccent, themeLook } from '@/app/theme/engine';
 import { usePreferredScheme } from '@/app/theme/looks';
 import type { CommandContext } from '@/command/actions';
 import { completeAddress, searchCommands } from '@/command/search';
-import { linkFor, siteFor } from '@/command/sites';
+import { completeLink, linkFor, linkHistoryText, linkPages, siteFor } from '@/command/sites';
 import type { ActionId, Command, Result } from '@/command/types';
 import type { Shortcut } from '@/model/types';
 import type { Typed } from '@/platform/command-bar';
@@ -166,14 +166,14 @@ export function CommandBar({
   // No inline completion over a link ("lh 3300").
   const linked = plainTyping && linkFor(query, shortcuts) !== undefined;
   const history = useHistory(actionsMode || site ? '' : query);
+  // For "lh 51" to complete to "lh 5173".
+  const linkHistory = useHistory(plainTyping ? linkHistoryText(query, shortcuts) : '');
   const typedAddresses = useTypedAddresses();
-  const completion = useMemo(
-    () =>
-      completing && plainTyping && !linked
-        ? completeAddress(query, [...typedAddresses, ...history])
-        : null,
-    [completing, plainTyping, linked, query, typedAddresses, history],
-  );
+  const completion = useMemo(() => {
+    if (!completing || !plainTyping) return null;
+    if (linked) return completeLink(query, linkPages(query, shortcuts, linkHistory));
+    return completeAddress(query, [...typedAddresses, ...history]);
+  }, [completing, plainTyping, linked, query, shortcuts, linkHistory, typedAddresses, history]);
   const results = useMemo(() => {
     if (prompt) return [];
     const found = searchCommands(query, ctx, history, {
@@ -181,11 +181,12 @@ export function CommandBar({
       pickSplit: picking !== null,
       completion,
       site,
+      linkHistory,
     });
     return pagesOnly
       ? found.filter(({ command }) => command.type === 'openUrl' || command.type === 'search')
       : found;
-  }, [prompt, picking, query, ctx, history, actionsMode, completion, site, pagesOnly]);
+  }, [prompt, picking, query, ctx, history, actionsMode, completion, site, pagesOnly, linkHistory]);
 
   // For the stand-in's Return, which picks the top result once its text is in.
   const latestResults = useRef(results);

@@ -134,6 +134,47 @@ export function fillLink(url: string, words: readonly string[]): string | null {
 export const fillSearch = (url: string, query: string) =>
   url.replaceAll('%s', encodeURIComponent(query.trim()));
 
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Reads a page back into a link's words: http://localhost:3300/api gives ["3300"]. */
+export function linkMatcher(url: string): (page: string) => string[] | null {
+  const blanks = [...url.matchAll(BLANK)];
+  if (!blanks.length) return () => null;
+  let pattern = '';
+  let at = 0;
+  blanks.forEach((blank, i) => {
+    pattern += escapeRegExp(url.slice(at, blank.index));
+    at = blank.index + blank[0].length;
+    // The last blank stops at the path.
+    pattern += i === blanks.length - 1 ? '([^/?#&\\s]+)' : '([^?#&\\s]+?)';
+  });
+  pattern += escapeRegExp(url.slice(at));
+  const scheme = /^https?:\/\/(www\\\.)?/i;
+  const regex = new RegExp(
+    scheme.test(pattern) ? `^https?://(?:www\\.)?${pattern.replace(scheme, '')}` : `^${pattern}`,
+    'i',
+  );
+  return (page) => {
+    const match = regex.exec(page);
+    if (!match) return null;
+    const words: string[] = Array.from({ length: blankCount(url) }, () => '');
+    blanks.forEach((blank, i) => {
+      const index = Number(blank[1]) - 1;
+      if (!words[index]) words[index] = match[i + 1]!;
+    });
+    return words;
+  };
+}
+
+/** The host to search history for, without blanks. */
+export function historyText(url: string): string {
+  const host = url
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//i, '')
+    .replace(BLANK, '')
+    .split(/[/?#:]/)[0]!;
+  return host.replace(/^www\./i, '').replace(/^\.+|\.+$/g, '');
+}
+
 export function isValidShortcutUrl(url: string): boolean {
   if (isSiteSearch({ url })) return openable(fillSearch(url, 'test')) !== null;
   const words = Array.from({ length: blankCount(url) }, (_, i) => String(i + 1));
