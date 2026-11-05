@@ -2,6 +2,7 @@ import { FAVORITES_ID, type Shortcut } from '@/model/types';
 import { hostname, isSamePage } from '@/model/urls';
 import { availableActions, type CommandContext } from './actions';
 import type { HistoryEntry } from '@/platform/types';
+import { historyBonus, pageText } from './history';
 import { isStrong, ranked } from './match';
 import { linkFor, linkPages, siteSearchUrl } from './sites';
 import type { Result } from './types';
@@ -127,6 +128,8 @@ export interface SearchOptions {
   site?: Shortcut | null;
   /** History for the link being typed, to list its pages. */
   linkHistory?: readonly HistoryEntry[];
+  /** For history's frecency. */
+  now?: number;
 }
 
 /**
@@ -143,10 +146,11 @@ export function searchCommands(
     completion = null,
     site = null,
     linkHistory = [],
+    now = Date.now(),
   }: SearchOptions = {},
 ): Result[] {
   const text = query.trim();
-  if (pickSplit) return splitChoices(text, ctx, history);
+  if (pickSplit) return splitChoices(text, ctx, history, now);
   if (site) {
     if (!text) return [];
     const url = siteSearchUrl(site, text);
@@ -241,9 +245,9 @@ export function searchCommands(
   ranked(
     history
       .filter((entry) => !shown.some((other) => isSamePage(other, entry.url)))
-      .map((entry) => ({ ...entry, text: `${entry.title} ${displayUrl(entry.url)}` })),
+      .map((entry) => ({ ...entry, text: pageText(entry) })),
     text,
-    { tieBreak: (a, b) => b.visitCount - a.visitCount || b.lastVisitTime - a.lastVisitTime },
+    { bonus: (entry) => historyBonus(entry, now) },
   )
     .slice(0, LIMIT.history)
     .forEach(({ item }) =>
@@ -263,7 +267,12 @@ export function searchCommands(
  * What the current tab can split with: this space's other Today tabs that
  * aren't split already, a typed address, or a page from history.
  */
-function splitChoices(text: string, ctx: CommandContext, history: readonly HistoryEntry[]) {
+function splitChoices(
+  text: string,
+  ctx: CommandContext,
+  history: readonly HistoryEntry[],
+  now: number,
+) {
   const tabs = ctx.todayIds
     .map((id) => ctx.tabs.get(id))
     .filter((tab) => tab && tab.id !== ctx.activeId && tab.splitViewId === undefined)
@@ -293,9 +302,9 @@ function splitChoices(text: string, ctx: CommandContext, history: readonly Histo
     .slice(0, LIMIT.pages)
     .forEach(({ item }) => results.push(strip(item)));
   ranked(
-    history.map((entry) => ({ ...entry, text: `${entry.title} ${displayUrl(entry.url)}` })),
+    history.map((entry) => ({ ...entry, text: pageText(entry) })),
     text,
-    { tieBreak: (a, b) => b.visitCount - a.visitCount },
+    { bonus: (entry) => historyBonus(entry, now) },
   )
     .slice(0, LIMIT.history)
     .forEach(({ item }) =>

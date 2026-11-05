@@ -167,7 +167,8 @@ export function CommandBar({
   const linked = plainTyping && linkFor(query, shortcuts) !== undefined;
   const history = useHistory(actionsMode || site ? '' : query);
   // For "lh 51" to complete to "lh 5173".
-  const linkHistory = useHistory(plainTyping ? linkHistoryText(query, shortcuts) : '');
+  // Plenty, so one busy port doesn't crowd out the others.
+  const linkHistory = useHistory(plainTyping ? linkHistoryText(query, shortcuts) : '', 500);
   const typedAddresses = useTypedAddresses();
   const completion = useMemo(() => {
     if (!completing || !plainTyping) return null;
@@ -553,28 +554,26 @@ function useCommandContext(sidebarOpen: boolean): CommandContext {
 }
 
 /** History matching what's typed. The last answer stays until the next arrives. */
-function useHistory(text: string): HistoryEntry[] {
+function useHistory(text: string, limit?: number): HistoryEntry[] {
   const [found, setFound] = useState(EMPTY);
   const query = text.trim();
   useEffect(() => {
     if (!query) return;
     let current = true;
-    void searchHistory(query).then((entries) => current && setFound(entries));
+    void searchHistory(query, limit).then((entries) => current && setFound(entries));
     return () => {
       current = false;
     };
-  }, [query]);
+  }, [query, limit]);
   return query ? found : EMPTY;
 }
 
-/** Addresses typed recently, loaded once, for inline completion. */
+/** Addresses typed before, loaded once, for inline completion. */
 function useTypedAddresses(): HistoryEntry[] {
   const [typed, setTyped] = useState(EMPTY);
   useEffect(() => {
     let current = true;
-    void searchHistory('').then(
-      (entries) => current && setTyped(entries.filter((entry) => entry.typedCount > 0)),
-    );
+    void searchHistory('', 500).then((entries) => current && setTyped(entries));
     return () => {
       current = false;
     };

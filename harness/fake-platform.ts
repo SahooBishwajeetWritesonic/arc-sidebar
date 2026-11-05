@@ -1,4 +1,5 @@
 import { generateNKeysBetween } from 'fractional-indexing';
+import { HistoryIndex } from '@/background/history';
 import { SidebarService, type LiveTab } from '@/background/service';
 import type { PullRequest } from '@/model/live';
 import { feedOwner, meetingsIn, type CalendarState } from '@/platform/calendar';
@@ -396,13 +397,24 @@ export class FakePlatform implements Platform {
     return [...this.tabs].sort((a, b) => at(b.id) - at(a.id)).map((tab) => tab.id);
   }
 
-  async searchHistory(text: string) {
-    await new Promise((resolve) => setTimeout(resolve, 4)); // like chrome.history
-    const query = text.toLowerCase();
-    return this.history
-      .filter((entry) => `${entry.title} ${entry.url}`.toLowerCase().includes(query))
-      .sort((a, b) => b.lastVisitTime - a.lastVisitTime)
-      .slice(0, 200);
+  /** As the background's, over this history. */
+  private historyIndex = new HistoryIndex({
+    recent: async (since, max) =>
+      this.history
+        .filter((entry) => entry.lastVisitTime >= since)
+        .sort((a, b) => b.lastVisitTime - a.lastVisitTime)
+        .slice(0, max),
+    search: async (text, max) => {
+      const query = text.toLowerCase();
+      return this.history
+        .filter((entry) => `${entry.title} ${entry.url}`.toLowerCase().includes(query))
+        .slice(0, max);
+    },
+  });
+
+  async searchHistory(text: string, limit = 30) {
+    await new Promise((resolve) => setTimeout(resolve, 4)); // like a message to the background
+    return this.historyIndex.search(text, limit);
   }
 
   openUrl(_windowId: number, url: string) {

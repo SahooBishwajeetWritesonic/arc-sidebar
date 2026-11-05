@@ -2,6 +2,8 @@ import { browser, type Browser } from 'wxt/browser';
 import { refreshCalendar, watchCalendar } from '@/background/calendar';
 import { onCommandBarHello } from '@/background/command-bar';
 import { cropVisibleTab } from '@/background/crop';
+import { chromeHistory, toHistoryEntry } from '@/background/chrome-history';
+import { HistoryIndex } from '@/background/history';
 import { fetchGitHubJson, fetchPullRequests } from '@/background/github';
 import { SidebarService, type LiveTab } from '@/background/service';
 import {
@@ -19,7 +21,7 @@ import { chromeSyncStore } from '@/background/sync-storage';
 import { buildTabMenu, onTabMenuClick } from '@/background/tab-menu';
 import type { Intent } from '@/model/types';
 import type { CommandBarMessage } from '@/platform/command-bar';
-import type { CaptureMessage, CaptureReply } from '@/platform/messages';
+import type { CaptureMessage, CaptureReply, HistoryMessage } from '@/platform/messages';
 import type { RecordingMessage } from '@/platform/recording';
 import {
   archiveItem,
@@ -51,6 +53,15 @@ function toLiveTab(tab: Browser.tabs.Tab): LiveTab | undefined {
 
 export default defineBackground(() => {
   void browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+
+  const history = new HistoryIndex(chromeHistory);
+  browser.history.onVisited.addListener((item) => {
+    const page = toHistoryEntry(item);
+    if (page) history.visited(page);
+  });
+  browser.history.onVisitRemoved.addListener(({ allHistory, urls }) =>
+    history.removed(allHistory ? 'all' : (urls ?? [])),
+  );
 
   const service = new SidebarService({
     queryTabs: async () =>
@@ -154,7 +165,11 @@ export default defineBackground(() => {
   browser.runtime.onMessage.addListener(
     (
       message:
-        { kind?: string; intent?: Intent } | CommandBarMessage | CaptureMessage | RecordingMessage,
+        | { kind?: string; intent?: Intent }
+        | CommandBarMessage
+        | CaptureMessage
+        | RecordingMessage
+        | HistoryMessage,
       sender,
       sendResponse,
     ) => {
@@ -171,6 +186,10 @@ export default defineBackground(() => {
         const { mic, camera } = message;
         if (sender.tab?.id !== undefined) noteRecording(sender.tab.id, { mic, camera });
         return;
+      }
+      if (message?.kind === 'history:search' && 'limit' in message) {
+        history.search(message.text, message.limit).then(sendResponse, () => sendResponse([]));
+        return true;
       }
       if (message?.kind === 'capture:shot' && 'area' in message) {
         const windowId = sender.tab?.windowId;

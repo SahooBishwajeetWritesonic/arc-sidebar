@@ -13,8 +13,10 @@ import {
 import { fullPage, SITE_PERMISSION_DEFAULTS } from './capture';
 import { fileName, type DownloadEntry } from './downloads';
 import { gmailFeedUrl, parseGmailFeed } from './gmail';
+import type { HistoryMessage } from './messages';
 import type { PeekMessage } from './peek';
 import type {
+  HistoryEntry,
   MediaState,
   Platform,
   SitePermission,
@@ -188,21 +190,9 @@ export const chromePlatform: Platform = {
       .flatMap((tab) => (tab.id === undefined ? [] : [tab.id]));
   },
 
-  async searchHistory(text) {
-    const items = await browser.history.search({ text, startTime: 0, maxResults: 200 });
-    return items.flatMap((item) =>
-      item.url
-        ? [
-            {
-              url: item.url,
-              title: item.title ?? '',
-              visitCount: item.visitCount ?? 0,
-              typedCount: item.typedCount ?? 0,
-              lastVisitTime: item.lastVisitTime ?? 0,
-            },
-          ]
-        : [],
-    );
+  async searchHistory(text, limit = 30) {
+    const message: HistoryMessage = { kind: 'history:search', text, limit };
+    return ((await browser.runtime.sendMessage(message).catch(() => [])) as HistoryEntry[]) ?? [];
   },
 
   openUrl(windowId, url) {

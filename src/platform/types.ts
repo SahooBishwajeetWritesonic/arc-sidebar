@@ -134,7 +134,8 @@ export interface Platform {
 
   /** The window's tabs, most recently used first (Chrome's lastAccessed). */
   recentTabs(windowId: number): Promise<number[]>;
-  searchHistory(text: string): Promise<HistoryEntry[]>;
+  /** Best first. With no text: addresses typed before. */
+  searchHistory(text: string, limit?: number): Promise<HistoryEntry[]>;
   /** Opens `url` in a new tab, which lands at the top of Today. */
   openUrl(windowId: number, url: string): void;
   /** Loads `url` in the tab, in place (the URL bar's ⌘L). */

@@ -90,6 +90,18 @@ test('addresses typed before complete inline; Backspace drops the completion', a
   await expect.poll(async () => (await todayTitles(page))[0]).toBe('github.com');
 });
 
+test('history is found by letters in order, not only as typed', async ({ page }) => {
+  await ready(page);
+  await openBar(page);
+  await field(page).pressSequentially('hckr nws');
+  const row = bar(page).getByRole('option').filter({ hasText: 'Hacker News' });
+  await expect(row).toBeVisible();
+  // Below the search, as a guess.
+  await expect(selected(page)).toContainText('hckr nws');
+  await row.click();
+  await expect.poll(async () => (await todayTitles(page))[0]).toContain('news.ycombinator.com');
+});
+
 test('words search the web in a new tab', async ({ page }) => {
   await ready(page);
   await openBar(page);

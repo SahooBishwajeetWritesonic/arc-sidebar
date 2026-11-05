@@ -302,8 +302,8 @@ export function recentTabs() {
   return (windowId !== null && platform?.recentTabs(windowId)) || Promise.resolve([]);
 }
 
-export function searchHistory(text: string) {
-  return platform?.searchHistory(text) ?? Promise.resolve([]);
+export function searchHistory(text: string, limit?: number) {
+  return platform?.searchHistory(text, limit) ?? Promise.resolve([]);
 }
 
 export function toggleMuted(id: number) {

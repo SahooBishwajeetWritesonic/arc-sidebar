@@ -154,6 +154,28 @@ describe('searchCommands', () => {
     expect(keys(completed)).not.toContain('link:http://localhost:5173');
   });
 
+  it('finds history by letters in order, after the search, frecent pages first', () => {
+    const now = Date.UTC(2026, 10, 6);
+    const visit = (url: string, title: string, visitCount: number, daysAgo: number) => ({
+      url,
+      title,
+      visitCount,
+      typedCount: 0,
+      lastVisitTime: now - daysAgo * 86_400_000,
+    });
+    const history = [
+      visit('https://hn.example/old', 'Hacker News archive', 1, 200),
+      visit('https://news.ycombinator.com/', 'Hacker News', 90, 1),
+    ];
+    const results = searchCommands('hckr nws', context(), history, { now });
+    const found = keys(results).filter((key) => key.startsWith('history:'));
+    expect(found).toEqual([
+      'history:https://news.ycombinator.com/',
+      'history:https://hn.example/old',
+    ]);
+    expect(keys(results).indexOf('search')).toBeLessThan(keys(results).indexOf(found[0]!));
+  });
+
   it('puts strong tab matches before the search and weak ones after', () => {
     const results = searchCommands('figma', context(), []);
     expect(keys(results).slice(0, 2)).toEqual(['tab:4', 'search']);

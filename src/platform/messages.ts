@@ -21,6 +21,13 @@ export interface SelectionMessage {
   windowId: number;
 }
 
+/** Command bar → background. Answers HistoryEntry[], best first. */
+export interface HistoryMessage {
+  kind: 'history:search';
+  text: string;
+  limit: number;
+}
+
 /** The capture tool → background: a picture of this part of the page, as it is now. */
 export interface CaptureMessage {
   kind: 'capture:shot';
