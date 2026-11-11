@@ -1,5 +1,12 @@
 import { browser, type Browser } from 'wxt/browser';
-import { refreshCalendar, watchCalendar } from '@/background/calendar';
+import {
+  noteTabShown,
+  noteWindowFocused,
+  refreshCalendar,
+  seedShownTabs,
+  watchCalendar,
+  type CalendarTab,
+} from '@/background/calendar';
 import { onCommandBarHello } from '@/background/command-bar';
 import { cropVisibleTab } from '@/background/crop';
 import { chromeHistory, toHistoryEntry } from '@/background/chrome-history';
@@ -156,6 +163,23 @@ export default defineBackground(() => {
   );
 
   void service.ready.then(() => watchCalendar(service.snapshot().model.settings.calendar));
+  // Live Calendar re-reads a moment after you leave the calendar's tab.
+  const calendarTab = async (): Promise<CalendarTab> => {
+    await service.ready;
+    const { model, session } = service.snapshot();
+    const calendar = model.settings.calendar;
+    return {
+      feed: calendar?.feed ?? null,
+      tabId: calendar ? session.bindings[calendar.itemId] : undefined,
+    };
+  };
+  void browser.tabs.query({ active: true }).then(seedShownTabs);
+  browser.tabs.onActivated.addListener(
+    ({ tabId, windowId }) => void calendarTab().then((tab) => noteTabShown(tabId, windowId, tab)),
+  );
+  browser.windows.onFocusChanged.addListener(
+    (windowId) => void calendarTab().then((tab) => noteWindowFocused(windowId, tab)),
+  );
 
   // Auto-archive, the Live Folder and Live Calendar: check every few minutes. Alarms
   // can be dropped when Chrome restarts, so make sure it exists each time the worker starts.

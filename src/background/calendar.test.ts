@@ -23,7 +23,8 @@ vi.mock('./copy', () => ({
   showNote: async (_windowId: number, text: string) => void stored.notes.push(text),
 }));
 
-const { joinMeeting, refreshCalendar } = await import('./calendar');
+const { joinMeeting, noteTabShown, noteWindowFocused, refreshCalendar, seedShownTabs } =
+  await import('./calendar');
 
 const FEED = 'https://calendar.google.com/calendar/ical/me%40example.com/private-abc/basic.ics';
 const NOW = Date.parse('2026-10-30T09:55:00Z');
@@ -95,6 +96,40 @@ describe('Live Calendar in the background', () => {
 
     await refreshCalendar(FEED, answering(ICS), () => NOW);
     expect(asked.at(-1)!.credentials).toBe('omit');
+  });
+
+  it('re-reads a moment after you leave the calendar’s tab or window, once', async () => {
+    vi.useFakeTimers();
+    const reads = vi.fn(async () => new Response(ICS));
+    vi.stubGlobal('fetch', reads);
+    const calendar = { tabId: 7, feed: FEED };
+    try {
+      seedShownTabs([{ id: 7, windowId: 1 }]);
+      // Into another tab and back, then away again: one read, after the moment.
+      noteTabShown(3, 1, calendar);
+      noteTabShown(7, 1, calendar);
+      noteTabShown(4, 1, calendar);
+      await vi.advanceTimersByTimeAsync(2_900);
+      expect(reads).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(200);
+      expect(reads).toHaveBeenCalledTimes(1);
+
+      // Leaving a tab that isn't the calendar's reads nothing.
+      noteTabShown(5, 1, calendar);
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(reads).toHaveBeenCalledTimes(1);
+
+      // Leaving the window while it shows the calendar, for another app (no window).
+      noteTabShown(7, 1, calendar);
+      await vi.advanceTimersByTimeAsync(5_000);
+      noteWindowFocused(1, calendar);
+      noteWindowFocused(-1, calendar);
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(reads).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
   });
 
   it('joins the meeting about to start, or says there’s none', async () => {

@@ -77,6 +77,45 @@ async function meetingsAt(feed: string, fetchFeed: typeof fetch, now: number): P
   }
 }
 
+/** Long enough for Google Calendar to save a change made just before leaving it. */
+const AFTER_LEAVING_MS = 3_000;
+
+export interface CalendarTab {
+  tabId: number | undefined;
+  feed: string | null;
+}
+
+let soon: ReturnType<typeof setTimeout> | undefined;
+/** The tab each window shows, and the focused window. */
+const shown = new Map<number, number>();
+let focused: number | undefined;
+
+/** Leaving and coming back within the moment reads once. */
+function readSoon(feed: string) {
+  clearTimeout(soon);
+  soon = setTimeout(() => void refreshCalendar(feed), AFTER_LEAVING_MS);
+}
+
+/** The worker forgets this when it stops. */
+export function seedShownTabs(tabs: readonly { id?: number; windowId: number }[]) {
+  for (const tab of tabs) if (tab.id !== undefined) shown.set(tab.windowId, tab.id);
+}
+
+/** Leaving the calendar's tab re-reads it soon, so a change made there shows in seconds. */
+export function noteTabShown(tabId: number, windowId: number, calendar: CalendarTab) {
+  const left = shown.get(windowId);
+  shown.set(windowId, tabId);
+  if (calendar.feed && left !== tabId && left === calendar.tabId) readSoon(calendar.feed);
+}
+
+/** The same for leaving its window, for another window or app. */
+export function noteWindowFocused(windowId: number, calendar: CalendarTab) {
+  const left = focused;
+  focused = windowId;
+  if (left === undefined || left === windowId || !calendar.feed) return;
+  if (calendar.tabId !== undefined && shown.get(left) === calendar.tabId) readSoon(calendar.feed);
+}
+
 /** Arc's ⌃⌘J: opens the call of the meeting about to start, or under way. */
 export async function joinMeeting(
   windowId: number,
