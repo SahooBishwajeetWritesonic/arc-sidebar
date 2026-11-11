@@ -5,7 +5,8 @@ A personal Chrome (MV3) extension that recreates Arc's macOS sidebar inside Chro
 ## Commands
 
 - `npm run dev`: WXT dev server with HMR. It does not launch a browser; load `.output/chrome-mv3-dev` unpacked in your own Chrome (`chrome://extensions` → Developer mode → Load unpacked).
-- `npm run build`: production build in `.output/chrome-mv3`.
+- `npm run build`: production build in `.output/chrome-mv3`. `npm run zip` also zips it (`.output/arc-sidebar-<version>-chrome.zip`).
+- Releasing: bump `version` in `package.json`, commit, then push a `v<version>` tag. The Release workflow checks the tag matches, runs typecheck and unit tests, and attaches the zip to a GitHub release.
 - `npm run harness`: the sidebar in a normal tab at http://localhost:5199 with a fake Chrome running the real background service. Fastest way to iterate on UI.
 - `npm test` (Vitest unit tests), `npm run e2e` (Playwright against the harness, in the installed Chrome, headless).
 - `npm run typecheck`, `npm run format`.
