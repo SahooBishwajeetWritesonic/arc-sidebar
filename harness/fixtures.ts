@@ -244,6 +244,8 @@ export function calendarFeed(now: number): string {
       'ATTENDEE;PARTSTAT=DECLINED:mailto:me@example.com',
     ),
     ...event('planning', start + 20 * 60 * minute, 60, 'SUMMARY:Sprint planning'),
+    // Under way into Design review, so the pill shows both.
+    ...event('sync', start - 20 * minute, 25, 'SUMMARY:Weekly sync'),
     'BEGIN:VEVENT',
     'UID:offsite@google.com',
     `DTSTART;VALUE=DATE:${icsDate(now)}`,

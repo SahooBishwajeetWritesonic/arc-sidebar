@@ -7,6 +7,7 @@ import {
   feedUrl,
   isCalendarScript,
   liveMeeting,
+  liveMeetings,
   meetingToJoin,
   meetingsIn,
   type Meeting,
@@ -172,6 +173,20 @@ describe('the live meeting', () => {
     expect(liveMeeting([under, next], 54 * minute, 5 * minute)).toBe(next);
     expect(liveMeeting([under, next], 95 * minute, 5 * minute)).toBeUndefined();
     expect(meetingToJoin([under, next], 54 * minute, 5 * minute)).toBe(under);
+  });
+
+  it('shows every meeting under way or about to start, in order, three at most', () => {
+    expect(liveMeetings([next, under], 54 * minute, 5 * minute)).toEqual([under, next]);
+    expect(liveMeetings([under, next], 50 * minute, 5 * minute)).toEqual([under]);
+    expect(liveMeetings([under, next], 95 * minute, 5 * minute)).toEqual([]);
+    // Too many: the ones about to start stay, and the longest under way goes.
+    const long = meeting('long', -60, 120);
+    const clash = meeting('clash', 56, 86);
+    expect(liveMeetings([long, under, next, clash], 54 * minute, 5 * minute)).toEqual([
+      under,
+      clash,
+      next,
+    ]);
   });
 
   it('counts down to the start, then shows what’s left', () => {

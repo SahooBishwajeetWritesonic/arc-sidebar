@@ -8,6 +8,10 @@
   overflow: hidden;
 }
 
+.reveal + .reveal .pill {
+  margin-top: 0;
+}
+
 .pill {
   display: flex;
   align-items: center;

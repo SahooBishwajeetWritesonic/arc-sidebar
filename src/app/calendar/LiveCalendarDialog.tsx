@@ -55,7 +55,7 @@ function LiveCalendarPopup({ itemId }: { itemId: string }) {
     <Dialog.Popup className={sheet.popup}>
       <Dialog.Title className={sheet.title}>Live Calendar</Dialog.Title>
       <Dialog.Description className={sheet.description}>
-        Your next meeting shows under Favorites, with a countdown and Join. Paste your calendar’s
+        Your next meetings show under Favorites, with a countdown and Join. Paste your calendar’s
         secret address in iCal format, from Integrate calendar in its settings.
       </Dialog.Description>
       <form

@@ -35,6 +35,17 @@ test('Live Calendar counts down to the next meeting, and Join opens its call', a
   await expect(today(page).filter({ hasText: 'meet.google.com' })).toHaveCount(1);
 });
 
+test('meetings that overlap or run back to back each get a pill', async ({ page }) => {
+  await turnOn(page);
+  await expect(live(page)).toHaveAttribute('aria-label', 'Next meetings');
+  await expect(live(page).getByText('Weekly sync')).toBeVisible();
+  await expect(live(page).getByText(/^Now · [45] min left$/)).toBeVisible();
+  await expect(live(page).getByText('Design review')).toBeVisible();
+  // Only Design review has a call.
+  await expect(live(page).getByRole('button', { name: 'Join Design review' })).toBeVisible();
+  await expect(live(page).getByRole('button', { name: /^Join/ })).toHaveCount(1);
+});
+
 test('the dialog copies the Live Calendar script for work accounts', async ({ page }) => {
   await turnOn(page);
   await calendar(page).click({ button: 'right' });

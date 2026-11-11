@@ -173,6 +173,22 @@ export function liveMeeting(meetings: Meeting[], now: number, before: number): M
   return soon ?? meetings.filter((meeting) => meeting.start <= now && now < meeting.end).at(-1);
 }
 
+const SHOWN_LIVE = 3;
+
+/**
+ * Meetings under way or starting within `before` ms, in order. When there are too many, ones about
+ * to start win over long ones under way.
+ */
+export function liveMeetings(meetings: readonly Meeting[], now: number, before: number): Meeting[] {
+  const soon = meetings
+    .filter((meeting) => meeting.start > now && meeting.start - now <= before)
+    .sort((a, b) => a.start - b.start);
+  const underWay = meetings
+    .filter((meeting) => meeting.start <= now && now < meeting.end)
+    .sort((a, b) => b.start - a.start);
+  return [...soon, ...underWay].slice(0, SHOWN_LIVE).sort((a, b) => a.start - b.start);
+}
+
 /** Arc's ⌃⌘J: the live meeting among those with a call to join. */
 export const meetingToJoin = (meetings: Meeting[], now: number, before: number) =>
   liveMeeting(
