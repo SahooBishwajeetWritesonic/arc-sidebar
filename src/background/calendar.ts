@@ -3,6 +3,7 @@ import type { LiveCalendar } from '@/model/types';
 import {
   NotACalendarError,
   feedOwner,
+  isCalendarScript,
   meetingToJoin,
   meetingsIn,
   type CalendarState,
@@ -57,8 +58,15 @@ async function read(feed: string | null, fetchFeed: typeof fetch, now: number) {
 }
 
 async function meetingsAt(feed: string, fetchFeed: typeof fetch, now: number): Promise<Meeting[]> {
-  // The address is the key: no cookies, and nothing cached on the way.
-  const response = await fetchFeed(feed, { credentials: 'omit', cache: 'no-store' });
+  // The address is the key: no cookies, nothing cached. A script needs your login, though.
+  const script = isCalendarScript(feed);
+  const response = await fetchFeed(feed, {
+    credentials: script ? 'include' : 'omit',
+    cache: 'no-store',
+  });
+  if (script && /accounts\.google\.com|\/ServiceLogin/.test(response.url)) {
+    throw new Problem('Sign in to Google in Chrome to read this calendar');
+  }
   if (response.status === 404) throw new Problem('No calendar at this address');
   if (!response.ok) throw new Problem(`The calendar didn’t answer (${response.status})`);
   try {

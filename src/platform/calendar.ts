@@ -63,6 +63,13 @@ export function feedUrl(text: string): string | undefined {
   }
 }
 
+/** A Live Calendar script's web app, for when secret iCal links are off. Only you can read it. */
+export function isCalendarScript(feed: string): boolean {
+  return /^https:\/\/script\.google\.com\/(?:a\/macros\/[^/]+|macros)\/s\/[\w-]+\/exec(?:[?#]|$)/.test(
+    feed,
+  );
+}
+
 /** Whose a Google calendar's feed is (its address names them), to leave out what they declined. */
 export function feedOwner(feed: string): string | undefined {
   const id = /\/calendar\/ical\/([^/]+)\//.exec(feed)?.[1];

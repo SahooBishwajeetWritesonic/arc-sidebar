@@ -70,6 +70,33 @@ describe('Live Calendar in the background', () => {
     expect(stored.calendar).toMatchObject({ problem: 'Couldn’t reach the calendar', meetings: [] });
   });
 
+  it('reads a Live Calendar script with your Google login, and only a script', async () => {
+    const SCRIPT = 'https://script.google.com/a/macros/acme.com/s/AKfy-123_x/exec';
+    const asked: RequestInit[] = [];
+    const answering = (body: string, url = '') =>
+      (async (_input: RequestInfo | URL, init: RequestInit) => {
+        asked.push(init);
+        const response = new Response(body);
+        Object.defineProperty(response, 'url', { value: url });
+        return response;
+      }) as unknown as typeof fetch;
+
+    await refreshCalendar(SCRIPT, answering(ICS), () => NOW);
+    expect(asked.at(-1)!.credentials).toBe('include');
+    expect(stored.calendar!.meetings.map((meeting) => meeting.title)).toEqual(['Design review']);
+
+    // Signed out of Google: it asks you to sign in, and keeps the last meetings.
+    const signIn = 'https://www.google.com/a/acme.com/ServiceLogin?continue=https%3A%2F%2Fscript';
+    await refreshCalendar(SCRIPT, answering('<html>Sign in</html>', signIn), () => NOW);
+    expect(stored.calendar).toMatchObject({
+      problem: 'Sign in to Google in Chrome to read this calendar',
+    });
+    expect(stored.calendar!.meetings).toHaveLength(1);
+
+    await refreshCalendar(FEED, answering(ICS), () => NOW);
+    expect(asked.at(-1)!.credentials).toBe('omit');
+  });
+
   it('joins the meeting about to start, or says there’s none', async () => {
     await refreshCalendar(FEED, answer(ICS), () => NOW);
     const calendar = { feed: FEED, itemId: 'p1', before: 5 };

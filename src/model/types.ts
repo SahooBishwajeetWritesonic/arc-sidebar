@@ -71,7 +71,7 @@ export interface Shortcut {
 
 /** Arc's Live Calendar, read from the calendar's private iCal address. */
 export interface LiveCalendar {
-  /** The calendar's iCal address. Anyone with it can read the calendar, so it's never exported. */
+  /** An iCal address or a Live Calendar script's link. Never exported: a secret one reads it. */
   feed: string;
   /** The pinned tab or favorite it's shown for (Google Calendar, say). */
   itemId: string;

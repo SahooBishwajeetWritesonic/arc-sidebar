@@ -5,6 +5,7 @@ import {
   countdown,
   feedOwner,
   feedUrl,
+  isCalendarScript,
   liveMeeting,
   meetingToJoin,
   meetingsIn,
@@ -129,6 +130,18 @@ describe('feeds', () => {
     expect(
       feedOwner('https://outlook.office365.com/owa/calendar/x/y/calendar.ics'),
     ).toBeUndefined();
+  });
+
+  it('tells a Live Calendar script’s web app from other addresses', () => {
+    expect(isCalendarScript('https://script.google.com/a/macros/acme.com/s/AKfy-1_x/exec')).toBe(
+      true,
+    );
+    expect(isCalendarScript('https://script.google.com/macros/s/AKfy-1_x/exec')).toBe(true);
+    expect(isCalendarScript('https://script.google.com/macros/s/AKfy-1_x/dev')).toBe(false);
+    expect(isCalendarScript('https://script.google.com.evil.com/macros/s/x/exec')).toBe(false);
+    expect(
+      isCalendarScript('https://calendar.google.com/calendar/ical/me/private-abc/basic.ics'),
+    ).toBe(false);
   });
 
   it('finds the call in a meeting’s place or notes', () => {

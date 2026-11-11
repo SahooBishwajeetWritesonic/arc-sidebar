@@ -14,7 +14,7 @@ const FEED = 'https://calendar.google.com/calendar/ical/me%40example.com/private
 async function setUp(page: Page, feed: string) {
   await calendar(page).click({ button: 'right' });
   await panel(page).getByRole('menuitem', { name: 'Live Calendar…' }).click();
-  await panel(page).getByRole('textbox', { name: 'Secret address in iCal format' }).fill(feed);
+  await panel(page).getByRole('textbox', { name: 'Calendar address' }).fill(feed);
   await panel(page)
     .getByRole('button', { name: /^(Turn On|Save)$/ })
     .click();
@@ -33,6 +33,15 @@ test('Live Calendar counts down to the next meeting, and Join opens its call', a
   await expect(live(page)).toContainText(/in [23] min/);
   await live(page).getByRole('button', { name: 'Join' }).click();
   await expect(today(page).filter({ hasText: 'meet.google.com' })).toHaveCount(1);
+});
+
+test('the dialog copies the Live Calendar script for work accounts', async ({ page }) => {
+  await turnOn(page);
+  await calendar(page).click({ button: 'right' });
+  await panel(page).getByRole('menuitem', { name: 'Live Calendar…' }).click();
+  await panel(page).getByRole('button', { name: 'Copy Script and Open Apps Script' }).click();
+  await expect(panel(page).getByRole('status')).toContainText('Copied Live Calendar script');
+  await expect(today(page).first()).toContainText('script.new');
 });
 
 test('hovering the calendar lists the coming meetings, leaving out what isn’t one', async ({

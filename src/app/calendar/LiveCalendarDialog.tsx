@@ -1,19 +1,23 @@
 import { Dialog } from '@base-ui/react/dialog';
 import { useRef, useState } from 'react';
 import { setLiveCalendar } from '@/app/actions';
+import { copyText } from '@/app/command/run';
 import sheet from '@/app/sheet/sheet.module.css';
+import { showToast } from '@/app/toast/toast';
 import { feedUrl } from '@/platform/calendar';
 import { useCalendar } from '@/state/calendar';
 import { useSidebar } from '@/state/sidebar';
 import { openUrl } from '@/state/tabs';
 import { setLiveCalendarFor, useUi } from '@/state/ui';
+import SCRIPT from './live-calendar.gs?raw';
 import styles from './live-calendar-dialog.module.css';
 
 /** How long before a meeting its countdown can show, in minutes. */
 const BEFORE = [1, 5, 10, 15];
 const GOOGLE_SETTINGS = 'https://calendar.google.com/calendar/u/0/r/settings';
+const NEW_SCRIPT = 'https://script.new';
 
-/** Arc reads the calendar through its sign-in; here it's the calendar's secret iCal address. */
+/** Arc reads the calendar through its sign-in; here, a secret iCal address or your own script. */
 export function LiveCalendarDialog() {
   const itemId = useUi((state) => state.liveCalendarFor);
   // Kept while the dialog fades out.
@@ -35,6 +39,11 @@ function LiveCalendarPopup({ itemId }: { itemId: string }) {
   const [address, setAddress] = useState(current?.feed ?? '');
   const [before, setBefore] = useState(current?.before ?? 5);
   const [invalid, setInvalid] = useState(false);
+  const copyScript = async () => {
+    await copyText(SCRIPT);
+    showToast('Copied Live Calendar script');
+    openUrl(NEW_SCRIPT);
+  };
   const save = () => {
     const feed = feedUrl(address);
     if (!feed) return setInvalid(true);
@@ -59,7 +68,7 @@ function LiveCalendarPopup({ itemId }: { itemId: string }) {
       >
         <input
           className={styles.field}
-          aria-label="Secret address in iCal format"
+          aria-label="Calendar address"
           aria-invalid={invalid || undefined}
           placeholder="https://calendar.google.com/calendar/ical/…"
           spellCheck={false}
@@ -94,6 +103,13 @@ function LiveCalendarPopup({ itemId }: { itemId: string }) {
           Open Google Calendar’s settings
         </button>
       )}
+      <p className={sheet.hint}>
+        No secret address on a work account? Paste the Live Calendar script into a new Apps Script
+        project, follow the steps at its top, then paste its web app link here.
+      </p>
+      <button type="button" className={styles.link} onClick={() => void copyScript()}>
+        Copy Script and Open Apps Script
+      </button>
       <footer className={sheet.footer}>
         {current && (
           <button
